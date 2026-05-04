@@ -98,6 +98,8 @@ class Battlefield:
 
     def occupied_slots(self, player_idx: int, line: Line) -> set[int]:
         """返回指定线已被占用的槽位。"""
+        if line == Line.SKIRMISH:
+            return {unit.slot for unit in self.p1_skirmish + self.p2_skirmish}
         return {unit.slot for unit in self.get_line(player_idx, line)}
 
     def is_slot_empty(self, player_idx: int, line: Line, slot: int) -> bool:
@@ -130,9 +132,9 @@ class Battlefield:
                 Line.SKIRMISH: 2,
             }[line]
         return {
-            Line.SKIRMISH: 3,
-            Line.MAIN: 4,
-            Line.REAR: 5,
+            Line.SKIRMISH: 2,
+            Line.MAIN: 3,
+            Line.REAR: 4,
         }[line]
 
     def distance(self, attacker_player_idx: int, attacker: BattleUnit, target: BattleUnit) -> int:

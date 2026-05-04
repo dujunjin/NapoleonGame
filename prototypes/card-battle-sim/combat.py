@@ -114,7 +114,7 @@ def find_attack_targets(
                       if "守卫" in u.card.keywords]
     guards_in_range = _targets_in_range(battlefield, attacker, attacker_player_idx, guards_in_main)
     
-    # 远程炮兵（在后方线）
+    # 远程炮兵（在后方线）：可以打散兵线和主力线，不能攻击对方后方。
     if (attacker.current_line == Line.REAR 
         and "远程" in attacker.card.keywords
         and attacker.card.unit_type == UnitType.ARTILLERY):
@@ -127,23 +127,13 @@ def find_attack_targets(
     if attacker.current_line == Line.REAR:
         return []
     
-    # 主力线 / 散兵线单位：先接触敌方散兵线，再处理守卫和主力线。
-    opp_skirmish = _targets_in_range(
-        battlefield, attacker, attacker_player_idx, battlefield.get_line(opp_idx, Line.SKIRMISH)
-    )
-    if opp_skirmish:
-        return opp_skirmish
     if guards_in_range:
         return guards_in_range
-    opp_main = _targets_in_range(
-        battlefield, attacker, attacker_player_idx, battlefield.get_line(opp_idx, Line.MAIN)
-    )
-    if opp_main:
-        return opp_main
-    opp_rear = _targets_in_range(
-        battlefield, attacker, attacker_player_idx, battlefield.get_line(opp_idx, Line.REAR)
-    )
-    return opp_rear
+    targets = (battlefield.get_line(opp_idx, Line.SKIRMISH)
+               + battlefield.get_line(opp_idx, Line.MAIN))
+    if attacker.card.unit_type == UnitType.CAVALRY and "侧翼迂回" in attacker.card.keywords:
+        targets += battlefield.get_line(opp_idx, Line.REAR)
+    return _targets_in_range(battlefield, attacker, attacker_player_idx, targets)
     
 
 

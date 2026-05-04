@@ -127,16 +127,60 @@ class RuleTuningTests(unittest.TestCase):
 
         self.assertEqual(choose_units_to_advance(player, battlefield, 0), [])
 
-    def test_infantry_attacks_only_adjacent_opposing_skirmish_slot(self):
+    def test_skirmish_line_slots_are_shared_between_players(self):
         battlefield = Battlefield()
-        attacker = BattleUnit(
-            card=self.make_card("步兵", attack=2),
+        p1 = Player(
+            name="P1",
+            faction=Faction.FRANCE,
+            hand=[self.make_card("P1散兵", unit_type=UnitType.SKIRMISHER, deploy_line=Line.SKIRMISH)],
+            current_orders=10,
+        )
+        p2 = Player(
+            name="P2",
+            faction=Faction.PRUSSIA,
+            hand=[self.make_card("P2散兵", unit_type=UnitType.SKIRMISHER, deploy_line=Line.SKIRMISH)],
+            current_orders=10,
+        )
+
+        self.assertTrue(deploy_card(p1, p1.hand[0], battlefield, 0, slot=1))
+        self.assertFalse(deploy_card(p2, p2.hand[0], battlefield, 1, slot=1))
+        self.assertTrue(deploy_card(p2, p2.hand[0], battlefield, 1, slot=2))
+
+        self.assertEqual(battlefield.occupied_slots(0, Line.SKIRMISH), {1, 2})
+        self.assertEqual(battlefield.occupied_slots(1, Line.SKIRMISH), {1, 2})
+
+    def test_advance_fails_when_enemy_occupies_matching_skirmish_slot(self):
+        battlefield = Battlefield()
+        player = Player(name="P1", faction=Faction.FRANCE, current_orders=3)
+        main_unit = BattleUnit(
+            card=self.make_card("待前压", cost=2),
             current_hp=3,
+            current_line=Line.MAIN,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        enemy_blocker = BattleUnit(
+            card=self.make_card("敌方散兵", unit_type=UnitType.SKIRMISHER, deploy_line=Line.SKIRMISH),
+            current_hp=2,
             current_line=Line.SKIRMISH,
             slot=1,
             deployed_this_turn=False,
         )
-        aligned_target = BattleUnit(
+        battlefield.p1_main.append(main_unit)
+        battlefield.p2_skirmish.append(enemy_blocker)
+
+        self.assertEqual(choose_units_to_advance(player, battlefield, 0), [])
+
+    def test_main_line_infantry_attacks_shared_skirmish_same_slot(self):
+        battlefield = Battlefield()
+        attacker = BattleUnit(
+            card=self.make_card("步兵", attack=2),
+            current_hp=3,
+            current_line=Line.MAIN,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        target = BattleUnit(
             card=self.make_card("正面敌人", health=3),
             current_hp=3,
             current_line=Line.SKIRMISH,
@@ -150,10 +194,31 @@ class RuleTuningTests(unittest.TestCase):
             slot=2,
             deployed_this_turn=False,
         )
-        battlefield.p1_skirmish.append(attacker)
-        battlefield.p2_skirmish.extend([aligned_target, offset_target])
+        battlefield.p1_main.append(attacker)
+        battlefield.p2_skirmish.extend([target, offset_target])
 
-        self.assertEqual(find_attack_targets(battlefield, attacker, 0), [aligned_target])
+        self.assertEqual(find_attack_targets(battlefield, attacker, 0), [target])
+
+    def test_shared_skirmish_infantry_attacks_adjacent_enemy_skirmisher(self):
+        battlefield = Battlefield()
+        attacker = BattleUnit(
+            card=self.make_card("步兵", attack=2),
+            current_hp=3,
+            current_line=Line.SKIRMISH,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        target = BattleUnit(
+            card=self.make_card("相邻敌人", health=3),
+            current_hp=3,
+            current_line=Line.SKIRMISH,
+            slot=2,
+            deployed_this_turn=False,
+        )
+        battlefield.p1_skirmish.append(attacker)
+        battlefield.p2_skirmish.append(target)
+
+        self.assertEqual(find_attack_targets(battlefield, attacker, 0), [target])
 
     def test_skirmisher_range_two_can_attack_adjacent_offset(self):
         battlefield = Battlefield()
@@ -176,7 +241,7 @@ class RuleTuningTests(unittest.TestCase):
 
         self.assertEqual(find_attack_targets(battlefield, attacker, 0), [target])
 
-    def test_artillery_range_three_reaches_skirmish_but_not_enemy_main(self):
+    def test_artillery_range_three_reaches_shared_skirmish_and_enemy_main(self):
         battlefield = Battlefield()
         attacker = BattleUnit(
             card=self.make_card("火炮", unit_type=UnitType.ARTILLERY, deploy_line=Line.REAR, keywords=["远程"]),
@@ -203,7 +268,7 @@ class RuleTuningTests(unittest.TestCase):
         battlefield.p2_skirmish.append(skirmish_target)
         battlefield.p2_main.append(main_target)
 
-        self.assertEqual(find_attack_targets(battlefield, attacker, 0), [skirmish_target])
+        self.assertEqual(find_attack_targets(battlefield, attacker, 0), [skirmish_target, main_target])
 
     def test_flanking_cavalry_effective_range_is_three(self):
         battlefield = Battlefield()

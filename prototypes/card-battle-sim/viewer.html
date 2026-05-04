@@ -378,8 +378,7 @@ function renderUI() {
             </div>
             <div class="line skirmish" id="line-skirmish">
                 <div class="line-label">散 兵 线</div>
-                <div class="units-container" style="border-bottom:1px dashed #8b6f47;padding-bottom:6px;margin-bottom:4px;" id="skirmish-p2"></div>
-                <div class="units-container" id="skirmish-p1"></div>
+                <div class="units-container" id="skirmish-shared"></div>
             </div>
             <div class="line" id="line-p1-main">
                 <div class="line-label">我·主力</div>
@@ -442,6 +441,26 @@ function slotsHTML(units, isP2) {
     return slots.map(u => u ? unitHTML(u, isP2) : `<div class="slot-empty"></div>`).join("");
 }
 
+function sharedSkirmishHTML(p1Units, p2Units) {
+    const slots = Array.from({ length: 4 }, () => null);
+    p2Units.forEach((u, index) => {
+        const slot = Number.isInteger(u.slot) ? u.slot : index;
+        if (slot >= 0 && slot < 4 && slots[slot] === null) {
+            slots[slot] = { unit: u, isP2: true };
+        }
+    });
+    p1Units.forEach((u, index) => {
+        const slot = Number.isInteger(u.slot) ? u.slot : index;
+        if (slot >= 0 && slot < 4 && slots[slot] === null) {
+            slots[slot] = { unit: u, isP2: false };
+        }
+    });
+    return slots.map(entry => entry
+        ? unitHTML(entry.unit, entry.isP2)
+        : `<div class="slot-empty"></div>`
+    ).join("");
+}
+
 function renderStep(idx) {
     currentStep = Math.max(0, Math.min(idx, MATCH_DATA.timeline.length - 1));
     const node = MATCH_DATA.timeline[currentStep];
@@ -475,10 +494,8 @@ function renderStep(idx) {
         slotsHTML(s.p2.rear, true);
     document.querySelector("#line-p2-main .units-container").innerHTML =
         slotsHTML(s.p2.main, true);
-    document.getElementById("skirmish-p2").innerHTML =
-        slotsHTML(s.p2.skirmish, true);
-    document.getElementById("skirmish-p1").innerHTML =
-        slotsHTML(s.p1.skirmish, false);
+    document.getElementById("skirmish-shared").innerHTML =
+        sharedSkirmishHTML(s.p1.skirmish, s.p2.skirmish);
     document.querySelector("#line-p1-main .units-container").innerHTML =
         slotsHTML(s.p1.main, false);
     document.querySelector("#line-p1-rear .units-container").innerHTML =
