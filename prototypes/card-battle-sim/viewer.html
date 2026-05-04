@@ -173,6 +173,11 @@ header .subtitle { font-size: 13px; color: #8b6f47; margin-top: 6px; }
 .unit.faction-法兰西 { border-color: #4a6fa5; }
 .unit.faction-普鲁士 { border-color: #1a1a1a; }
 .unit.faction-俄罗斯 { border-color: #2d5a3d; }
+.unit.type-infantry { background: linear-gradient(135deg, #d8e7f2 0%, #8fb0c5 100%); }
+.unit.type-skirmisher { background: linear-gradient(135deg, #dff0cf 0%, #8daf64 100%); }
+.unit.type-cavalry { background: linear-gradient(135deg, #f2d5d1 0%, #c06a5b 100%); }
+.unit.type-artillery { background: linear-gradient(135deg, #ece1be 0%, #b79a4a 100%); }
+.unit.type-guard { background: linear-gradient(135deg, #eadcf4 0%, #9f75bd 100%); }
 
 .unit .cost {
     position: absolute;
@@ -412,12 +417,22 @@ function factionClass(faction) {
     return "france";
 }
 
+function unitTypeClass(type) {
+    if (type === "线列步兵") return "type-infantry";
+    if (type === "散兵") return "type-skirmisher";
+    if (type === "骑兵") return "type-cavalry";
+    if (type === "炮兵") return "type-artillery";
+    if (type === "近卫") return "type-guard";
+    return "type-infantry";
+}
+
 function unitHTML(u, isP2) {
     const damaged = u.current_hp < u.max_hp;
     const hpClass = damaged ? "damaged" : "full";
     const kw = (u.keywords || []).filter(k => !k.startsWith("光环")).slice(0, 3).join("·");
+    const typeClass = unitTypeClass(u.type);
     return `
-        <div class="unit ${isP2 ? 'p2-unit' : ''} faction-${u.name.includes('俄') || u.name.includes('哥萨克') || u.name.includes('库图') || u.name.includes('巴格') || u.name.includes('普拉') || u.name.includes('独角') || u.name.includes('莫斯科') || u.name.includes('帝国大军') || u.name.includes('东正') || u.name.includes('西伯') || u.name.includes('猎兵团') ? '俄罗斯' : (u.name.includes('普鲁') || u.name.includes('耶格') || u.name.includes('黑色') || u.name.includes('死骑') || u.name.includes('布吕') || u.name.includes('西里') ? '普鲁士' : '法兰西')}">
+        <div class="unit ${typeClass} ${isP2 ? 'p2-unit' : ''} faction-${u.name.includes('俄') || u.name.includes('哥萨克') || u.name.includes('库图') || u.name.includes('巴格') || u.name.includes('普拉') || u.name.includes('独角') || u.name.includes('莫斯科') || u.name.includes('帝国大军') || u.name.includes('东正') || u.name.includes('西伯') || u.name.includes('猎兵团') ? '俄罗斯' : (u.name.includes('普鲁') || u.name.includes('耶格') || u.name.includes('黑色') || u.name.includes('死骑') || u.name.includes('布吕') || u.name.includes('西里') ? '普鲁士' : '法兰西')}">
             <div class="cost">${u.cost}</div>
             <div class="name">${u.name}</div>
             <div class="type">${u.type}</div>
