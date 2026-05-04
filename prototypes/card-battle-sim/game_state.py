@@ -9,7 +9,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 from cards import Card, Line, Faction
 import random
 
@@ -20,6 +20,7 @@ class BattleUnit:
     card: Card
     current_hp: int
     current_line: Line
+    slot: int = 0
     has_acted_this_turn: bool = False
     deployed_this_turn: bool = True
     has_used_evade: bool = False
@@ -70,8 +71,9 @@ class Player:
 
 @dataclass
 class Battlefield:
-    """战场，管理三条线"""
+    """战场，管理双方三条线，每条线有 4 个横向槽位。"""
     LINE_CAPACITY = 4
+    SLOT_PRIORITY = (1, 2, 0, 3)
 
     p1_rear: List[BattleUnit] = field(default_factory=list)
     p1_main: List[BattleUnit] = field(default_factory=list)
@@ -94,9 +96,52 @@ class Battlefield:
             Line.SKIRMISH: self.p2_skirmish,
         }[line]
 
-    def can_deploy(self, player_idx: int, line: Line) -> bool:
-        """该线是否还有空位"""
-        return len(self.get_line(player_idx, line)) < self.LINE_CAPACITY
+    def occupied_slots(self, player_idx: int, line: Line) -> set[int]:
+        """返回指定线已被占用的槽位。"""
+        return {unit.slot for unit in self.get_line(player_idx, line)}
+
+    def is_slot_empty(self, player_idx: int, line: Line, slot: int) -> bool:
+        """指定槽位是否可用。"""
+        return 0 <= slot < self.LINE_CAPACITY and slot not in self.occupied_slots(player_idx, line)
+
+    def choose_deploy_slot(self, player_idx: int, line: Line) -> Optional[int]:
+        """AI 默认部署槽位：优先中路，再到边路。"""
+        for slot in self.SLOT_PRIORITY:
+            if self.is_slot_empty(player_idx, line, slot):
+                return slot
+        return None
+
+    def can_deploy(self, player_idx: int, line: Line, slot: Optional[int] = None) -> bool:
+        """该线或指定槽位是否还有空位。"""
+        if slot is not None:
+            return self.is_slot_empty(player_idx, line, slot)
+        return self.choose_deploy_slot(player_idx, line) is not None
+
+    def sort_line(self, player_idx: int, line: Line):
+        """按横向槽位排序，保证日志、AI 和导出稳定。"""
+        self.get_line(player_idx, line).sort(key=lambda unit: unit.slot)
+
+    def row_index(self, player_idx: int, line: Line) -> int:
+        """从 P1 视角返回二维战场行号。"""
+        if player_idx == 0:
+            return {
+                Line.REAR: 0,
+                Line.MAIN: 1,
+                Line.SKIRMISH: 2,
+            }[line]
+        return {
+            Line.SKIRMISH: 3,
+            Line.MAIN: 4,
+            Line.REAR: 5,
+        }[line]
+
+    def distance(self, attacker_player_idx: int, attacker: BattleUnit, target: BattleUnit) -> int:
+        """返回攻击者到敌方目标的曼哈顿距离。"""
+        target_player_idx = 1 - attacker_player_idx
+        row_delta = abs(self.row_index(attacker_player_idx, attacker.current_line)
+                        - self.row_index(target_player_idx, target.current_line))
+        slot_delta = abs(attacker.slot - target.slot)
+        return row_delta + slot_delta
 
     def cleanup_dead(self):
         """清理所有阵亡单位"""

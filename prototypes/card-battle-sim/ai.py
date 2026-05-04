@@ -59,7 +59,7 @@ def choose_units_to_advance(
     """
     advancers = []
     main_line = battlefield.get_line(player_idx, Line.MAIN)
-    skirmish_capacity = Battlefield.LINE_CAPACITY - len(battlefield.get_line(player_idx, Line.SKIRMISH))
+    skirmish_capacity = Battlefield.LINE_CAPACITY - len(battlefield.occupied_slots(player_idx, Line.SKIRMISH))
     
     if skirmish_capacity <= 0:
         return []
@@ -68,7 +68,8 @@ def choose_units_to_advance(
     candidates = [u for u in main_line 
                   if not u.deployed_this_turn  # 部署当回合不能前压（除非有冲锋）
                   and u.card.unit_type in (UnitType.INFANTRY, UnitType.SKIRMISHER)
-                  and u.card.cost <= 4]  # 不前压精锐
+                  and u.card.cost <= 4
+                  and battlefield.can_deploy(player_idx, Line.SKIRMISH, u.slot)]  # 不隐式换槽
     
     # 按 cost 升序（前压便宜的先去送）
     candidates.sort(key=lambda u: u.card.cost)

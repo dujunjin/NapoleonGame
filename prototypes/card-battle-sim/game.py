@@ -62,8 +62,8 @@ def advance_max_orders(current_max_orders: int, turn_num: int) -> int:
     return current_max_orders
 
 
-def deploy_card(player: Player, card: Card, battlefield: Battlefield, 
-                player_idx: int, log: list = None) -> bool:
+def deploy_card(player: Player, card: Card, battlefield: Battlefield,
+                player_idx: int, log: list = None, slot: int = None) -> bool:
     """部署一张卡到战场
     
     根据卡牌的 deploy_line 部署到对应线（散兵线 / 主力 / 后方）
@@ -72,21 +72,24 @@ def deploy_card(player: Player, card: Card, battlefield: Battlefield,
     - "光环+1攻" / "光环+1血"：所有其他友军获得永久增益
     """
     target_line = card.deploy_line
-    if not battlefield.can_deploy(player_idx, target_line):
+    target_slot = slot if slot is not None else battlefield.choose_deploy_slot(player_idx, target_line)
+    if target_slot is None or not battlefield.can_deploy(player_idx, target_line, target_slot):
         return False
     
     unit = BattleUnit(
         card=card,
         current_hp=card.health,
         current_line=target_line,
+        slot=target_slot,
         deployed_this_turn=True,
     )
     battlefield.get_line(player_idx, target_line).append(unit)
+    battlefield.sort_line(player_idx, target_line)
     player.hand.remove(card)
     player.current_orders -= card.cost
     
     if log is not None:
-        log.append(f"  ▶ {player.name} 部署 {card.name} 到 {target_line.value}")
+        log.append(f"  ▶ {player.name} 部署 {card.name} 到 {target_line.value} 槽位{target_slot + 1}")
     
     # === 部署效果 ===
     for kw in card.keywords:
@@ -175,17 +178,18 @@ def play_turn(
     for unit in advancers:
         if active.current_orders < 1:
             break
-        if not battlefield.can_deploy(active_idx, Line.SKIRMISH):
-            break
+        if not battlefield.can_deploy(active_idx, Line.SKIRMISH, unit.slot):
+            continue
         # 从主力线移除
         battlefield.get_line(active_idx, Line.MAIN).remove(unit)
         # 加入散兵线
         unit.current_line = Line.SKIRMISH
         battlefield.get_line(active_idx, Line.SKIRMISH).append(unit)
+        battlefield.sort_line(active_idx, Line.SKIRMISH)
         active.current_orders -= 1
         stats["advances"] = stats.get("advances", 0) + 1
         if log is not None:
-            log.append(f"  ⇒ {unit.card.name} 前压到散兵线（-1军令）")
+            log.append(f"  ⇒ {unit.card.name} 前压到散兵线 槽位{unit.slot + 1}（-1军令）")
     
     # 4. 攻击阶段
     hq_damage = ai_attack_phase(active, opponent, battlefield, active_idx, log)

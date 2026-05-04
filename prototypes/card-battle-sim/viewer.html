@@ -124,9 +124,19 @@ header .subtitle { font-size: 13px; color: #8b6f47; margin-top: 6px; }
 }
 .units-container {
     flex: 1;
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 90px);
     gap: 8px;
-    flex-wrap: wrap;
+    align-items: center;
+    min-height: 110px;
+}
+.slot-empty {
+    width: 90px;
+    height: 110px;
+    border: 1px dashed rgba(139,111,71,0.45);
+    border-radius: 3px;
+    background: rgba(0,0,0,0.12);
+    box-sizing: border-box;
 }
 
 .line.skirmish {
@@ -421,6 +431,17 @@ function unitHTML(u, isP2) {
     `;
 }
 
+function slotsHTML(units, isP2) {
+    const slots = Array.from({ length: 4 }, () => null);
+    units.forEach((u, index) => {
+        const slot = Number.isInteger(u.slot) ? u.slot : index;
+        if (slot >= 0 && slot < 4 && slots[slot] === null) {
+            slots[slot] = u;
+        }
+    });
+    return slots.map(u => u ? unitHTML(u, isP2) : `<div class="slot-empty"></div>`).join("");
+}
+
 function renderStep(idx) {
     currentStep = Math.max(0, Math.min(idx, MATCH_DATA.timeline.length - 1));
     const node = MATCH_DATA.timeline[currentStep];
@@ -451,17 +472,17 @@ function renderStep(idx) {
     
     // 战线
     document.querySelector("#line-p2-rear .units-container").innerHTML =
-        s.p2.rear.map(u => unitHTML(u, true)).join("");
+        slotsHTML(s.p2.rear, true);
     document.querySelector("#line-p2-main .units-container").innerHTML =
-        s.p2.main.map(u => unitHTML(u, true)).join("");
+        slotsHTML(s.p2.main, true);
     document.getElementById("skirmish-p2").innerHTML =
-        s.p2.skirmish.map(u => unitHTML(u, true)).join("");
+        slotsHTML(s.p2.skirmish, true);
     document.getElementById("skirmish-p1").innerHTML =
-        s.p1.skirmish.map(u => unitHTML(u, false)).join("");
+        slotsHTML(s.p1.skirmish, false);
     document.querySelector("#line-p1-main .units-container").innerHTML =
-        s.p1.main.map(u => unitHTML(u, false)).join("");
+        slotsHTML(s.p1.main, false);
     document.querySelector("#line-p1-rear .units-container").innerHTML =
-        s.p1.rear.map(u => unitHTML(u, false)).join("");
+        slotsHTML(s.p1.rear, false);
     
     // 累积日志（显示从开始到当前步骤的所有日志）
     const logPanel = document.getElementById("log-panel");

@@ -8,9 +8,33 @@
 4. 侧翼迂回：散兵线的轻骑兵可以无视守卫直击后方炮兵
 """
 
-from typing import List, Optional, Tuple
-from cards import Card, UnitType, Line
+from typing import List, Tuple
+from cards import UnitType, Line
 from game_state import BattleUnit, Battlefield
+
+
+def attack_range(unit: BattleUnit) -> int:
+    """返回单位在二维战场上的攻击距离。"""
+    if unit.card.unit_type == UnitType.ARTILLERY:
+        return 3
+    if unit.card.unit_type == UnitType.SKIRMISHER:
+        return 2
+    if unit.card.unit_type == UnitType.CAVALRY:
+        return 2 if "侧翼迂回" in unit.card.keywords else 1
+    return 1
+
+
+def _targets_in_range(
+    battlefield: Battlefield,
+    attacker: BattleUnit,
+    attacker_player_idx: int,
+    targets: List[BattleUnit],
+) -> List[BattleUnit]:
+    max_range = attack_range(attacker)
+    return [
+        target for target in targets
+        if battlefield.distance(attacker_player_idx, attacker, target) <= max_range
+    ]
 
 
 def calculate_damage(attacker: BattleUnit, defender: BattleUnit) -> Tuple[int, int]:
@@ -79,58 +103,48 @@ def find_attack_targets(
     
     规则优先级：
     1. 守卫优先：敌方场上有守卫单位时，必须先打守卫
-    2. 侧翼迂回：散兵线的骑兵带"侧翼迂回"，可以无视主力线直击后方炮兵
-    3. 远程：后方炮兵可以攻击散兵线和主力线（不能攻击对方后方）
-    4. 散兵线：在散兵线的单位攻击敌方散兵线和敌方主力线
-    5. 主力线：在主力线的单位优先攻击散兵线（如果有），否则攻击敌方主力线
+    2. 二维距离：每个单位按 row + slot 的曼哈顿距离筛选目标
+    3. 远程：后方炮兵可以攻击距离内的散兵线和主力线，不能攻击对方后方
+    4. 正面优先：优先攻击敌方散兵线，其次主力线
     """
     opp_idx = 1 - attacker_player_idx
     
     # 守卫单位（必须先打）
     guards_in_main = [u for u in battlefield.get_line(opp_idx, Line.MAIN) 
                       if "守卫" in u.card.keywords]
-    
-    # 侧翼迂回（在散兵线的骑兵）
-    if (attacker.current_line == Line.SKIRMISH 
-        and "侧翼迂回" in attacker.card.keywords
-        and attacker.card.unit_type == UnitType.CAVALRY):
-        # 后方炮兵优先目标
-        rear_artillery = [u for u in battlefield.get_line(opp_idx, Line.REAR)]
-        if rear_artillery:
-            return rear_artillery
+    guards_in_range = _targets_in_range(battlefield, attacker, attacker_player_idx, guards_in_main)
     
     # 远程炮兵（在后方线）
     if (attacker.current_line == Line.REAR 
         and "远程" in attacker.card.keywords
         and attacker.card.unit_type == UnitType.ARTILLERY):
-        # 可以打散兵线和主力线
-        if guards_in_main:
-            return guards_in_main
+        if guards_in_range:
+            return guards_in_range
         targets = (battlefield.get_line(opp_idx, Line.SKIRMISH) 
                    + battlefield.get_line(opp_idx, Line.MAIN))
-        return targets
+        return _targets_in_range(battlefield, attacker, attacker_player_idx, targets)
     
-    # 散兵线单位
-    if attacker.current_line == Line.SKIRMISH:
-        # 优先打敌方散兵线
-        opp_skirmish = battlefield.get_line(opp_idx, Line.SKIRMISH)
-        if opp_skirmish:
-            return opp_skirmish
-        if guards_in_main:
-            return guards_in_main
-        return battlefield.get_line(opp_idx, Line.MAIN)
+    if attacker.current_line == Line.REAR:
+        return []
     
-    # 主力线单位
-    if attacker.current_line == Line.MAIN:
-        # 必须先解决敌方散兵线
-        opp_skirmish = battlefield.get_line(opp_idx, Line.SKIRMISH)
-        if opp_skirmish:
-            return opp_skirmish
-        if guards_in_main:
-            return guards_in_main
-        return battlefield.get_line(opp_idx, Line.MAIN)
+    # 主力线 / 散兵线单位：先接触敌方散兵线，再处理守卫和主力线。
+    opp_skirmish = _targets_in_range(
+        battlefield, attacker, attacker_player_idx, battlefield.get_line(opp_idx, Line.SKIRMISH)
+    )
+    if opp_skirmish:
+        return opp_skirmish
+    if guards_in_range:
+        return guards_in_range
+    opp_main = _targets_in_range(
+        battlefield, attacker, attacker_player_idx, battlefield.get_line(opp_idx, Line.MAIN)
+    )
+    if opp_main:
+        return opp_main
+    opp_rear = _targets_in_range(
+        battlefield, attacker, attacker_player_idx, battlefield.get_line(opp_idx, Line.REAR)
+    )
+    return opp_rear
     
-    return []
 
 
 def can_attack_hq(

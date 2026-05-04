@@ -27,6 +27,7 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "current_hp": u.current_hp,
             "max_hp": u.card.health,
             "cost": u.card.cost,
+            "slot": u.slot,
             "keywords": list(u.card.keywords),
         }
     
