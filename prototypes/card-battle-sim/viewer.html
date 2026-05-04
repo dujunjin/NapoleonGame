@@ -353,16 +353,18 @@ function renderUI() {
             <div class="player-info" id="p1-info">
                 <span><span class="label">玩家：</span><span class="value">${MATCH_DATA.timeline[0].state.p1.name}</span></span>
                 <span><span class="label">HQ：</span><span class="value" id="p1-hq">25</span></span>
-                <span><span class="label">军令：</span><span class="value" id="p1-orders">2/2</span></span>
+                <span><span class="label">军令：</span><span class="value" id="p1-orders">1/1</span></span>
                 <span><span class="label">手牌：</span><span class="value" id="p1-hand">4</span></span>
                 <span><span class="label">牌库：</span><span class="value" id="p1-deck">26</span></span>
+                <span><span class="label">弃牌：</span><span class="value" id="p1-discard">0</span></span>
             </div>
             <div class="player-info" id="p2-info">
                 <span><span class="label">玩家：</span><span class="value">${MATCH_DATA.timeline[0].state.p2.name}</span></span>
                 <span><span class="label">HQ：</span><span class="value" id="p2-hq">25</span></span>
-                <span><span class="label">军令：</span><span class="value" id="p2-orders">2/2</span></span>
-                <span><span class="label">手牌：</span><span class="value" id="p2-hand">6</span></span>
-                <span><span class="label">牌库：</span><span class="value" id="p2-deck">24</span></span>
+                <span><span class="label">军令：</span><span class="value" id="p2-orders">1/1</span></span>
+                <span><span class="label">手牌：</span><span class="value" id="p2-hand">5</span></span>
+                <span><span class="label">牌库：</span><span class="value" id="p2-deck">25</span></span>
+                <span><span class="label">弃牌：</span><span class="value" id="p2-discard">0</span></span>
             </div>
         </div>
 
@@ -493,10 +495,12 @@ function renderStep(idx) {
     document.getElementById("p1-orders").textContent = s.p1.orders;
     document.getElementById("p1-hand").textContent = s.p1.hand_size;
     document.getElementById("p1-deck").textContent = s.p1.deck_size;
+    document.getElementById("p1-discard").textContent = s.p1.discard_size ?? 0;
     document.getElementById("p2-hq").textContent = s.p2.hq_hp;
     document.getElementById("p2-orders").textContent = s.p2.orders;
     document.getElementById("p2-hand").textContent = s.p2.hand_size;
     document.getElementById("p2-deck").textContent = s.p2.deck_size;
+    document.getElementById("p2-discard").textContent = s.p2.discard_size ?? 0;
     
     document.getElementById("p1-hq-big").textContent = s.p1.hq_hp;
     document.getElementById("p2-hq-big").textContent = s.p2.hq_hp;

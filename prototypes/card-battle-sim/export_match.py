@@ -13,7 +13,8 @@ from cards import Faction, DECK_BUILDERS, Line
 from game_state import Player, Battlefield, BattleUnit
 from game import (
     play_turn, GameResult,
-    STARTING_HQ_HP, STARTING_HAND_SIZE, INITIAL_ORDERS, MAX_TURNS
+    STARTING_HQ_HP, STARTING_HAND_SIZE, SECOND_PLAYER_BONUS_DRAW,
+    INITIAL_ORDERS, MAX_TURNS
 )
 
 
@@ -39,6 +40,7 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "orders": f"{p1.current_orders}/{p1.max_orders}",
             "hand_size": len(p1.hand),
             "deck_size": len(p1.deck),
+            "discard_size": len(p1.discard_pile),
             "rear": [unit_to_dict(u) for u in bf.p1_rear],
             "main": [unit_to_dict(u) for u in bf.p1_main],
             "skirmish": [unit_to_dict(u) for u in bf.p1_skirmish],
@@ -50,6 +52,7 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "orders": f"{p2.current_orders}/{p2.max_orders}",
             "hand_size": len(p2.hand),
             "deck_size": len(p2.deck),
+            "discard_size": len(p2.discard_pile),
             "rear": [unit_to_dict(u) for u in bf.p2_rear],
             "main": [unit_to_dict(u) for u in bf.p2_main],
             "skirmish": [unit_to_dict(u) for u in bf.p2_skirmish],
@@ -74,7 +77,7 @@ def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict
     p1.current_orders = INITIAL_ORDERS
     p2.max_orders = INITIAL_ORDERS
     p2.current_orders = INITIAL_ORDERS
-    p2.draw(2)  # 后手 +2
+    p2.draw(SECOND_PLAYER_BONUS_DRAW)
     
     battlefield = Battlefield()
     

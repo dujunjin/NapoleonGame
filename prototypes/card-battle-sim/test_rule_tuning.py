@@ -1,8 +1,10 @@
 import unittest
 
 from cards import Card, Faction, Line, UnitType
+from cards import DECK_BUILDERS
 from combat import execute_attack, find_attack_targets
-from game import deploy_card, play_turn
+from game import deploy_card, play_turn, advance_max_orders
+from export_match import play_and_export
 from ai import choose_units_to_advance
 from game_state import Battlefield, BattleUnit, Player
 
@@ -20,15 +22,59 @@ class RuleTuningTests(unittest.TestCase):
             keywords=keywords or [],
         )
 
-    def test_turn_draws_two_cards_when_hand_is_low(self):
+    def test_all_faction_decks_have_thirty_cards(self):
+        self.assertEqual({faction: len(builder()) for faction, builder in DECK_BUILDERS.items()}, {
+            Faction.FRANCE: 30,
+            Faction.PRUSSIA: 30,
+            Faction.RUSSIA: 30,
+        })
+
+    def test_initial_deal_is_four_cards_with_one_extra_for_second_player(self):
+        data = play_and_export(Faction.FRANCE, Faction.PRUSSIA, seed=1)
+        initial = data["timeline"][0]["state"]
+
+        self.assertEqual(initial["p1"]["hand_size"], 4)
+        self.assertEqual(initial["p1"]["deck_size"], 26)
+        self.assertEqual(initial["p1"]["orders"], "1/1")
+        self.assertEqual(initial["p2"]["hand_size"], 5)
+        self.assertEqual(initial["p2"]["deck_size"], 25)
+        self.assertEqual(initial["p2"]["orders"], "1/1")
+
+    def test_turn_draws_two_cards_up_to_seven_card_hand_limit(self):
         player = Player(
             name="P1",
             faction=Faction.FRANCE,
             deck=[self.make_card("补给1", cost=99), self.make_card("补给2", cost=99)],
-            hand=[self.make_card("手牌", cost=99)],
+            hand=[
+                self.make_card("手牌1", cost=99),
+                self.make_card("手牌2", cost=99),
+                self.make_card("手牌3", cost=99),
+                self.make_card("手牌4", cost=99),
+                self.make_card("手牌5", cost=99),
+                self.make_card("手牌6", cost=99),
+            ],
             hq_hp=25,
-            max_orders=2,
-            current_orders=2,
+            max_orders=1,
+            current_orders=1,
+        )
+        opponent = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=25)
+        log = []
+
+        play_turn(player, opponent, Battlefield(), 0, 1, log)
+
+        self.assertTrue(any("抽到 补给1" in entry for entry in log))
+        self.assertEqual(len(player.hand), 7)
+        self.assertEqual([card.name for card in player.deck], ["补给2"])
+
+    def test_turn_draws_two_cards_when_hand_has_room(self):
+        player = Player(
+            name="P1",
+            faction=Faction.FRANCE,
+            deck=[self.make_card("补给1", cost=99), self.make_card("补给2", cost=99)],
+            hand=[self.make_card("手牌1", cost=99), self.make_card("手牌2", cost=99)],
+            hq_hp=25,
+            max_orders=1,
+            current_orders=1,
         )
         opponent = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=25)
         log = []
@@ -36,41 +82,46 @@ class RuleTuningTests(unittest.TestCase):
         play_turn(player, opponent, Battlefield(), 0, 1, log)
 
         self.assertTrue(any("抽到 补给1、补给2" in entry for entry in log))
-        self.assertEqual(len(player.hand), 3)
+        self.assertEqual(len(player.hand), 4)
 
-    def test_orders_growth_slows_after_six_orders(self):
+    def test_full_hand_draws_no_cards(self):
         player = Player(
             name="P1",
             faction=Faction.FRANCE,
-            deck=[],
-            hand=[],
+            deck=[self.make_card("补给1", cost=99), self.make_card("补给2", cost=99)],
+            hand=[self.make_card(f"手牌{i}", cost=99) for i in range(7)],
             hq_hp=25,
-            max_orders=6,
-            current_orders=6,
+            max_orders=1,
+            current_orders=1,
         )
         opponent = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=25)
         log = []
 
-        play_turn(player, opponent, Battlefield(), 0, 5, log)
+        play_turn(player, opponent, Battlefield(), 0, 1, log)
 
-        self.assertEqual(player.max_orders, 6)
-        self.assertTrue(any("军令: 6/6" in entry for entry in log))
+        self.assertTrue(any("抽到 (手牌已满)" in entry for entry in log))
+        self.assertEqual(len(player.hand), 7)
+        self.assertEqual(len(player.deck), 2)
 
-    def test_orders_increase_every_other_turn_after_six_orders(self):
+    def test_orders_start_at_one_and_increase_by_one_each_turn_to_sixteen(self):
+        self.assertEqual(advance_max_orders(1, 1), 1)
+        self.assertEqual(advance_max_orders(1, 2), 2)
+        self.assertEqual(advance_max_orders(15, 16), 16)
+        self.assertEqual(advance_max_orders(16, 17), 16)
+
+    def test_deployed_card_moves_to_discard_pile(self):
         player = Player(
             name="P1",
             faction=Faction.FRANCE,
-            deck=[],
-            hand=[],
-            hq_hp=25,
-            max_orders=6,
-            current_orders=6,
+            hand=[self.make_card("使用的牌", cost=1)],
+            current_orders=1,
         )
-        opponent = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=25)
+        battlefield = Battlefield()
 
-        play_turn(player, opponent, Battlefield(), 0, 6, [])
+        self.assertTrue(deploy_card(player, player.hand[0], battlefield, 0))
 
-        self.assertEqual(player.max_orders, 7)
+        self.assertEqual(player.hand, [])
+        self.assertEqual([card.name for card in player.discard_pile], ["使用的牌"])
 
     def test_death_log_names_the_dead_unit(self):
         attacker = BattleUnit(

@@ -2,8 +2,8 @@
 拿破仑卡牌游戏规则模拟器 - 主对局循环
 
 回合流程：
-1. 抽牌（手牌不足时补抽 2 张，否则抽 1 张）
-2. 恢复军令（6 点前每回合 +1；6 点后每 2 回合 +1；封顶 10）
+1. 抽牌（每轮抽 2 张，手牌上限 7）
+2. 恢复军令（第 1 回合 1 点；每回合 +1；封顶 16）
 3. 部署阶段（打牌）
 4. 攻击阶段
 5. 检查胜负
@@ -21,14 +21,13 @@ from cards import Line, UnitType
 # ========== 配置 ==========
 STARTING_HQ_HP = 25         # HQ 起始血量
 STARTING_HAND_SIZE = 4      # 起手抽牌
-INITIAL_ORDERS = 2          # 起始军令
+SECOND_PLAYER_BONUS_DRAW = 1 # 后手额外起手牌
+TURN_DRAW_COUNT = 2         # 每轮发牌
+MAX_HAND_SIZE = 7           # 手牌上限
+INITIAL_ORDERS = 1          # 起始军令
 ORDERS_GROWTH_PER_TURN = 1  # 每回合军令+1
-ORDERS_SLOWDOWN_AT = 6      # 达到 6 后军令增长放缓
-MAX_ORDERS = 10             # 军令上限
+MAX_ORDERS = 16             # 军令上限
 MAX_TURNS = 60              # 防止死循环
-LOW_HAND_THRESHOLD = 2       # 手牌 <=2 时触发补给抽牌
-LOW_HAND_DRAW_COUNT = 2      # 手牌饥饿时抽 2
-NORMAL_DRAW_COUNT = 1       # 正常抽 1
 
 
 @dataclass
@@ -43,23 +42,15 @@ class GameResult:
 
 
 def draw_for_turn(player: Player) -> List[Card]:
-    """回合开始抽牌：手牌饥饿时补抽 2 张，否则抽 1 张。"""
-    draw_count = LOW_HAND_DRAW_COUNT if len(player.hand) <= LOW_HAND_THRESHOLD else NORMAL_DRAW_COUNT
-    return player.draw(draw_count)
+    """回合开始抽 2 张；手牌达到上限时不再发牌。"""
+    return player.draw(TURN_DRAW_COUNT)
 
 
 def advance_max_orders(current_max_orders: int, turn_num: int) -> int:
-    """计算本回合军令上限。
-
-    6 点前保持早期展开速度；达到 6 后只在偶数回合增长，降低第 8 回合后的爆发总量。
-    """
-    if current_max_orders >= MAX_ORDERS:
-        return MAX_ORDERS
-    if current_max_orders < ORDERS_SLOWDOWN_AT:
-        return min(current_max_orders + ORDERS_GROWTH_PER_TURN, MAX_ORDERS)
-    if turn_num % 2 == 0:
-        return min(current_max_orders + ORDERS_GROWTH_PER_TURN, MAX_ORDERS)
-    return current_max_orders
+    """计算本回合军令上限：第 1 回合为 1，之后每回合 +1，封顶 16。"""
+    if turn_num <= 1:
+        return min(max(current_max_orders, INITIAL_ORDERS), MAX_ORDERS)
+    return min(current_max_orders + ORDERS_GROWTH_PER_TURN, MAX_ORDERS)
 
 
 def deploy_card(player: Player, card: Card, battlefield: Battlefield,
@@ -86,6 +77,7 @@ def deploy_card(player: Player, card: Card, battlefield: Battlefield,
     battlefield.get_line(player_idx, target_line).append(unit)
     battlefield.sort_line(player_idx, target_line)
     player.hand.remove(card)
+    player.discard_pile.append(card)
     player.current_orders -= card.cost
     
     if log is not None:
@@ -156,7 +148,12 @@ def play_turn(
         unit.deployed_this_turn = False
     
     if log is not None:
-        drawn_names = "、".join(card.name for card in drawn) if drawn else "(牌库空)"
+        if drawn:
+            drawn_names = "、".join(card.name for card in drawn)
+        elif len(active.hand) >= MAX_HAND_SIZE:
+            drawn_names = "(手牌已满)"
+        else:
+            drawn_names = "(牌库空)"
         log.append(f"  抽到 {drawn_names}")
         log.append(f"  军令: {active.current_orders}/{active.max_orders}")
         log.append(f"  手牌: {[c.name for c in active.hand]}")
@@ -230,8 +227,8 @@ def play_one_game(p1_faction: Faction = Faction.FRANCE,
     p1.current_orders = INITIAL_ORDERS
     p2.max_orders = INITIAL_ORDERS
     p2.current_orders = INITIAL_ORDERS
-    # 后手补偿：多抽 2 张（实验验证最佳，把先手胜率压到 ~52%）
-    p2.draw(2)
+    # 后手补偿：额外 1 张起手牌
+    p2.draw(SECOND_PLAYER_BONUS_DRAW)
     
     battlefield = Battlefield()
     

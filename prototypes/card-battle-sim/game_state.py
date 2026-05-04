@@ -51,18 +51,23 @@ class Player:
     faction: Faction
     deck: List[Card] = field(default_factory=list)
     hand: List[Card] = field(default_factory=list)
+    discard_pile: List[Card] = field(default_factory=list)
     hq_hp: int = 20
     max_orders: int = 0
     current_orders: int = 0
+    hand_limit: int = 7
 
     def draw(self, n: int = 1) -> List[Card]:
-        """抽 n 张牌，牌库空了就略过（不烧伤）"""
+        """抽 n 张牌；手牌满或牌库空了就略过（不烧伤，不洗弃牌堆）。"""
         drawn = []
         for _ in range(n):
-            if self.deck:
-                card = self.deck.pop(0)
-                self.hand.append(card)
-                drawn.append(card)
+            if len(self.hand) >= self.hand_limit:
+                break
+            if not self.deck:
+                break
+            card = self.deck.pop(0)
+            self.hand.append(card)
+            drawn.append(card)
         return drawn
 
     def shuffle_deck(self):
