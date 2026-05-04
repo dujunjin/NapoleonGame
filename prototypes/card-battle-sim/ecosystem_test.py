@@ -22,7 +22,8 @@ def test_matchup(p1_f: Faction, p2_f: Faction, n: int = 200) -> dict:
         results.append(r)
     
     p1_wins = sum(1 for r in results if r.winner == 0)
-    timeouts = sum(1 for r in results if "超时" in r.end_reason)
+    # 软超时：到达 MAX_TURNS 上限 → 倒计时结束判定
+    timeouts = sum(1 for r in results if r.end_reason.startswith("倒计时结束") or "超时" in r.end_reason)
     avg_turns = statistics.mean(r.turns for r in results)
     
     return {

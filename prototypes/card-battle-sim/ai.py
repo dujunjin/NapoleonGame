@@ -12,9 +12,9 @@
 
 import random
 from typing import List, Optional, Tuple
-from cards import Card, Line, UnitType
+from cards import Card, CardType, Line, UnitType
 from game_state import Player, Battlefield, BattleUnit
-from combat import find_attack_targets, can_attack_hq, calculate_damage
+from combat import find_attack_targets, can_attack_hq, calculate_damage, effective_attack
 
 
 def choose_cards_to_play(player: Player, battlefield: Battlefield, player_idx: int) -> List[Card]:
@@ -33,54 +33,73 @@ def choose_cards_to_play(player: Player, battlefield: Battlefield, player_idx: i
     budget = remaining_orders - reserve_for_advance
     
     hand_copy.sort(key=lambda c: c.cost)
-    
+
     for card in hand_copy:
         if card.cost > budget:
             continue
-        target_line = card.deploy_line
-        if not battlefield.can_deploy(player_idx, target_line):
-            continue
+        if card.card_type == CardType.EVENT:
+            if not _event_has_legal_target(card, battlefield, player_idx):
+                continue
+        else:
+            target_line = Line.REAR  # UNIT 卡只能从后方部署
+            if not battlefield.can_deploy(player_idx, target_line):
+                continue
         cards_to_play.append(card)
         budget -= card.cost
-    
+
     return cards_to_play
 
 
+def _event_has_legal_target(card: Card, battlefield: Battlefield, player_idx: int) -> bool:
+    """事件卡能否合法打出（是否有合法目标）"""
+    if card.event_effect == "buff_target_INF+1+2":
+        return any(u.card.unit_type == UnitType.INFANTRY
+                   for u in battlefield.all_units(player_idx))
+    return True
+
+
 def choose_units_to_advance(
-    player: Player, 
-    battlefield: Battlefield, 
-    player_idx: int
+    player: Player,
+    battlefield: Battlefield,
+    player_idx: int,
+    from_line: Line = Line.MAIN,
+    to_line: Line = Line.SKIRMISH,
 ) -> List[BattleUnit]:
-    """选择要从主力线前压到散兵线的单位
-    
+    """选择要前压的单位
+
     前压成本：1 军令/单位
     优先前压：步兵和散兵（推进控线）
     不前压：炮兵（远程）、高费精锐（保护）
     """
     advancers = []
-    main_line = battlefield.get_line(player_idx, Line.MAIN)
-    skirmish_capacity = Battlefield.LINE_CAPACITY - len(battlefield.occupied_slots(player_idx, Line.SKIRMISH))
-    
-    if skirmish_capacity <= 0:
+    source_line = battlefield.get_line(player_idx, from_line)
+    target_capacity = Battlefield.LINE_CAPACITY - len(battlefield.occupied_slots(player_idx, to_line))
+
+    if target_capacity <= 0:
         return []
-    
-    # 优先前压步兵（不是高费的精锐）
-    candidates = [u for u in main_line 
-                  if not u.deployed_this_turn  # 部署当回合不能前压（除非有冲锋）
-                  and u.card.unit_type in (UnitType.INFANTRY, UnitType.SKIRMISHER)
-                  and u.card.cost <= 4
-                  and battlefield.can_deploy(player_idx, Line.SKIRMISH, u.slot)]  # 不隐式换槽
-    
-    # 按 cost 升序（前压便宜的先去送）
+
+    # 后方→主力：推步兵 / 骑兵 / 散兵 / 近卫（炮兵留后方远程）
+    # 主力→散兵：步兵、骑兵、散兵都该上前线施压 HQ
+    if from_line == Line.REAR:
+        preferred_types = (UnitType.INFANTRY, UnitType.CAVALRY, UnitType.SKIRMISHER, UnitType.GUARD)
+    else:
+        preferred_types = (UnitType.INFANTRY, UnitType.CAVALRY, UnitType.SKIRMISHER)
+
+    candidates = [u for u in source_line
+                  if not u.deployed_this_turn
+                  and (u.card.unit_type in preferred_types
+                       or "阿尔科莱精神" in u.card.keywords)
+                  and battlefield.can_deploy(player_idx, to_line, u.slot)]
+
     candidates.sort(key=lambda u: u.card.cost)
-    
+
     for unit in candidates:
         if player.current_orders < 1:
             break
-        if len(advancers) >= skirmish_capacity:
+        if len(advancers) >= target_capacity:
             break
         advancers.append(unit)
-    
+
     return advancers
 
 
@@ -131,30 +150,31 @@ def ai_attack_phase(
 ) -> int:
     """执行攻击阶段，返回对 HQ 造成的总伤害"""
     from combat import execute_attack
-    
+    from game import MAX_ORDERS
+
     hq_damage = 0
     # 收集所有能行动的单位
     attackers = [u for u in battlefield.all_units(player_idx) if u.can_act]
-    
+
     for attacker in attackers:
         if attacker.is_dead:
             continue
-        
+
         # 优先攻击 HQ
         if can_attack_hq(battlefield, attacker, player_idx):
             # 远程炮兵打 HQ 需要额外 1 点军令（瞄准/校射成本）
             is_long_range_hq_strike = (
-                attacker.current_line == Line.REAR 
+                attacker.current_line == Line.REAR
                 and "远程" in attacker.card.keywords
             )
-            
+
             if is_long_range_hq_strike and player.current_orders < 1:
                 # 军令不够，这门炮打不了 HQ，看能否打场上目标
                 pass  # 落到下面的常规攻击逻辑
             else:
                 if is_long_range_hq_strike:
                     player.current_orders -= 1
-                dmg = attacker.card.attack
+                dmg = effective_attack(attacker, battlefield, player_idx)
                 opponent.hq_hp -= dmg
                 hq_damage += dmg
                 attacker.has_acted_this_turn = True
@@ -162,21 +182,51 @@ def ai_attack_phase(
                     cost_note = "（-1军令）" if is_long_range_hq_strike else ""
                     log.append(f"  💥 {attacker.card.name} 直击HQ，造成{dmg}点伤害{cost_note}")
                 continue
-        
+
         # 找目标
         legal_targets = find_attack_targets(battlefield, attacker, player_idx)
         if not legal_targets:
             continue
-        
+
         target = choose_attack_target(attacker, legal_targets, battlefield, player_idx)
         if target is None:
             continue
-        
-        result = execute_attack(attacker, target, log)
+
+        result = execute_attack(
+            attacker, target, log,
+            battlefield=battlefield,
+            attacker_player_idx=player_idx,
+        )
         if result["smash_overflow"]:
             opponent.hq_hp -= result["smash_overflow"]
             hq_damage += result["smash_overflow"]
+
+        # 焦土补给：死亡触发拥有者下回合 +1 max_orders
+        if result["defender_killed"] and "焦土补给" in target.card.keywords:
+            opponent.max_orders = min(opponent.max_orders + 1, MAX_ORDERS)
+            if log is not None:
+                log.append(f"    🔥 焦土补给：{opponent.name} 下回合 max_orders +1 (现 {opponent.max_orders})")
+        if result["attacker_killed"] and "焦土补给" in attacker.card.keywords:
+            player.max_orders = min(player.max_orders + 1, MAX_ORDERS)
+            if log is not None:
+                log.append(f"    🔥 焦土补给：{player.name} 下回合 max_orders +1 (现 {player.max_orders})")
+
+        # 熔岩战术：仅限 MAIN 线攻击后撤回 REAR
+        # （SKIRMISH 攻击不触发：哥萨克前压到散兵线后被困在前线）
+        if (not result["attacker_killed"]
+                and "熔岩战术" in attacker.card.keywords
+                and attacker.current_line == Line.MAIN):
+            rear_slot = battlefield.choose_deploy_slot(player_idx, Line.REAR)
+            if rear_slot is not None:
+                battlefield.get_line(player_idx, attacker.current_line).remove(attacker)
+                attacker.current_line = Line.REAR
+                attacker.slot = rear_slot
+                battlefield.get_line(player_idx, Line.REAR).append(attacker)
+                battlefield.sort_line(player_idx, Line.REAR)
+                if log is not None:
+                    log.append(f"    🌋 熔岩战术：{attacker.card.name} 撤回后方")
+
         battlefield.cleanup_dead()
-    
+
     battlefield.cleanup_dead()
     return hq_damage

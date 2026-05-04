@@ -1,11 +1,11 @@
 import unittest
 
-from cards import Card, Faction, Line, UnitType
+from cards import Card, CardType, Faction, Line, UnitType
 from cards import DECK_BUILDERS
-from combat import execute_attack, find_attack_targets
-from game import deploy_card, play_turn, advance_max_orders
+from combat import execute_attack, find_attack_targets, effective_attack
+from game import deploy_card, play_turn, advance_max_orders, MAX_ORDERS, STARTING_HQ_HP, MAX_TURNS
 from export_match import play_and_export
-from ai import choose_units_to_advance
+from ai import choose_units_to_advance, ai_attack_phase
 from game_state import Battlefield, BattleUnit, Player
 
 
@@ -30,15 +30,166 @@ class RuleTuningTests(unittest.TestCase):
         })
 
     def test_balance_tuning_card_stats(self):
+        france = {card.name: card for card in DECK_BUILDERS[Faction.FRANCE]()}
         prussia = {card.name: card for card in DECK_BUILDERS[Faction.PRUSSIA]()}
         russia = {card.name: card for card in DECK_BUILDERS[Faction.RUSSIA]()}
 
         self.assertEqual(prussia["耶格猎兵"].health, 2)
         self.assertEqual((prussia["死骑兵"].attack, prussia["死骑兵"].health), (2, 2))
+        self.assertIn("死神威慑", prussia["死骑兵"].keywords)
         self.assertEqual(prussia["近卫掷弹兵团"].health, 5)
         self.assertEqual(prussia["布吕歇尔的近卫"].attack, 6)
+        # 普鲁士线列军：3 攻 → 4 攻
+        self.assertEqual((prussia["普鲁士线列军"].attack, prussia["普鲁士线列军"].health), (4, 4))
+        # 法兰西马炮兵：拥有 军团联动（重炮不机动，不带此关键词）
+        self.assertIn("军团联动", france["近卫马炮兵"].keywords)
+        self.assertNotIn("军团联动", france["12磅野战炮"].keywords)
+        # 老近卫军：攻击 7→6
+        self.assertEqual((france["老近卫军"].attack, france["老近卫军"].health), (6, 8))
         self.assertEqual((russia["西伯利亚老兵"].attack, russia["西伯利亚老兵"].health), (5, 5))
         self.assertEqual(russia["普拉托夫的哥萨克"].attack, 3)
+        # 俄国线列军：保持 2/5 肉盾
+        self.assertEqual((russia["俄国线列军"].attack, russia["俄国线列军"].health), (2, 5))
+        # 哥萨克轻骑：2 费 2/2 + 熔岩战术
+        self.assertEqual(russia["哥萨克轻骑"].cost, 2)
+        self.assertEqual((russia["哥萨克轻骑"].attack, russia["哥萨克轻骑"].health), (2, 2))
+        self.assertIn("熔岩战术", russia["哥萨克轻骑"].keywords)
+        # 焦土补给在东正教民兵
+        self.assertIn("焦土补给", russia["东正教民兵"].keywords)
+        # 库图佐夫的旗手 自残2，帝国大军 自残1
+        self.assertIn("自残2", russia["库图佐夫的旗手"].keywords)
+        self.assertIn("自残1", russia["帝国大军"].keywords)
+
+    def test_global_constants_pinned(self):
+        self.assertEqual(STARTING_HQ_HP, 14)
+        self.assertEqual(MAX_TURNS, 30)
+
+    def test_prussia_has_two_event_cards(self):
+        prussia = DECK_BUILDERS[Faction.PRUSSIA]()
+        events = [c for c in prussia if c.card_type == CardType.EVENT]
+        self.assertEqual(len(events), 2)
+        self.assertEqual(events[0].name, "国防动员")
+        self.assertEqual(events[0].cost, 2)
+        self.assertEqual(events[0].event_effect, "buff_target_INF+1+2")
+
+    def test_corps_synergy_buffs_friendly_cavalry_in_same_slot(self):
+        """军团联动：同槽位友方炮兵在 MAIN/SKIRMISH 时，骑兵 +1 攻"""
+        bf = Battlefield()
+        cav = BattleUnit(card=self.make_card("龙骑兵", attack=4, unit_type=UnitType.CAVALRY),
+                         current_hp=3, current_line=Line.MAIN, slot=1, deployed_this_turn=False)
+        art = BattleUnit(card=self.make_card("马炮", attack=3, unit_type=UnitType.ARTILLERY,
+                                              keywords=["远程", "军团联动"]),
+                         current_hp=3, current_line=Line.MAIN, slot=1, deployed_this_turn=False)
+        bf.p1_main = [cav, art]
+        self.assertEqual(effective_attack(cav, bf, 0), 5)
+
+        # 不同槽位则不生效
+        art.slot = 2
+        bf.sort_line(0, Line.MAIN)
+        self.assertEqual(effective_attack(cav, bf, 0), 4)
+
+    def test_deaths_head_intimidation_lowers_enemy_attack_in_same_slot(self):
+        """死神威慑：处于此单位同槽位的敌方单位 -1 攻；多源叠加；最低 0"""
+        bf = Battlefield()
+        dh = BattleUnit(card=self.make_card("死骑兵", attack=2, unit_type=UnitType.CAVALRY,
+                                             keywords=["冲锋", "死神威慑"]),
+                        current_hp=2, current_line=Line.MAIN, slot=2, deployed_this_turn=False)
+        bf.p1_main = [dh]
+        enemy = BattleUnit(card=self.make_card("敌龙骑", attack=4, unit_type=UnitType.CAVALRY),
+                           current_hp=3, current_line=Line.MAIN, slot=2, deployed_this_turn=False)
+        bf.p2_main = [enemy]
+        self.assertEqual(effective_attack(enemy, bf, 1), 3)
+
+        # 添加第二源（在 SKIRMISH 同槽位）
+        dh2 = BattleUnit(card=self.make_card("黑色布伦瑞克", attack=5, unit_type=UnitType.INFANTRY,
+                                              keywords=["结阵", "死神威慑"]),
+                         current_hp=4, current_line=Line.SKIRMISH, slot=2, deployed_this_turn=False)
+        bf.p1_skirmish = [dh2]
+        self.assertEqual(effective_attack(enemy, bf, 1), 2)
+
+    def test_lava_tactics_returns_attacker_to_rear(self):
+        """熔岩战术：攻击后，存活则撤回 REAR"""
+        bf = Battlefield()
+        cossack = BattleUnit(card=self.make_card("哥萨克", cost=4, attack=3, health=5,
+                                                  unit_type=UnitType.CAVALRY,
+                                                  keywords=["冲锋", "侧翼迂回", "熔岩战术"]),
+                             current_hp=5, current_line=Line.MAIN, slot=1, deployed_this_turn=False)
+        victim = BattleUnit(card=self.make_card("普军步兵", attack=2, health=5, unit_type=UnitType.INFANTRY,
+                                                  keywords=["结阵"]),
+                            current_hp=5, current_line=Line.MAIN, slot=1, deployed_this_turn=False)
+        bf.p1_main = [cossack]
+        bf.p2_main = [victim]
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=20, max_orders=5, current_orders=5)
+        p2 = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=20, max_orders=5, current_orders=5)
+        ai_attack_phase(p1, p2, bf, 0, log=None)
+        self.assertEqual(cossack.current_line, Line.REAR)
+        self.assertIn(cossack, bf.p1_rear)
+        self.assertNotIn(cossack, bf.p1_main)
+
+    def test_scorched_earth_grants_owner_max_orders_on_death(self):
+        """焦土补给：拥有此关键词的单位死亡时，拥有者下回合 max_orders +1"""
+        bf = Battlefield()
+        militia = BattleUnit(card=self.make_card("民兵", attack=1, health=1, unit_type=UnitType.INFANTRY,
+                                                  keywords=["结阵", "焦土补给"]),
+                             current_hp=1, current_line=Line.SKIRMISH, slot=1, deployed_this_turn=False)
+        attacker = BattleUnit(card=self.make_card("敌散兵", attack=3, health=2, unit_type=UnitType.SKIRMISHER,
+                                                   keywords=[]),
+                              current_hp=2, current_line=Line.SKIRMISH, slot=2, deployed_this_turn=False)
+        bf.p1_skirmish = [militia]
+        bf.p2_skirmish = [attacker]
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=20, max_orders=5, current_orders=5)
+        p2 = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=20, max_orders=5, current_orders=5)
+        before = p1.max_orders
+        ai_attack_phase(p2, p1, bf, 1, log=None)
+        self.assertTrue(militia.is_dead or militia.current_hp <= 0)
+        self.assertEqual(p1.max_orders, before + 1)
+
+    def test_event_card_buffs_friendly_infantry(self):
+        """国防动员：选择一个我方 INFANTRY，永久 +1/+2 并立即回血 2"""
+        bf = Battlefield()
+        target = BattleUnit(
+            card=self.make_card("普鲁士线列军", attack=4, health=4, unit_type=UnitType.INFANTRY,
+                                 keywords=["结阵"]),
+            current_hp=2, current_line=Line.REAR, slot=1, deployed_this_turn=False,
+        )
+        bf.p1_rear = [target]
+
+        event = Card(
+            name="国防动员", cost=3, attack=0, health=0,
+            unit_type=UnitType.INFANTRY, faction=Faction.PRUSSIA,
+            deploy_line=Line.REAR, keywords=[],
+            card_type=CardType.EVENT, event_effect="buff_target_INF+1+2",
+        )
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=20,
+                    hand=[event], max_orders=3, current_orders=3)
+        ok = deploy_card(p1, event, bf, 0)
+        self.assertTrue(ok)
+        self.assertEqual(target.card.attack, 5)        # +1 atk
+        self.assertEqual(target.card.health, 6)        # +2 hp上限
+        self.assertEqual(target.current_hp, 4)         # 2 → 2+2
+        self.assertNotIn(event, p1.hand)
+        self.assertEqual(p1.current_orders, 0)
+
+    def test_event_card_fails_with_no_legal_target(self):
+        """国防动员：若我方无 INFANTRY，事件卡无法打出"""
+        bf = Battlefield()
+        only_cav = BattleUnit(
+            card=self.make_card("骑兵", unit_type=UnitType.CAVALRY),
+            current_hp=2, current_line=Line.REAR, slot=1, deployed_this_turn=False,
+        )
+        bf.p1_rear = [only_cav]
+        event = Card(
+            name="国防动员", cost=3, attack=0, health=0,
+            unit_type=UnitType.INFANTRY, faction=Faction.PRUSSIA,
+            deploy_line=Line.REAR, keywords=[],
+            card_type=CardType.EVENT, event_effect="buff_target_INF+1+2",
+        )
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=20,
+                    hand=[event], max_orders=3, current_orders=3)
+        ok = deploy_card(p1, event, bf, 0)
+        self.assertFalse(ok)
+        self.assertIn(event, p1.hand)
+        self.assertEqual(p1.current_orders, 3)
 
     def test_initial_deal_is_four_cards_with_one_extra_for_second_player(self):
         data = play_and_export(Faction.FRANCE, Faction.PRUSSIA, seed=1)
@@ -228,7 +379,8 @@ class RuleTuningTests(unittest.TestCase):
         deploy_card(player, player.hand[0], battlefield, 0)
         deploy_card(player, player.hand[0], battlefield, 0)
 
-        self.assertEqual([u.slot for u in battlefield.get_line(0, Line.MAIN)], [1, 2])
+        # rear-deploy-only：所有 UNIT 卡部署到 REAR；优先中路槽位 1 / 2
+        self.assertEqual([u.slot for u in battlefield.get_line(0, Line.REAR)], [1, 2])
 
     def test_advance_fails_when_matching_skirmish_slot_is_occupied(self):
         battlefield = Battlefield()
@@ -253,24 +405,22 @@ class RuleTuningTests(unittest.TestCase):
         self.assertEqual(choose_units_to_advance(player, battlefield, 0), [])
 
     def test_skirmish_line_slots_are_shared_between_players(self):
+        # rear-deploy-only：散兵线只能通过前压进入；这里验证 SKIRMISH 占位仍然双方共享
         battlefield = Battlefield()
-        p1 = Player(
-            name="P1",
-            faction=Faction.FRANCE,
-            hand=[self.make_card("P1散兵", unit_type=UnitType.SKIRMISHER, deploy_line=Line.SKIRMISH)],
-            current_orders=10,
+        p1_skirmisher = BattleUnit(
+            card=self.make_card("P1散兵", unit_type=UnitType.SKIRMISHER, deploy_line=Line.SKIRMISH),
+            current_hp=2, current_line=Line.SKIRMISH, slot=1, deployed_this_turn=False,
         )
-        p2 = Player(
-            name="P2",
-            faction=Faction.PRUSSIA,
-            hand=[self.make_card("P2散兵", unit_type=UnitType.SKIRMISHER, deploy_line=Line.SKIRMISH)],
-            current_orders=10,
+        p2_skirmisher = BattleUnit(
+            card=self.make_card("P2散兵", unit_type=UnitType.SKIRMISHER, deploy_line=Line.SKIRMISH),
+            current_hp=2, current_line=Line.SKIRMISH, slot=2, deployed_this_turn=False,
         )
+        battlefield.p1_skirmish.append(p1_skirmisher)
+        battlefield.p2_skirmish.append(p2_skirmisher)
 
-        self.assertTrue(deploy_card(p1, p1.hand[0], battlefield, 0, slot=1))
-        self.assertFalse(deploy_card(p2, p2.hand[0], battlefield, 1, slot=1))
-        self.assertTrue(deploy_card(p2, p2.hand[0], battlefield, 1, slot=2))
-
+        # SKIRMISH 槽位双方共享：P1 已占 slot 1 → P2 看到 slot 1 也被占
+        self.assertFalse(battlefield.is_slot_empty(1, Line.SKIRMISH, 1))
+        self.assertTrue(battlefield.is_slot_empty(1, Line.SKIRMISH, 0))
         self.assertEqual(battlefield.occupied_slots(0, Line.SKIRMISH), {1, 2})
         self.assertEqual(battlefield.occupied_slots(1, Line.SKIRMISH), {1, 2})
 

@@ -24,6 +24,7 @@ class BattleUnit:
     has_acted_this_turn: bool = False
     deployed_this_turn: bool = True
     has_used_evade: bool = False
+    damage_reduction_turns: int = 0  # 剩余伤害减免回合数（单次受伤最大1）
 
     @property
     def is_dead(self) -> bool:

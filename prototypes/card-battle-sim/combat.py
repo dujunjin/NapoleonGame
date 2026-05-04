@@ -8,9 +8,36 @@
 4. 侧翼迂回：散兵线的轻骑兵可以无视守卫直击后方炮兵
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from cards import UnitType, Line
 from game_state import BattleUnit, Battlefield
+
+
+def effective_attack(unit: BattleUnit, battlefield: Battlefield, owner_idx: int) -> int:
+    """计算单位在战场上下文中的实际攻击力，应用光环类关键词。
+
+    应用规则：
+    - 军团联动：当我方同槽位的炮兵处于 MAIN 或 SKIRMISH 时，骑兵 +1 攻
+    - 死神威慑：每个处于此单位同槽位（任意线）的敌方"死神威慑"单位 -1 攻，最低为 0
+    """
+    atk = unit.card.attack
+
+    if unit.card.unit_type == UnitType.CAVALRY:
+        for line in (Line.MAIN, Line.SKIRMISH):
+            for friendly in battlefield.get_line(owner_idx, line):
+                if (friendly.slot == unit.slot
+                        and friendly.card.unit_type == UnitType.ARTILLERY
+                        and "军团联动" in friendly.card.keywords):
+                    atk += 1
+                    break
+
+    enemy_idx = 1 - owner_idx
+    intimidations = sum(
+        1 for enemy in battlefield.all_units(enemy_idx)
+        if enemy.slot == unit.slot and "死神威慑" in enemy.card.keywords
+    )
+    atk = max(0, atk - intimidations)
+    return atk
 
 
 def attack_range(unit: BattleUnit) -> int:
@@ -37,59 +64,68 @@ def _targets_in_range(
     ]
 
 
-def calculate_damage(attacker: BattleUnit, defender: BattleUnit) -> Tuple[int, int]:
+def calculate_damage(
+    attacker: BattleUnit,
+    defender: BattleUnit,
+    attacker_attack_override: Optional[int] = None,
+    defender_attack_override: Optional[int] = None,
+) -> Tuple[int, int]:
     """计算战斗伤害：返回 (defender 受到的伤害, attacker 受到的反击伤害)
-    
+
     克制规则：
     - 骑兵冲锋打非方阵步兵：双倍伤害
     - 方阵步兵被骑兵打：伤害减半
     - 炮兵打方阵 / 密集步兵：伤害+1
     - 散兵带闪避：免疫第一次非炮兵攻击
     - 远程单位（炮兵）：不吃反击
+
+    attacker_attack_override：传入则替代基础攻击力（用于光环类如 军团联动 / 死神威慑）。
     """
     a_card = attacker.card
     d_card = defender.card
-    
+
     # 散兵闪避（一次性）
     if "闪避" in d_card.keywords and not defender.has_used_evade:
         if a_card.unit_type != UnitType.ARTILLERY:
             defender.has_used_evade = True
             return (0, 0)  # 完全闪避
-    
-    base_attack = a_card.attack
+
+    base_attack = attacker_attack_override if attacker_attack_override is not None else a_card.attack
     damage_to_defender = base_attack
     
     # === 骑兵 vs 步兵 ===
     if a_card.unit_type == UnitType.CAVALRY and d_card.unit_type in (UnitType.INFANTRY, UnitType.GUARD):
-        if "结阵" in d_card.keywords:
-            # 方阵抗骑兵
+        if "结阵" in d_card.keywords and "突破" not in a_card.keywords:
+            # 方阵抗骑兵；带"突破"的重骑兵无视方阵减伤
             damage_to_defender = max(1, base_attack // 2)
         else:
-            # 散开的步兵被骑兵冲垮
-            damage_to_defender = base_attack * 2
-    
+            # 散开的步兵被骑兵冲垮，或重骑兵突破方阵
+            damage_to_defender = base_attack * 2 if "结阵" not in d_card.keywords else base_attack
+
     # === 炮兵 vs 密集步兵 ===
     if a_card.unit_type == UnitType.ARTILLERY and d_card.unit_type in (UnitType.INFANTRY, UnitType.GUARD):
-        damage_to_defender = base_attack + 1
+        # 方阵步兵被炮弹横扫吃额外伤害
+        if "结阵" in d_card.keywords:
+            damage_to_defender = base_attack + 2
+        else:
+            damage_to_defender = base_attack + 1
     
-    # === 齐射先制 ===
-    pre_strike_damage = 0
-    if "齐射" in a_card.keywords:
-        pre_strike_damage = 1
-    
-    damage_to_defender += pre_strike_damage
-    
+    # === 齐射：本回合首次进攻 +1 伤害 ===
+    if "齐射" in a_card.keywords and not attacker.has_acted_this_turn:
+        damage_to_defender += 1
+
+    # === 伤害减免（阿尔科莱精神）===
+    if defender.damage_reduction_turns > 0:
+        damage_to_defender = min(damage_to_defender, 1)
+
     # === 反击伤害 ===
+    defender_attack = defender_attack_override if defender_attack_override is not None else d_card.attack
     if a_card.unit_type == UnitType.ARTILLERY and "远程" in a_card.keywords:
         damage_to_attacker = 0  # 远程炮兵不吃反击
     elif d_card.unit_type == UnitType.ARTILLERY:
-        # 攻击炮兵不吃反击（炮兵被冲了基本是单方面挨打）
-        damage_to_attacker = max(0, d_card.attack // 2)
+        damage_to_attacker = max(0, defender_attack // 2)
     else:
-        damage_to_attacker = d_card.attack
-        # 方阵反骑兵
-        if "结阵" in d_card.keywords and a_card.unit_type == UnitType.CAVALRY:
-            damage_to_attacker = d_card.attack  # 全额反击
+        damage_to_attacker = defender_attack
     
     return (damage_to_defender, damage_to_attacker)
 
@@ -115,13 +151,24 @@ def find_attack_targets(
     guards_in_range = _targets_in_range(battlefield, attacker, attacker_player_idx, guards_in_main)
     
     # 远程炮兵（在后方线）：可以打散兵线和主力线，不能攻击对方后方。
-    if (attacker.current_line == Line.REAR 
+    if (attacker.current_line == Line.REAR
         and "远程" in attacker.card.keywords
         and attacker.card.unit_type == UnitType.ARTILLERY):
         if guards_in_range:
             return guards_in_range
-        targets = (battlefield.get_line(opp_idx, Line.SKIRMISH) 
+        targets = (battlefield.get_line(opp_idx, Line.SKIRMISH)
                    + battlefield.get_line(opp_idx, Line.MAIN))
+        return _targets_in_range(battlefield, attacker, attacker_player_idx, targets)
+
+    # 阿尔科莱精神炮兵：在主力线或散兵线时，可攻击敌方所有单位（含后方）
+    if ("阿尔科莱精神" in attacker.card.keywords
+        and attacker.card.unit_type == UnitType.ARTILLERY
+        and attacker.current_line in (Line.MAIN, Line.SKIRMISH)):
+        if guards_in_range:
+            return guards_in_range
+        targets = (battlefield.get_line(opp_idx, Line.SKIRMISH)
+                   + battlefield.get_line(opp_idx, Line.MAIN)
+                   + battlefield.get_line(opp_idx, Line.REAR))
         return _targets_in_range(battlefield, attacker, attacker_player_idx, targets)
     
     if attacker.current_line == Line.REAR:
@@ -155,8 +202,13 @@ def can_attack_hq(
     opp_rear = battlefield.get_line(opp_idx, Line.REAR)
     
     # 远程炮兵：敌方散兵+主力都为空时可以炮击 HQ
-    if (attacker.current_line == Line.REAR 
+    if (attacker.current_line == Line.REAR
         and "远程" in attacker.card.keywords):
+        return len(opp_skirmish) == 0 and len(opp_main) == 0
+
+    # 阿尔科莱精神炮兵在主力线：敌方散兵+主力都为空时可打 HQ
+    if ("阿尔科莱精神" in attacker.card.keywords
+        and attacker.current_line == Line.MAIN):
         return len(opp_skirmish) == 0 and len(opp_main) == 0
     
     # 散兵线发起的攻击：敌方散兵线+主力线为空
@@ -170,11 +222,26 @@ def can_attack_hq(
 def execute_attack(
     attacker: BattleUnit,
     defender: BattleUnit,
-    log: list = None
+    log: list = None,
+    battlefield: Optional[Battlefield] = None,
+    attacker_player_idx: Optional[int] = None,
 ) -> dict:
-    """执行一次攻击，返回结算结果"""
-    dmg_def, dmg_atk = calculate_damage(attacker, defender)
-    
+    """执行一次攻击，返回结算结果。
+
+    若提供 battlefield 与 attacker_player_idx，则会应用光环类关键词
+    （军团联动 / 死神威慑）到双方的有效攻击力。
+    """
+    if battlefield is not None and attacker_player_idx is not None:
+        attacker_atk = effective_attack(attacker, battlefield, attacker_player_idx)
+        defender_atk = effective_attack(defender, battlefield, 1 - attacker_player_idx)
+        dmg_def, dmg_atk = calculate_damage(
+            attacker, defender,
+            attacker_attack_override=attacker_atk,
+            defender_attack_override=defender_atk,
+        )
+    else:
+        dmg_def, dmg_atk = calculate_damage(attacker, defender)
+
     defender.current_hp -= dmg_def
     attacker.current_hp -= dmg_atk
     attacker.has_acted_this_turn = True
