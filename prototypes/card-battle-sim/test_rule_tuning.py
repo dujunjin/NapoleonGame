@@ -134,6 +134,69 @@ class RuleTuningTests(unittest.TestCase):
         self.assertEqual(player.hand, [])
         self.assertEqual([card.name for card in player.discard_pile], ["使用的牌"])
 
+    def test_advanced_unit_cannot_attack_on_the_same_turn(self):
+        player = Player(name="P1", faction=Faction.FRANCE, deck=[], hand=[], max_orders=4, current_orders=4)
+        opponent = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=25)
+        battlefield = Battlefield()
+        advancer = BattleUnit(
+            card=self.make_card("前压步兵", cost=2, attack=3, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        target = BattleUnit(
+            card=self.make_card("敌方散兵", health=5),
+            current_hp=5,
+            current_line=Line.SKIRMISH,
+            slot=2,
+            deployed_this_turn=False,
+        )
+        battlefield.p1_main.append(advancer)
+        battlefield.p2_skirmish.append(target)
+
+        play_turn(player, opponent, battlefield, 0, 4, [])
+
+        self.assertEqual(advancer.current_line, Line.SKIRMISH)
+        self.assertTrue(advancer.has_acted_this_turn)
+        self.assertEqual(target.current_hp, 5)
+
+    def test_dead_targets_are_not_attacked_again_later_in_the_same_phase(self):
+        player = Player(name="P1", faction=Faction.FRANCE)
+        opponent = Player(name="P2", faction=Faction.PRUSSIA, hq_hp=25)
+        battlefield = Battlefield()
+        attacker_1 = BattleUnit(
+            card=self.make_card("攻击者1", attack=3, health=3),
+            current_hp=3,
+            current_line=Line.SKIRMISH,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        attacker_2 = BattleUnit(
+            card=self.make_card("攻击者2", attack=3, health=3),
+            current_hp=3,
+            current_line=Line.SKIRMISH,
+            slot=2,
+            deployed_this_turn=False,
+        )
+        target = BattleUnit(
+            card=self.make_card("低血目标", attack=0, health=2),
+            current_hp=2,
+            current_line=Line.SKIRMISH,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        battlefield.p1_skirmish.extend([attacker_1, attacker_2])
+        battlefield.p2_skirmish.append(target)
+        log = []
+
+        from ai import ai_attack_phase
+        ai_attack_phase(player, opponent, battlefield, 0, log)
+
+        attacks_against_target = [entry for entry in log if "低血目标" in entry]
+        self.assertEqual(len(attacks_against_target), 1)
+        self.assertEqual(battlefield.p2_skirmish, [])
+
     def test_death_log_names_the_dead_unit(self):
         attacker = BattleUnit(
             card=self.make_card("攻击者", attack=3, health=3),

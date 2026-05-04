@@ -176,6 +176,7 @@ def ai_attack_phase(
         if result["smash_overflow"]:
             opponent.hq_hp -= result["smash_overflow"]
             hq_damage += result["smash_overflow"]
+        battlefield.cleanup_dead()
     
     battlefield.cleanup_dead()
     return hq_damage

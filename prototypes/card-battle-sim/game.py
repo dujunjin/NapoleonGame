@@ -181,6 +181,7 @@ def play_turn(
         battlefield.get_line(active_idx, Line.MAIN).remove(unit)
         # 加入散兵线
         unit.current_line = Line.SKIRMISH
+        unit.has_acted_this_turn = True
         battlefield.get_line(active_idx, Line.SKIRMISH).append(unit)
         battlefield.sort_line(active_idx, Line.SKIRMISH)
         active.current_orders -= 1
