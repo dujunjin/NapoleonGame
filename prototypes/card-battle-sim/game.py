@@ -25,7 +25,7 @@ INITIAL_ORDERS = 2          # 起始军令
 ORDERS_GROWTH_PER_TURN = 1  # 每回合军令+1
 ORDERS_SLOWDOWN_AT = 6      # 达到 6 后军令增长放缓
 MAX_ORDERS = 10             # 军令上限
-MAX_TURNS = 30              # 防止死循环
+MAX_TURNS = 60              # 防止死循环
 LOW_HAND_THRESHOLD = 2       # 手牌 <=2 时触发补给抽牌
 LOW_HAND_DRAW_COUNT = 2      # 手牌饥饿时抽 2
 NORMAL_DRAW_COUNT = 1       # 正常抽 1

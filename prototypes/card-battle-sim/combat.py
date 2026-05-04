@@ -20,7 +20,7 @@ def attack_range(unit: BattleUnit) -> int:
     if unit.card.unit_type == UnitType.SKIRMISHER:
         return 2
     if unit.card.unit_type == UnitType.CAVALRY:
-        return 2 if "侧翼迂回" in unit.card.keywords else 1
+        return 3 if "侧翼迂回" in unit.card.keywords else 1
     return 1
 
 

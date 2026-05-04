@@ -205,7 +205,7 @@ class RuleTuningTests(unittest.TestCase):
 
         self.assertEqual(find_attack_targets(battlefield, attacker, 0), [skirmish_target])
 
-    def test_flanking_cavalry_effective_range_is_two(self):
+    def test_flanking_cavalry_effective_range_is_three(self):
         battlefield = Battlefield()
         attacker = BattleUnit(
             card=self.make_card("侧翼骑兵", unit_type=UnitType.CAVALRY, keywords=["冲锋", "侧翼迂回"]),
@@ -231,7 +231,7 @@ class RuleTuningTests(unittest.TestCase):
         battlefield.p1_main.append(attacker)
         battlefield.p2_skirmish.extend([range_two_target, range_three_target])
 
-        self.assertEqual(find_attack_targets(battlefield, attacker, 0), [range_two_target])
+        self.assertEqual(find_attack_targets(battlefield, attacker, 0), [range_two_target, range_three_target])
 
 
 if __name__ == "__main__":
