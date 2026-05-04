@@ -1,0 +1,3227 @@
+{
+  "meta": {
+    "p1_faction": "法兰西",
+    "p2_faction": "俄罗斯",
+    "seed": 42,
+    "winner": 0,
+    "winner_name": "P1 法兰西",
+    "final_turn": 18,
+    "end_reason": "P2 HQ 摧毁"
+  },
+  "timeline": [
+    {
+      "turn": 0,
+      "active_player": null,
+      "log": [
+        "对局开始"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/2",
+          "hand_size": 4,
+          "deck_size": 26,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 25,
+          "orders": "2/2",
+          "hand_size": 6,
+          "deck_size": 24,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 1,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 1：P1-法兰西 行动 ===",
+        "  抽到 骠骑兵",
+        "  军令: 3/3",
+        "  手牌: ['老近卫军', '胸甲骑兵', '龙骑兵团', '帝国步兵团', '骠骑兵']",
+        "  ▶ P1-法兰西 部署 骠骑兵 到 主力战列线",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/3",
+          "hand_size": 4,
+          "deck_size": 25,
+          "rear": [],
+          "main": [
+            {
+              "name": "骠骑兵",
+              "type": "骑兵",
+              "attack": 2,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 25,
+          "orders": "2/2",
+          "hand_size": 6,
+          "deck_size": 24,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 1,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 1：P2-俄罗斯 行动 ===",
+        "  抽到 普拉托夫的哥萨克",
+        "  军令: 3/3",
+        "  手牌: ['西伯利亚老兵', '莫斯科掷弹兵', '西伯利亚老兵', '俄国线列军', '西伯利亚老兵', '俄军龙骑', '普拉托夫的哥萨克']",
+        "  ▶ P2-俄罗斯 部署 西伯利亚老兵 到 主力战列线",
+        "    ⚠ 自残：HQ -1 (剩24)",
+        "  状态：P1 HQ=25, P2 HQ=24"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/3",
+          "hand_size": 4,
+          "deck_size": 25,
+          "rear": [],
+          "main": [
+            {
+              "name": "骠骑兵",
+              "type": "骑兵",
+              "attack": 2,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 24,
+          "orders": "0/3",
+          "hand_size": 6,
+          "deck_size": 23,
+          "rear": [],
+          "main": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 2,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 2：P1-法兰西 行动 ===",
+        "  抽到 第45线列步兵团",
+        "  军令: 4/4",
+        "  手牌: ['老近卫军', '胸甲骑兵', '龙骑兵团', '帝国步兵团', '第45线列步兵团']",
+        "  ▶ P1-法兰西 部署 第45线列步兵团 到 主力战列线",
+        "  ⚔ 骠骑兵(2hp) → 西伯利亚老兵: 造成1伤害，反击6",
+        "  状态：P1 HQ=25, P2 HQ=24"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/4",
+          "hand_size": 4,
+          "deck_size": 24,
+          "rear": [],
+          "main": [
+            {
+              "name": "第45线列步兵团",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 24,
+          "orders": "0/3",
+          "hand_size": 6,
+          "deck_size": 23,
+          "rear": [],
+          "main": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 4,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 2,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 2：P2-俄罗斯 行动 ===",
+        "  抽到 东正教民兵",
+        "  军令: 4/4",
+        "  手牌: ['莫斯科掷弹兵', '西伯利亚老兵', '俄国线列军', '西伯利亚老兵', '俄军龙骑', '普拉托夫的哥萨克', '东正教民兵']",
+        "  ▶ P2-俄罗斯 部署 东正教民兵 到 主力战列线",
+        "  ⇒ 西伯利亚老兵 前压到散兵线（-1军令）",
+        "  ⚔ 西伯利亚老兵(4hp) → 第45线列步兵团: 造成6伤害，反击3，目标阵亡：第45线列步兵团",
+        "  状态：P1 HQ=25, P2 HQ=24"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/4",
+          "hand_size": 4,
+          "deck_size": 24,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 24,
+          "orders": "1/4",
+          "hand_size": 6,
+          "deck_size": 22,
+          "rear": [],
+          "main": [
+            {
+              "name": "东正教民兵",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 1,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 3,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 3：P1-法兰西 行动 ===",
+        "  抽到 第45线列步兵团",
+        "  军令: 5/5",
+        "  手牌: ['老近卫军', '胸甲骑兵', '龙骑兵团', '帝国步兵团', '第45线列步兵团']",
+        "  ▶ P1-法兰西 部署 第45线列步兵团 到 主力战列线",
+        "  状态：P1 HQ=25, P2 HQ=24"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/5",
+          "hand_size": 4,
+          "deck_size": 23,
+          "rear": [],
+          "main": [
+            {
+              "name": "第45线列步兵团",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 24,
+          "orders": "1/4",
+          "hand_size": 6,
+          "deck_size": 22,
+          "rear": [],
+          "main": [
+            {
+              "name": "东正教民兵",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 1,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 3,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 3：P2-俄罗斯 行动 ===",
+        "  抽到 巴格拉季昂的近卫",
+        "  军令: 5/5",
+        "  手牌: ['莫斯科掷弹兵', '西伯利亚老兵', '俄国线列军', '西伯利亚老兵', '俄军龙骑', '普拉托夫的哥萨克', '巴格拉季昂的近卫']",
+        "  ▶ P2-俄罗斯 部署 西伯利亚老兵 到 主力战列线",
+        "    ⚠ 自残：HQ -1 (剩23)",
+        "  ⇒ 东正教民兵 前压到散兵线（-1军令）",
+        "  ⚔ 西伯利亚老兵(1hp) → 第45线列步兵团: 造成6伤害，反击3，目标阵亡：第45线列步兵团",
+        "  ⚔ 东正教民兵(3hp) → 第45线列步兵团: 造成2伤害，反击3，目标阵亡：第45线列步兵团",
+        "  状态：P1 HQ=25, P2 HQ=23"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/5",
+          "hand_size": 4,
+          "deck_size": 23,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 23,
+          "orders": "1/5",
+          "hand_size": 6,
+          "deck_size": 21,
+          "rear": [],
+          "main": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 4,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 4：P1-法兰西 行动 ===",
+        "  抽到 龙骑兵团",
+        "  军令: 6/6",
+        "  手牌: ['老近卫军', '胸甲骑兵', '龙骑兵团', '帝国步兵团', '龙骑兵团']",
+        "  ▶ P1-法兰西 部署 龙骑兵团 到 主力战列线",
+        "  ⚔ 龙骑兵团(3hp) → 西伯利亚老兵: 造成2伤害，反击6",
+        "  状态：P1 HQ=25, P2 HQ=23"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/6",
+          "hand_size": 4,
+          "deck_size": 22,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 23,
+          "orders": "1/5",
+          "hand_size": 6,
+          "deck_size": 21,
+          "rear": [],
+          "main": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 3,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 4,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 4：P2-俄罗斯 行动 ===",
+        "  抽到 普拉托夫的哥萨克",
+        "  军令: 6/6",
+        "  手牌: ['莫斯科掷弹兵', '俄国线列军', '西伯利亚老兵', '俄军龙骑', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '普拉托夫的哥萨克']",
+        "  ▶ P2-俄罗斯 部署 俄国线列军 到 主力战列线",
+        "  ⇒ 西伯利亚老兵 前压到散兵线（-1军令）",
+        "  💥 西伯利亚老兵 直击HQ，造成6点伤害",
+        "  状态：P1 HQ=19, P2 HQ=23"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 19,
+          "orders": "2/6",
+          "hand_size": 4,
+          "deck_size": 22,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 23,
+          "orders": "2/6",
+          "hand_size": 6,
+          "deck_size": 20,
+          "rear": [],
+          "main": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 3,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 5,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 5：P1-法兰西 行动 ===",
+        "  抽到 龙骑兵团",
+        "  军令: 6/6",
+        "  手牌: ['老近卫军', '胸甲骑兵', '帝国步兵团', '龙骑兵团', '龙骑兵团']",
+        "  ▶ P1-法兰西 部署 帝国步兵团 到 主力战列线",
+        "  状态：P1 HQ=19, P2 HQ=23"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 19,
+          "orders": "2/6",
+          "hand_size": 4,
+          "deck_size": 21,
+          "rear": [],
+          "main": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 23,
+          "orders": "2/6",
+          "hand_size": 6,
+          "deck_size": 20,
+          "rear": [],
+          "main": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 3,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 5,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 5：P2-俄罗斯 行动 ===",
+        "  抽到 俄国线列军",
+        "  军令: 6/6",
+        "  手牌: ['莫斯科掷弹兵', '西伯利亚老兵', '俄军龙骑', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '普拉托夫的哥萨克', '俄国线列军']",
+        "  ▶ P2-俄罗斯 部署 西伯利亚老兵 到 主力战列线",
+        "    ⚠ 自残：HQ -1 (剩22)",
+        "  ⇒ 俄国线列军 前压到散兵线（-1军令）",
+        "  ⚔ 西伯利亚老兵(3hp) → 帝国步兵团: 造成6伤害，反击4，目标阵亡：帝国步兵团",
+        "  ⚔ 俄国线列军(5hp) → 帝国步兵团: 造成2伤害，反击4，目标阵亡：帝国步兵团",
+        "  状态：P1 HQ=19, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 19,
+          "orders": "2/6",
+          "hand_size": 4,
+          "deck_size": 21,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "2/6",
+          "hand_size": 6,
+          "deck_size": 19,
+          "rear": [],
+          "main": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 1,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 6,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 6：P1-法兰西 行动 ===",
+        "  抽到 近卫马炮兵",
+        "  军令: 7/7",
+        "  手牌: ['老近卫军', '胸甲骑兵', '龙骑兵团', '龙骑兵团', '近卫马炮兵']",
+        "  ▶ P1-法兰西 部署 龙骑兵团 到 主力战列线",
+        "  ⚔ 龙骑兵团(3hp) → 俄国线列军: 造成2伤害，反击2，目标阵亡：俄国线列军",
+        "  状态：P1 HQ=19, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 19,
+          "orders": "3/7",
+          "hand_size": 4,
+          "deck_size": 20,
+          "rear": [],
+          "main": [
+            {
+              "name": "龙骑兵团",
+              "type": "骑兵",
+              "attack": 4,
+              "current_hp": 1,
+              "max_hp": 3,
+              "cost": 4,
+              "keywords": [
+                "冲锋"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "2/6",
+          "hand_size": 6,
+          "deck_size": 19,
+          "rear": [],
+          "main": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 6,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 6：P2-俄罗斯 行动 ===",
+        "  抽到 俄军步兵炮",
+        "  军令: 7/7",
+        "  手牌: ['莫斯科掷弹兵', '俄军龙骑', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '普拉托夫的哥萨克', '俄国线列军', '俄军步兵炮']",
+        "  ▶ P2-俄罗斯 部署 俄国线列军 到 主力战列线",
+        "  ⇒ 西伯利亚老兵 前压到散兵线（-1军令）",
+        "  ⚔ 西伯利亚老兵(5hp) → 龙骑兵团: 造成6伤害，反击4，目标阵亡：龙骑兵团",
+        "  状态：P1 HQ=19, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 19,
+          "orders": "3/7",
+          "hand_size": 4,
+          "deck_size": 20,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "3/7",
+          "hand_size": 6,
+          "deck_size": 18,
+          "rear": [],
+          "main": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "西伯利亚老兵",
+              "type": "线列步兵",
+              "attack": 6,
+              "current_hp": 1,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "自残1"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 7,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 7：P1-法兰西 行动 ===",
+        "  抽到 近卫掷弹兵",
+        "  军令: 7/7",
+        "  手牌: ['老近卫军', '胸甲骑兵', '龙骑兵团', '近卫马炮兵', '近卫掷弹兵']",
+        "  ▶ P1-法兰西 部署 龙骑兵团 到 主力战列线",
+        "  ⚔ 龙骑兵团(3hp) → 西伯利亚老兵: 造成2伤害，反击6，目标阵亡：西伯利亚老兵",
+        "  状态：P1 HQ=19, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 19,
+          "orders": "3/7",
+          "hand_size": 4,
+          "deck_size": 19,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "3/7",
+          "hand_size": 6,
+          "deck_size": 18,
+          "rear": [],
+          "main": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 7,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 7：P2-俄罗斯 行动 ===",
+        "  抽到 巴格拉季昂的近卫",
+        "  军令: 7/7",
+        "  手牌: ['莫斯科掷弹兵', '俄军龙骑', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '普拉托夫的哥萨克', '俄军步兵炮', '巴格拉季昂的近卫']",
+        "  ▶ P2-俄罗斯 部署 俄军步兵炮 到 后方线",
+        "  ⇒ 俄国线列军 前压到散兵线（-1军令）",
+        "  💥 俄国线列军 直击HQ，造成2点伤害",
+        "  状态：P1 HQ=17, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "3/7",
+          "hand_size": 4,
+          "deck_size": 19,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "3/7",
+          "hand_size": 6,
+          "deck_size": 17,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 8,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 8：P1-法兰西 行动 ===",
+        "  抽到 征召步兵营",
+        "  军令: 8/8",
+        "  手牌: ['老近卫军', '胸甲骑兵', '近卫马炮兵', '近卫掷弹兵', '征召步兵营']",
+        "  ▶ P1-法兰西 部署 征召步兵营 到 主力战列线",
+        "  ▶ P1-法兰西 部署 近卫马炮兵 到 后方线",
+        "  状态：P1 HQ=X17, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "2/8",
+          "hand_size": 3,
+          "deck_size": 18,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "3/7",
+          "hand_size": 6,
+          "deck_size": 17,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 8,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 8：P2-俄罗斯 行动 ===",
+        "  抽到 哥萨克轻骑",
+        "  军令: 8/8",
+        "  手牌: ['莫斯科掷弹兵', '俄军龙骑', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '哥萨克轻骑']",
+        "  ▶ P2-俄罗斯 部署 哥萨克轻骑 到 主力战列线",
+        "  ▶ P2-俄罗斯 部署 俄军龙骑 到 主力战列线",
+        "  ⚔ 俄军步兵炮(2hp) → 征召步兵营: 造成4伤害，目标阵亡：征召步兵营",
+        "  ⚔ 哥萨克轻骑(1hp) → 征召步兵营: 造成1伤害，反击2，目标阵亡：征召步兵营",
+        "  ⚔ 俄军龙骑(3hp) → 征召步兵营: 造成2伤害，反击2，目标阵亡：征召步兵营",
+        "  ⚔ 俄国线列军(5hp) → 征召步兵营: 造成2伤害，反击2，目标阵亡：征召步兵营",
+        "  状态：P1 HQ=X17, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "2/8",
+          "hand_size": 3,
+          "deck_size": 18,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "3/8",
+          "hand_size": 5,
+          "deck_size": 16,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "俄军龙骑",
+              "type": "骑兵",
+              "attack": 4,
+              "current_hp": 1,
+              "max_hp": 3,
+              "cost": 4,
+              "keywords": [
+                "冲锋"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 9,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 9：P1-法兰西 行动 ===",
+        "  抽到 帝国步兵团",
+        "  军令: 8/8",
+        "  手牌: ['老近卫军', '胸甲骑兵', '近卫掷弹兵', '帝国步兵团']",
+        "  ▶ P1-法兰西 部署 帝国步兵团 到 主力战列线",
+        "  ⚔ 近卫马炮兵(2hp) → 俄军龙骑: 造成3伤害，目标阵亡：俄军龙骑",
+        "  状态：P1 HQ=X17, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "4/8",
+          "hand_size": 3,
+          "deck_size": 17,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "3/8",
+          "hand_size": 5,
+          "deck_size": 16,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 9,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 9：P2-俄罗斯 行动 ===",
+        "  抽到 帝国大军",
+        "  军令: 8/8",
+        "  手牌: ['莫斯科掷弹兵', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '帝国大军']",
+        "  ▶ P2-俄罗斯 部署 普拉托夫的哥萨克 到 主力战列线",
+        "  ⚔ 俄军步兵炮(2hp) → 帝国步兵团: 造成4伤害，目标阵亡：帝国步兵团",
+        "  ⚔ 普拉托夫的哥萨克(2hp) → 帝国步兵团: 造成2伤害，反击4，目标阵亡：帝国步兵团",
+        "  ⚔ 俄国线列军(3hp) → 帝国步兵团: 造成2伤害，反击4，目标阵亡：帝国步兵团",
+        "  状态：P1 HQ=X17, P2 HQ=22"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "4/8",
+          "hand_size": 3,
+          "deck_size": 17,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 22,
+          "orders": "4/8",
+          "hand_size": 5,
+          "deck_size": 15,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 10：P1-法兰西 行动 ===",
+        "  抽到 骠骑兵",
+        "  军令: 9/9",
+        "  手牌: ['老近卫军', '胸甲骑兵', '近卫掷弹兵', '骠骑兵']",
+        "  ▶ P1-法兰西 部署 骠骑兵 到 主力战列线",
+        "  ▶ P1-法兰西 部署 近卫掷弹兵 到 主力战列线",
+        "  💥 近卫马炮兵 直击HQ，造成3点伤害（-1军令）",
+        "  状态：P1 HQ=X17, P2 HQ=19"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "1/9",
+          "hand_size": 2,
+          "deck_size": 16,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "骠骑兵",
+              "type": "骑兵",
+              "attack": 2,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 19,
+          "orders": "4/8",
+          "hand_size": 5,
+          "deck_size": 15,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 10：P2-俄罗斯 行动 ===",
+        "  抽到 俄军猎兵团",
+        "  军令: 9/9",
+        "  手牌: ['莫斯科掷弹兵', '巴格拉季昂的近卫', '普拉托夫的哥萨克', '巴格拉季昂的近卫', '帝国大军', '俄军猎兵团']",
+        "  ▶ P2-俄罗斯 部署 俄军猎兵团 到 散兵线",
+        "  ▶ P2-俄罗斯 部署 普拉托夫的哥萨克 到 主力战列线",
+        "  ⚔ 俄军步兵炮(2hp) → 近卫掷弹兵: 造成4伤害",
+        "  ⚔ 普拉托夫的哥萨克(2hp) → 近卫掷弹兵: 造成2伤害，反击5，目标阵亡：近卫掷弹兵",
+        "  状态：P1 HQ=X17, P2 HQ=19"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "1/9",
+          "hand_size": 2,
+          "deck_size": 16,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "骠骑兵",
+              "type": "骑兵",
+              "attack": 2,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 19,
+          "orders": "4/9",
+          "hand_size": 4,
+          "deck_size": 14,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "俄军猎兵团",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 11,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 11：P1-法兰西 行动 ===",
+        "  抽到 近卫马炮兵、帝国步兵团",
+        "  军令: 9/9",
+        "  手牌: ['老近卫军', '胸甲骑兵', '近卫马炮兵', '帝国步兵团']",
+        "  ▶ P1-法兰西 部署 近卫马炮兵 到 后方线",
+        "  ⚔ 近卫马炮兵(2hp) → 俄军猎兵团: 造成3伤害，目标阵亡：俄军猎兵团",
+        "  ⚔ 骠骑兵(2hp) → 俄军猎兵团: 造成2伤害，反击1，目标阵亡：俄军猎兵团",
+        "  状态：P1 HQ=X17, P2 HQ=19"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "5/9",
+          "hand_size": 3,
+          "deck_size": 14,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "骠骑兵",
+              "type": "骑兵",
+              "attack": 2,
+              "current_hp": 1,
+              "max_hp": 2,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 19,
+          "orders": "4/9",
+          "hand_size": 4,
+          "deck_size": 14,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 11,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 11：P2-俄罗斯 行动 ===",
+        "  抽到 俄军猎兵团",
+        "  军令: 9/9",
+        "  手牌: ['莫斯科掷弹兵', '巴格拉季昂的近卫', '巴格拉季昂的近卫', '帝国大军', '俄军猎兵团']",
+        "  ▶ P2-俄罗斯 部署 俄军猎兵团 到 散兵线",
+        "  ▶ P2-俄罗斯 部署 莫斯科掷弹兵 到 主力战列线",
+        "  ⚔ 俄军步兵炮(2hp) → 骠骑兵: 造成3伤害，目标阵亡：骠骑兵",
+        "  状态：P1 HQ=X17, P2 HQ=19"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "5/9",
+          "hand_size": 3,
+          "deck_size": 14,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 19,
+          "orders": "3/9",
+          "hand_size": 3,
+          "deck_size": 13,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "莫斯科掷弹兵",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "俄军猎兵团",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 12,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 12：P1-法兰西 行动 ===",
+        "  抽到 猎兵连",
+        "  军令: 10/10",
+        "  手牌: ['老近卫军', '胸甲骑兵', '帝国步兵团', '猎兵连']",
+        "  ▶ P1-法兰西 部署 猎兵连 到 散兵线",
+        "  ▶ P1-法兰西 部署 帝国步兵团 到 主力战列线",
+        "  ⚔ 近卫马炮兵(2hp) → 莫斯科掷弹兵: 造成4伤害",
+        "  ⚔ 近卫马炮兵(2hp) → 莫斯科掷弹兵: 造成4伤害，目标阵亡：莫斯科掷弹兵",
+        "  状态：P1 HQ=X17, P2 HQ=19"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "5/10",
+          "hand_size": 2,
+          "deck_size": 13,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "猎兵连",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 19,
+          "orders": "3/9",
+          "hand_size": 3,
+          "deck_size": 13,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "俄军猎兵团",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 12,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 12：P2-俄罗斯 行动 ===",
+        "  抽到 俄军龙骑",
+        "  军令: 10/10",
+        "  手牌: ['巴格拉季昂的近卫', '巴格拉季昂的近卫', '帝国大军', '俄军龙骑']",
+        "  ▶ P2-俄罗斯 部署 俄军龙骑 到 主力战列线",
+        "  ⚔ 俄军步兵炮(2hp) → 帝国步兵团: 造成4伤害，目标阵亡：帝国步兵团",
+        "  ⚔ 俄军龙骑(3hp) → 猎兵连: 造成4伤害，反击1，目标阵亡：猎兵连",
+        "  ⚔ 俄军猎兵团(2hp) → 猎兵连: 造成1伤害，反击1，目标阵亡：猎兵连",
+        "  状态：P1 HQ=X17, P2 HQ=19"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "5/10",
+          "hand_size": 2,
+          "deck_size": 13,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 19,
+          "orders": "6/10",
+          "hand_size": 3,
+          "deck_size": 12,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "俄军龙骑",
+              "type": "骑兵",
+              "attack": 4,
+              "current_hp": 2,
+              "max_hp": 3,
+              "cost": 4,
+              "keywords": [
+                "冲锋"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "俄军猎兵团",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 1,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 13,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 13：P1-法兰西 行动 ===",
+        "  抽到 胸甲骑兵、12磅野战炮",
+        "  军令: 10/10",
+        "  手牌: ['老近卫军', '胸甲骑兵', '胸甲骑兵', '12磅野战炮']",
+        "  ▶ P1-法兰西 部署 12磅野战炮 到 后方线",
+        "  ⚔ 近卫马炮兵(2hp) → 俄军龙骑: 造成3伤害，目标阵亡：俄军龙骑",
+        "  ⚔ 近卫马炮兵(2hp) → 俄军龙骑: 造成3伤害，目标阵亡：俄军龙骑",
+        "  状态：P1 HQ=X17, P2 HQ=19"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 17,
+          "orders": "5/10",
+          "hand_size": 3,
+          "deck_size": 11,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 19,
+          "orders": "6/10",
+          "hand_size": 3,
+          "deck_size": 12,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "俄军猎兵团",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 1,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 13,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 13：P2-俄罗斯 行动 ===",
+        "  抽到 东正教民兵",
+        "  军令: 10/10",
+        "  手牌: ['巴格拉季昂的近卫', '巴格拉季昂的近卫', '帝国大军', '东正教民兵']",
+        "  ▶ P2-俄罗斯 部署 东正教民兵 到 主力战列线",
+        "  ▶ P2-俄罗斯 部署 帝国大军 到 主力战列线",
+        "    ⚠ 自残：HQ -1 (剩18)",
+        "    ✨ 光环：所有其他友军 +1 血",
+        "  💥 俄军步兵炮 直击HQ，造成3点伤害（-1军令）",
+        "  💥 俄军猎兵团 直击HQ，造成1点伤害",
+        "  状态：P1 HQ=X13, P2 HQ=18"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "5/10",
+          "hand_size": 3,
+          "deck_size": 11,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 18,
+          "orders": "2/10",
+          "hand_size": 2,
+          "deck_size": 11,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "东正教民兵",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "帝国大军",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "自残1",
+                "光环+1血"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "俄军猎兵团",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 2,
+              "max_hp": 3,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 14,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 14：P1-法兰西 行动 ===",
+        "  抽到 猎兵连",
+        "  军令: 10/10",
+        "  手牌: ['老近卫军', '胸甲骑兵', '胸甲骑兵', '猎兵连']",
+        "  ▶ P1-法兰西 部署 猎兵连 到 散兵线",
+        "  ▶ P1-法兰西 部署 胸甲骑兵 到 主力战列线",
+        "  ⚔ 近卫马炮兵(2hp) → 东正教民兵: 造成4伤害，目标阵亡：东正教民兵",
+        "  ⚔ 近卫马炮兵(2hp) → 东正教民兵: 造成4伤害，目标阵亡：东正教民兵",
+        "  ⚔ 12磅野战炮(3hp) → 东正教民兵: 造成5伤害，目标阵亡：东正教民兵",
+        "  ⚔ 胸甲骑兵(5hp) → 俄军猎兵团: 造成6伤害，反击1，目标阵亡：俄军猎兵团，突破溢出4打HQ",
+        "  状态：P1 HQ=X13, P2 HQ=14"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 10,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "胸甲骑兵",
+              "type": "骑兵",
+              "attack": 6,
+              "current_hp": 4,
+              "max_hp": 5,
+              "cost": 6,
+              "keywords": [
+                "冲锋",
+                "突破"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "猎兵连",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 14,
+          "orders": "2/10",
+          "hand_size": 2,
+          "deck_size": 11,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "帝国大军",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "自残1",
+                "光环+1血"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 14,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 14：P2-俄罗斯 行动 ===",
+        "  抽到 东正教民兵、库图佐夫的旗手",
+        "  军令: 10/10",
+        "  手牌: ['巴格拉季昂的近卫', '巴格拉季昂的近卫', '东正教民兵', '库图佐夫的旗手']",
+        "  ▶ P2-俄罗斯 部署 东正教民兵 到 主力战列线",
+        "  ▶ P2-俄罗斯 部署 巴格拉季昂的近卫 到 主力战列线",
+        "  ⚔ 俄军步兵炮(3hp) → 猎兵连: 造成3伤害，目标阵亡：猎兵连",
+        "  ⚔ 帝国大军(5hp) → 猎兵连: 造成3伤害，反击1，目标阵亡：猎兵连",
+        "  状态：P1 HQ=X13, P2 HQ=14"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 10,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "胸甲骑兵",
+              "type": "骑兵",
+              "attack": 6,
+              "current_hp": 4,
+              "max_hp": 5,
+              "cost": 6,
+              "keywords": [
+                "冲锋",
+                "突破"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 14,
+          "orders": "2/10",
+          "hand_size": 2,
+          "deck_size": 9,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "帝国大军",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "自残1",
+                "光环+1血"
+              ]
+            },
+            {
+              "name": "东正教民兵",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "巴格拉季昂的近卫",
+              "type": "近卫",
+              "attack": 5,
+              "current_hp": 6,
+              "max_hp": 6,
+              "cost": 6,
+              "keywords": [
+                "结阵",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 15,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 15：P1-法兰西 行动 ===",
+        "  抽到 12磅野战炮、帝国步兵团",
+        "  军令: 10/10",
+        "  手牌: ['老近卫军', '胸甲骑兵', '12磅野战炮', '帝国步兵团']",
+        "  ▶ P1-法兰西 部署 帝国步兵团 到 主力战列线",
+        "  ⚔ 近卫马炮兵(2hp) → 巴格拉季昂的近卫: 造成4伤害",
+        "  ⚔ 近卫马炮兵(2hp) → 巴格拉季昂的近卫: 造成4伤害，目标阵亡：巴格拉季昂的近卫",
+        "  ⚔ 12磅野战炮(3hp) → 巴格拉季昂的近卫: 造成5伤害，目标阵亡：巴格拉季昂的近卫",
+        "  ⚔ 胸甲骑兵(4hp) → 巴格拉季昂的近卫: 造成3伤害，反击5，目标阵亡：巴格拉季昂的近卫，突破溢出10打HQ",
+        "  状态：P1 HQ=X13, P2 HQ=4"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "6/10",
+          "hand_size": 3,
+          "deck_size": 8,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 4,
+          "orders": "2/10",
+          "hand_size": 2,
+          "deck_size": 9,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "帝国大军",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "自残1",
+                "光环+1血"
+              ]
+            },
+            {
+              "name": "东正教民兵",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 15,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 15：P2-俄罗斯 行动 ===",
+        "  抽到 俄国线列军、俄军步兵炮",
+        "  军令: 10/10",
+        "  手牌: ['巴格拉季昂的近卫', '库图佐夫的旗手', '俄国线列军', '俄军步兵炮']",
+        "  ▶ P2-俄罗斯 部署 俄国线列军 到 主力战列线",
+        "  ▶ P2-俄罗斯 部署 俄军步兵炮 到 后方线",
+        "  ⇒ 东正教民兵 前压到散兵线（-1军令）",
+        "  ⚔ 俄军步兵炮(3hp) → 帝国步兵团: 造成4伤害，目标阵亡：帝国步兵团",
+        "  ⚔ 帝国大军(4hp) → 帝国步兵团: 造成3伤害，反击4，目标阵亡：帝国步兵团",
+        "  ⚔ 东正教民兵(3hp) → 帝国步兵团: 造成2伤害，反击4，目标阵亡：帝国步兵团",
+        "  状态：P1 HQ=X13, P2 HQ=4"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "6/10",
+          "hand_size": 3,
+          "deck_size": 8,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 4,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 7,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "俄国线列军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 3,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 16,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 16：P1-法兰西 行动 ===",
+        "  抽到 第45线列步兵团",
+        "  军令: 10/10",
+        "  手牌: ['老近卫军', '胸甲骑兵', '12磅野战炮', '第45线列步兵团']",
+        "  ▶ P1-法兰西 部署 第45线列步兵团 到 主力战列线",
+        "  ▶ P1-法兰西 部署 12磅野战炮 到 后方线",
+        "  ⚔ 近卫马炮兵(2hp) → 俄国线列军: 造成4伤害",
+        "  ⚔ 近卫马炮兵(2hp) → 俄国线列军: 造成4伤害，目标阵亡：俄国线列军",
+        "  ⚔ 12磅野战炮(3hp) → 俄国线列军: 造成5伤害，目标阵亡：俄国线列军",
+        "  状态：P1 HQ=X13, P2 HQ=4"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "2/10",
+          "hand_size": 2,
+          "deck_size": 7,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "第45线列步兵团",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 4,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 7,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 16,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 16：P2-俄罗斯 行动 ===",
+        "  抽到 莫斯科掷弹兵、东正教民兵",
+        "  军令: 10/10",
+        "  手牌: ['巴格拉季昂的近卫', '库图佐夫的旗手', '莫斯科掷弹兵', '东正教民兵']",
+        "  ▶ P2-俄罗斯 部署 东正教民兵 到 主力战列线",
+        "  ▶ P2-俄罗斯 部署 莫斯科掷弹兵 到 主力战列线",
+        "  ⚔ 俄军步兵炮(3hp) → 第45线列步兵团: 造成4伤害，目标阵亡：第45线列步兵团",
+        "  ⚔ 俄军步兵炮(2hp) → 第45线列步兵团: 造成4伤害，目标阵亡：第45线列步兵团",
+        "  状态：P1 HQ=X13, P2 HQ=4"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "2/10",
+          "hand_size": 2,
+          "deck_size": 7,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 4,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 5,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "东正教民兵",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "莫斯科掷弹兵",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 17,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 17：P1-法兰西 行动 ===",
+        "  抽到 征召步兵营、近卫掷弹兵",
+        "  军令: 10/10",
+        "  手牌: ['老近卫军', '胸甲骑兵', '征召步兵营', '近卫掷弹兵']",
+        "  ▶ P1-法兰西 部署 征召步兵营 到 主力战列线",
+        "  ▶ P1-法兰西 部署 近卫掷弹兵 到 主力战列线",
+        "  ⚔ 近卫马炮兵(2hp) → 莫斯科掷弹兵: 造成4伤害",
+        "  ⚔ 近卫马炮兵(2hp) → 莫斯科掷弹兵: 造成4伤害，目标阵亡：莫斯科掷弹兵",
+        "  ⚔ 12磅野战炮(3hp) → 莫斯科掷弹兵: 造成5伤害，目标阵亡：莫斯科掷弹兵",
+        "  ⚔ 12磅野战炮(3hp) → 莫斯科掷弹兵: 造成5伤害，目标阵亡：莫斯科掷弹兵",
+        "  状态：P1 HQ=X13, P2 HQ=4"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 5,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 4,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 5,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "东正教民兵",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 17,
+      "active_player": 1,
+      "active_name": "P2-俄罗斯",
+      "log": [
+        "\n=== 回合 17：P2-俄罗斯 行动 ===",
+        "  抽到 独角兽榴弹炮、哥萨克轻骑",
+        "  军令: 10/10",
+        "  手牌: ['巴格拉季昂的近卫', '库图佐夫的旗手', '独角兽榴弹炮', '哥萨克轻骑']",
+        "  ▶ P2-俄罗斯 部署 哥萨克轻骑 到 主力战列线",
+        "  ▶ P2-俄罗斯 部署 独角兽榴弹炮 到 后方线",
+        "  ⇒ 东正教民兵 前压到散兵线（-1军令）",
+        "  ⚔ 俄军步兵炮(3hp) → 近卫掷弹兵: 造成4伤害",
+        "  ⚔ 俄军步兵炮(2hp) → 近卫掷弹兵: 造成4伤害，目标阵亡：近卫掷弹兵",
+        "  ⚔ 哥萨克轻骑(1hp) → 近卫掷弹兵: 造成1伤害，反击5，目标阵亡：近卫掷弹兵",
+        "  ⚔ 东正教民兵(3hp) → 近卫掷弹兵: 造成2伤害，反击5，目标阵亡：近卫掷弹兵",
+        "  状态：P1 HQ=X13, P2 HQ=4"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 5,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": 4,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 3,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "独角兽榴弹炮",
+              "type": "炮兵",
+              "attack": 5,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 18,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 18：P1-法兰西 行动 ===",
+        "  抽到 近卫掷弹兵、征召步兵营",
+        "  军令: 10/10",
+        "  手牌: ['老近卫军', '胸甲骑兵', '近卫掷弹兵', '征召步兵营']",
+        "  ▶ P1-法兰西 部署 征召步兵营 到 主力战列线",
+        "  ▶ P1-法兰西 部署 近卫掷弹兵 到 主力战列线",
+        "  ⇒ 征召步兵营 前压到散兵线（-1军令）",
+        "  💥 近卫马炮兵 直击HQ，造成3点伤害（-1军令）",
+        "  💥 近卫马炮兵 直击HQ，造成3点伤害（-1军令）",
+        "  💥 征召步兵营 直击HQ，造成2点伤害",
+        "  状态：P1 HQ=X13, P2 HQ=-4"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 13,
+          "orders": "0/10",
+          "hand_size": 2,
+          "deck_size": 3,
+          "rear": [
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "近卫马炮兵",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 4,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "12磅野战炮",
+              "type": "炮兵",
+              "attack": 4,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-俄罗斯",
+          "faction": "俄罗斯",
+          "hq_hp": -4,
+          "orders": "3/10",
+          "hand_size": 2,
+          "deck_size": 3,
+          "rear": [
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "俄军步兵炮",
+              "type": "炮兵",
+              "attack": 3,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "独角兽榴弹炮",
+              "type": "炮兵",
+              "attack": 5,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    }
+  ]
+}

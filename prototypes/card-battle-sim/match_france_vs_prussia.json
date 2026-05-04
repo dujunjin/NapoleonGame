@@ -1,0 +1,1776 @@
+{
+  "meta": {
+    "p1_faction": "法兰西",
+    "p2_faction": "普鲁士",
+    "seed": 10,
+    "winner": 1,
+    "winner_name": "P2 普鲁士",
+    "final_turn": 11,
+    "end_reason": "P1 HQ 摧毁"
+  },
+  "timeline": [
+    {
+      "turn": 0,
+      "active_player": null,
+      "log": [
+        "对局开始"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/2",
+          "hand_size": 4,
+          "deck_size": 26,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "2/2",
+          "hand_size": 6,
+          "deck_size": 24,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 1,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 1：P1-法兰西 行动 ===",
+        "  抽到 骠骑兵",
+        "  军令: 3/3",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '骠骑兵', '第45线列步兵团', '骠骑兵']",
+        "  ▶ P1-法兰西 部署 骠骑兵 到 主力战列线",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/3",
+          "hand_size": 4,
+          "deck_size": 25,
+          "rear": [],
+          "main": [
+            {
+              "name": "骠骑兵",
+              "type": "骑兵",
+              "attack": 2,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "2/2",
+          "hand_size": 6,
+          "deck_size": 24,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 1,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 1：P2-普鲁士 行动 ===",
+        "  抽到 普鲁士线列军",
+        "  军令: 3/3",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '耶格猎兵', '死骑兵', '西里西亚国民军', '普鲁士线列军']",
+        "  ▶ P2-普鲁士 部署 耶格猎兵 到 散兵线",
+        "  ▶ P2-普鲁士 部署 死骑兵 到 主力战列线",
+        "  ⚔ 死骑兵(1hp) → 骠骑兵: 造成3伤害，反击2，目标阵亡：骠骑兵",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/3",
+          "hand_size": 4,
+          "deck_size": 25,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "0/3",
+          "hand_size": 5,
+          "deck_size": 23,
+          "rear": [],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "耶格猎兵",
+              "type": "散兵",
+              "attack": 2,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 1,
+              "keywords": [
+                "闪避",
+                "齐射"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 2,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 2：P1-法兰西 行动 ===",
+        "  抽到 近卫掷弹兵",
+        "  军令: 4/4",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '第45线列步兵团', '骠骑兵', '近卫掷弹兵']",
+        "  ▶ P1-法兰西 部署 骠骑兵 到 主力战列线",
+        "  ⚔ 骠骑兵(2hp) → 耶格猎兵: 造成2伤害，反击2，目标阵亡：耶格猎兵",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/4",
+          "hand_size": 4,
+          "deck_size": 24,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "0/3",
+          "hand_size": 5,
+          "deck_size": 23,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 2,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 2：P2-普鲁士 行动 ===",
+        "  抽到 死骑兵",
+        "  军令: 4/4",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '西里西亚国民军', '普鲁士线列军', '死骑兵']",
+        "  ▶ P2-普鲁士 部署 西里西亚国民军 到 主力战列线",
+        "  ▶ P2-普鲁士 部署 死骑兵 到 主力战列线",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/4",
+          "hand_size": 4,
+          "deck_size": 24,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "0/4",
+          "hand_size": 4,
+          "deck_size": 22,
+          "rear": [],
+          "main": [
+            {
+              "name": "西里西亚国民军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "死骑兵",
+              "type": "骑兵",
+              "attack": 3,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 3,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 3：P1-法兰西 行动 ===",
+        "  抽到 帝国步兵团",
+        "  军令: 5/5",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '第45线列步兵团', '近卫掷弹兵', '帝国步兵团']",
+        "  ▶ P1-法兰西 部署 第45线列步兵团 到 主力战列线",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/5",
+          "hand_size": 4,
+          "deck_size": 23,
+          "rear": [],
+          "main": [
+            {
+              "name": "第45线列步兵团",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "0/4",
+          "hand_size": 4,
+          "deck_size": 22,
+          "rear": [],
+          "main": [
+            {
+              "name": "西里西亚国民军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "死骑兵",
+              "type": "骑兵",
+              "attack": 3,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 3,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 3：P2-普鲁士 行动 ===",
+        "  抽到 步兵炮组",
+        "  军令: 5/5",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '普鲁士线列军', '步兵炮组']",
+        "  ▶ P2-普鲁士 部署 普鲁士线列军 到 主力战列线",
+        "  ⇒ 西里西亚国民军 前压到散兵线（-1军令）",
+        "  ⚔ 死骑兵(1hp) → 第45线列步兵团: 造成1伤害，反击3",
+        "  ⚔ 西里西亚国民军(3hp) → 第45线列步兵团: 造成2伤害，反击3",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "2/5",
+          "hand_size": 4,
+          "deck_size": 23,
+          "rear": [],
+          "main": [
+            {
+              "name": "第45线列步兵团",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 1,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "1/5",
+          "hand_size": 4,
+          "deck_size": 21,
+          "rear": [],
+          "main": [
+            {
+              "name": "普鲁士线列军",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 4,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 4：P1-法兰西 行动 ===",
+        "  抽到 龙骑兵团",
+        "  军令: 6/6",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '帝国步兵团', '龙骑兵团']",
+        "  ▶ P1-法兰西 部署 帝国步兵团 到 主力战列线",
+        "  ⇒ 第45线列步兵团 前压到散兵线（-1军令）",
+        "  ⚔ 第45线列步兵团(1hp) → 普鲁士线列军: 造成4伤害，反击3，目标阵亡：普鲁士线列军",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/6",
+          "hand_size": 4,
+          "deck_size": 22,
+          "rear": [],
+          "main": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "1/5",
+          "hand_size": 4,
+          "deck_size": 21,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 4,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 4：P2-普鲁士 行动 ===",
+        "  抽到 黑色布伦瑞克",
+        "  军令: 6/6",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '步兵炮组', '黑色布伦瑞克']",
+        "  ▶ P2-普鲁士 部署 步兵炮组 到 后方线",
+        "  状态：P1 HQ=25, P2 HQ=25"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "1/6",
+          "hand_size": 4,
+          "deck_size": 22,
+          "rear": [],
+          "main": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 25,
+          "orders": "3/6",
+          "hand_size": 4,
+          "deck_size": 20,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 5,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 5：P1-法兰西 行动 ===",
+        "  抽到 猎兵连",
+        "  军令: 6/6",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '龙骑兵团', '猎兵连']",
+        "  ▶ P1-法兰西 部署 猎兵连 到 散兵线",
+        "  ⇒ 帝国步兵团 前压到散兵线（-1军令）",
+        "  💥 帝国步兵团 直击HQ，造成4点伤害",
+        "  状态：P1 HQ=25, P2 HQ=21"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "4/6",
+          "hand_size": 4,
+          "deck_size": 21,
+          "rear": [],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "猎兵连",
+              "type": "散兵",
+              "attack": 1,
+              "current_hp": 2,
+              "max_hp": 2,
+              "cost": 1,
+              "keywords": [
+                "闪避"
+              ]
+            },
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 21,
+          "orders": "3/6",
+          "hand_size": 4,
+          "deck_size": 20,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 5,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 5：P2-普鲁士 行动 ===",
+        "  抽到 步兵炮组",
+        "  军令: 6/6",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '黑色布伦瑞克', '步兵炮组']",
+        "  ▶ P2-普鲁士 部署 步兵炮组 到 后方线",
+        "  ⚔ 步兵炮组(3hp) → 猎兵连: 造成2伤害，目标阵亡：猎兵连",
+        "  状态：P1 HQ=25, P2 HQ=21"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "4/6",
+          "hand_size": 4,
+          "deck_size": 21,
+          "rear": [],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 21,
+          "orders": "3/6",
+          "hand_size": 4,
+          "deck_size": 19,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 6,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 6：P1-法兰西 行动 ===",
+        "  抽到 征召步兵营",
+        "  军令: 7/7",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '龙骑兵团', '征召步兵营']",
+        "  ▶ P1-法兰西 部署 征召步兵营 到 主力战列线",
+        "  💥 帝国步兵团 直击HQ，造成4点伤害",
+        "  状态：P1 HQ=25, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "5/7",
+          "hand_size": 4,
+          "deck_size": 20,
+          "rear": [],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "3/6",
+          "hand_size": 4,
+          "deck_size": 19,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 6,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 6：P2-普鲁士 行动 ===",
+        "  抽到 西里西亚国民军",
+        "  军令: 7/7",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '黑色布伦瑞克', '西里西亚国民军']",
+        "  ▶ P2-普鲁士 部署 西里西亚国民军 到 主力战列线",
+        "  ⚔ 步兵炮组(3hp) → 征召步兵营: 造成3伤害，目标阵亡：征召步兵营",
+        "  ⚔ 步兵炮组(3hp) → 征召步兵营: 造成3伤害，目标阵亡：征召步兵营",
+        "  状态：P1 HQ=25, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "5/7",
+          "hand_size": 4,
+          "deck_size": 20,
+          "rear": [],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "5/7",
+          "hand_size": 4,
+          "deck_size": 18,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "西里西亚国民军",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 7,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 7：P1-法兰西 行动 ===",
+        "  抽到 征召步兵营",
+        "  军令: 7/7",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '龙骑兵团', '征召步兵营']",
+        "  ▶ P1-法兰西 部署 征召步兵营 到 主力战列线",
+        "  ⚔ 帝国步兵团(4hp) → 西里西亚国民军: 造成5伤害，反击2，目标阵亡：西里西亚国民军",
+        "  状态：P1 HQ=25, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "5/7",
+          "hand_size": 4,
+          "deck_size": 19,
+          "rear": [],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "帝国步兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 2,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ]
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "5/7",
+          "hand_size": 4,
+          "deck_size": 18,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 7,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 7：P2-普鲁士 行动 ===",
+        "  抽到 普鲁士线列军",
+        "  军令: 7/7",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '黑色布伦瑞克', '普鲁士线列军']",
+        "  ▶ P2-普鲁士 部署 普鲁士线列军 到 主力战列线",
+        "  ⚔ 步兵炮组(3hp) → 帝国步兵团: 造成3伤害，目标阵亡：帝国步兵团",
+        "  ⚔ 步兵炮组(3hp) → 帝国步兵团: 造成3伤害，目标阵亡：帝国步兵团",
+        "  状态：P1 HQ=25, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "5/7",
+          "hand_size": 4,
+          "deck_size": 19,
+          "rear": [],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "4/7",
+          "hand_size": 4,
+          "deck_size": 17,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "普鲁士线列军",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 8,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 8：P1-法兰西 行动 ===",
+        "  抽到 老近卫军",
+        "  军令: 8/8",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '龙骑兵团', '老近卫军']",
+        "  ▶ P1-法兰西 部署 龙骑兵团 到 主力战列线",
+        "  ⇒ 征召步兵营 前压到散兵线（-1军令）",
+        "  ⚔ 龙骑兵团(3hp) → 普鲁士线列军: 造成2伤害，反击3",
+        "  ⚔ 征召步兵营(3hp) → 普鲁士线列军: 造成2伤害，反击3，目标阵亡：普鲁士线列军",
+        "  状态：P1 HQ=25, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 25,
+          "orders": "3/8",
+          "hand_size": 4,
+          "deck_size": 18,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "4/7",
+          "hand_size": 4,
+          "deck_size": 17,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 8,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 8：P2-普鲁士 行动 ===",
+        "  抽到 死骑兵",
+        "  军令: 8/8",
+        "  手牌: ['布吕歇尔的近卫', '近卫掷弹兵团', '布吕歇尔的近卫', '黑色布伦瑞克', '死骑兵']",
+        "  ▶ P2-普鲁士 部署 死骑兵 到 主力战列线",
+        "  ▶ P2-普鲁士 部署 近卫掷弹兵团 到 主力战列线",
+        "  💥 步兵炮组 直击HQ，造成2点伤害（-1军令）",
+        "  💥 步兵炮组 直击HQ，造成2点伤害（-1军令）",
+        "  状态：P1 HQ=21, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 21,
+          "orders": "3/8",
+          "hand_size": 4,
+          "deck_size": 18,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "0/8",
+          "hand_size": 3,
+          "deck_size": 16,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "死骑兵",
+              "type": "骑兵",
+              "attack": 3,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 9,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 9：P1-法兰西 行动 ===",
+        "  抽到 龙骑兵团",
+        "  军令: 8/8",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '老近卫军', '龙骑兵团']",
+        "  ▶ P1-法兰西 部署 龙骑兵团 到 主力战列线",
+        "  ⚔ 龙骑兵团(3hp) → 近卫掷弹兵团: 造成2伤害，反击4",
+        "  状态：P1 HQ=21, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 21,
+          "orders": "4/8",
+          "hand_size": 4,
+          "deck_size": 17,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "0/8",
+          "hand_size": 3,
+          "deck_size": 16,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "死骑兵",
+              "type": "骑兵",
+              "attack": 3,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 2,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 9,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 9：P2-普鲁士 行动 ===",
+        "  抽到 耶格猎兵",
+        "  军令: 8/8",
+        "  手牌: ['布吕歇尔的近卫', '布吕歇尔的近卫', '黑色布伦瑞克', '耶格猎兵']",
+        "  ▶ P2-普鲁士 部署 耶格猎兵 到 散兵线",
+        "  ▶ P2-普鲁士 部署 黑色布伦瑞克 到 主力战列线",
+        "  ⇒ 近卫掷弹兵团 前压到散兵线（-1军令）",
+        "  💥 步兵炮组 直击HQ，造成2点伤害（-1军令）",
+        "  💥 近卫掷弹兵团 直击HQ，造成4点伤害",
+        "  状态：P1 HQ=15, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 15,
+          "orders": "4/8",
+          "hand_size": 4,
+          "deck_size": 17,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "0/8",
+          "hand_size": 2,
+          "deck_size": 15,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "死骑兵",
+              "type": "骑兵",
+              "attack": 3,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            },
+            {
+              "name": "黑色布伦瑞克",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "突破"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "耶格猎兵",
+              "type": "散兵",
+              "attack": 2,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 1,
+              "keywords": [
+                "闪避",
+                "齐射"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 2,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 10：P1-法兰西 行动 ===",
+        "  抽到 第45线列步兵团",
+        "  军令: 9/9",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '老近卫军', '第45线列步兵团']",
+        "  ▶ P1-法兰西 部署 第45线列步兵团 到 主力战列线",
+        "  状态：P1 HQ=15, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 15,
+          "orders": "6/9",
+          "hand_size": 4,
+          "deck_size": 16,
+          "rear": [],
+          "main": [
+            {
+              "name": "第45线列步兵团",
+              "type": "线列步兵",
+              "attack": 3,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 3,
+              "keywords": [
+                "结阵",
+                "齐射"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "0/8",
+          "hand_size": 2,
+          "deck_size": 15,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "死骑兵",
+              "type": "骑兵",
+              "attack": 3,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 2,
+              "keywords": [
+                "冲锋",
+                "侧翼迂回"
+              ]
+            },
+            {
+              "name": "黑色布伦瑞克",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "突破"
+              ]
+            }
+          ],
+          "skirmish": [
+            {
+              "name": "耶格猎兵",
+              "type": "散兵",
+              "attack": 2,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 1,
+              "keywords": [
+                "闪避",
+                "齐射"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵团",
+              "type": "线列步兵",
+              "attack": 4,
+              "current_hp": 2,
+              "max_hp": 4,
+              "cost": 4,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "turn": 10,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 10：P2-普鲁士 行动 ===",
+        "  抽到 黑色布伦瑞克、普鲁士重炮",
+        "  军令: 9/9",
+        "  手牌: ['布吕歇尔的近卫', '布吕歇尔的近卫', '黑色布伦瑞克', '普鲁士重炮']",
+        "  ▶ P2-普鲁士 部署 黑色布伦瑞克 到 主力战列线",
+        "  ⚔ 步兵炮组(3hp) → 第45线列步兵团: 造成3伤害",
+        "  ⚔ 步兵炮组(3hp) → 第45线列步兵团: 造成3伤害，目标阵亡：第45线列步兵团",
+        "  ⚔ 死骑兵(1hp) → 第45线列步兵团: 造成1伤害，反击3，目标阵亡：第45线列步兵团",
+        "  ⚔ 黑色布伦瑞克(4hp) → 第45线列步兵团: 造成5伤害，反击3，目标阵亡：第45线列步兵团，突破溢出8打HQ",
+        "  ⚔ 耶格猎兵(1hp) → 第45线列步兵团: 造成3伤害，反击3，目标阵亡：第45线列步兵团",
+        "  ⚔ 近卫掷弹兵团(2hp) → 第45线列步兵团: 造成5伤害，反击3，目标阵亡：第45线列步兵团",
+        "  状态：P1 HQ=7, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 7,
+          "orders": "6/9",
+          "hand_size": 4,
+          "deck_size": 16,
+          "rear": [],
+          "main": [],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "4/9",
+          "hand_size": 3,
+          "deck_size": 13,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "黑色布伦瑞克",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 1,
+              "max_hp": 4,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "突破"
+              ]
+            },
+            {
+              "name": "黑色布伦瑞克",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "突破"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 11,
+      "active_player": 0,
+      "active_name": "P1-法兰西",
+      "log": [
+        "\n=== 回合 11：P1-法兰西 行动 ===",
+        "  抽到 征召步兵营",
+        "  军令: 9/9",
+        "  手牌: ['近卫掷弹兵', '12磅野战炮', '近卫掷弹兵', '老近卫军', '征召步兵营']",
+        "  ▶ P1-法兰西 部署 征召步兵营 到 主力战列线",
+        "  ▶ P1-法兰西 部署 近卫掷弹兵 到 主力战列线",
+        "  状态：P1 HQ=7, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": 7,
+          "orders": "2/9",
+          "hand_size": 3,
+          "deck_size": 15,
+          "rear": [],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            },
+            {
+              "name": "近卫掷弹兵",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 5,
+              "max_hp": 5,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "齐射",
+                "守卫"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "4/9",
+          "hand_size": 3,
+          "deck_size": 13,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [
+            {
+              "name": "黑色布伦瑞克",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 1,
+              "max_hp": 4,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "突破"
+              ]
+            },
+            {
+              "name": "黑色布伦瑞克",
+              "type": "线列步兵",
+              "attack": 5,
+              "current_hp": 4,
+              "max_hp": 4,
+              "cost": 5,
+              "keywords": [
+                "结阵",
+                "突破"
+              ]
+            }
+          ],
+          "skirmish": []
+        }
+      }
+    },
+    {
+      "turn": 11,
+      "active_player": 1,
+      "active_name": "P2-普鲁士",
+      "log": [
+        "\n=== 回合 11：P2-普鲁士 行动 ===",
+        "  抽到 耶格猎兵",
+        "  军令: 9/9",
+        "  手牌: ['布吕歇尔的近卫', '布吕歇尔的近卫', '普鲁士重炮', '耶格猎兵']",
+        "  ▶ P2-普鲁士 部署 耶格猎兵 到 散兵线",
+        "  ▶ P2-普鲁士 部署 普鲁士重炮 到 后方线",
+        "  ⚔ 步兵炮组(3hp) → 近卫掷弹兵: 造成3伤害",
+        "  ⚔ 步兵炮组(3hp) → 近卫掷弹兵: 造成3伤害，目标阵亡：近卫掷弹兵",
+        "  ⚔ 黑色布伦瑞克(1hp) → 近卫掷弹兵: 造成5伤害，反击5，目标阵亡：近卫掷弹兵，突破溢出6打HQ",
+        "  ⚔ 黑色布伦瑞克(4hp) → 近卫掷弹兵: 造成5伤害，反击5，目标阵亡：近卫掷弹兵，突破溢出11打HQ",
+        "  状态：P1 HQ=-10, P2 HQ=17"
+      ],
+      "state": {
+        "p1": {
+          "name": "P1-法兰西",
+          "faction": "法兰西",
+          "hq_hp": -10,
+          "orders": "2/9",
+          "hand_size": 3,
+          "deck_size": 15,
+          "rear": [],
+          "main": [
+            {
+              "name": "征召步兵营",
+              "type": "线列步兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 2,
+              "keywords": [
+                "结阵"
+              ]
+            }
+          ],
+          "skirmish": []
+        },
+        "p2": {
+          "name": "P2-普鲁士",
+          "faction": "普鲁士",
+          "hq_hp": 17,
+          "orders": "3/9",
+          "hand_size": 2,
+          "deck_size": 12,
+          "rear": [
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "步兵炮组",
+              "type": "炮兵",
+              "attack": 2,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 3,
+              "keywords": [
+                "远程"
+              ]
+            },
+            {
+              "name": "普鲁士重炮",
+              "type": "炮兵",
+              "attack": 5,
+              "current_hp": 3,
+              "max_hp": 3,
+              "cost": 5,
+              "keywords": [
+                "远程"
+              ]
+            }
+          ],
+          "main": [],
+          "skirmish": [
+            {
+              "name": "耶格猎兵",
+              "type": "散兵",
+              "attack": 2,
+              "current_hp": 1,
+              "max_hp": 1,
+              "cost": 1,
+              "keywords": [
+                "闪避",
+                "齐射"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
