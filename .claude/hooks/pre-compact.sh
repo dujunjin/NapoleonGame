@@ -1,4 +1,12 @@
 #!/bin/bash
+# Auto-detect project root; skip if not in a project with .claude/
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$PROJECT_ROOT" ] || [ ! -d "$PROJECT_ROOT/.claude" ]; then
+    exit 0
+fi
+cd "$PROJECT_ROOT"
+
+
 # Claude Code PreCompact hook: Dump session state before context compression
 # This output appears in the conversation right before compaction, ensuring
 # critical state survives the summarization process.

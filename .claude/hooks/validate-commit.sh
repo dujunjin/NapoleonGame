@@ -1,4 +1,12 @@
 #!/bin/bash
+# Auto-detect project root; skip if not in a project with .claude/
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$PROJECT_ROOT" ] || [ ! -d "$PROJECT_ROOT/.claude" ]; then
+    exit 0
+fi
+cd "$PROJECT_ROOT"
+
+
 # Claude Code PreToolUse hook: Validates git commit commands
 # Receives JSON on stdin with tool_input.command
 # Exit 0 = allow, Exit 2 = block (stderr shown to Claude)
