@@ -29,6 +29,17 @@ class RuleTuningTests(unittest.TestCase):
             Faction.RUSSIA: 30,
         })
 
+    def test_balance_tuning_card_stats(self):
+        prussia = {card.name: card for card in DECK_BUILDERS[Faction.PRUSSIA]()}
+        russia = {card.name: card for card in DECK_BUILDERS[Faction.RUSSIA]()}
+
+        self.assertEqual(prussia["耶格猎兵"].health, 2)
+        self.assertEqual((prussia["死骑兵"].attack, prussia["死骑兵"].health), (2, 2))
+        self.assertEqual(prussia["近卫掷弹兵团"].health, 5)
+        self.assertEqual(prussia["布吕歇尔的近卫"].attack, 6)
+        self.assertEqual((russia["西伯利亚老兵"].attack, russia["西伯利亚老兵"].health), (5, 5))
+        self.assertEqual(russia["普拉托夫的哥萨克"].attack, 3)
+
     def test_initial_deal_is_four_cards_with_one_extra_for_second_player(self):
         data = play_and_export(Faction.FRANCE, Faction.PRUSSIA, seed=1)
         initial = data["timeline"][0]["state"]

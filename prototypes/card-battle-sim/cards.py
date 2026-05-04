@@ -142,7 +142,7 @@ def build_prussia_deck() -> List[Card]:
     
     # 散兵 ×4：普鲁士军事改革核心
     for i in range(4):
-        deck.append(Card("耶格猎兵", 1, 2, 1, UnitType.SKIRMISHER, Faction.PRUSSIA,
+        deck.append(Card("耶格猎兵", 1, 2, 2, UnitType.SKIRMISHER, Faction.PRUSSIA,
                          Line.SKIRMISH, ["闪避", "齐射"]))
     
     # 国民军 ×4：低费铺场步兵
@@ -157,12 +157,12 @@ def build_prussia_deck() -> List[Card]:
     
     # 掷弹兵 ×3：精锐步兵
     for i in range(3):
-        deck.append(Card("近卫掷弹兵团", 4, 4, 4, UnitType.INFANTRY, Faction.PRUSSIA,
+        deck.append(Card("近卫掷弹兵团", 4, 4, 5, UnitType.INFANTRY, Faction.PRUSSIA,
                          Line.MAIN, ["结阵", "齐射", "守卫"]))
     
     # 黑色骠骑兵 ×3：低费骑兵
     for i in range(3):
-        deck.append(Card("死骑兵", 2, 3, 1, UnitType.CAVALRY, Faction.PRUSSIA,
+        deck.append(Card("死骑兵", 2, 2, 2, UnitType.CAVALRY, Faction.PRUSSIA,
                          Line.MAIN, ["冲锋", "侧翼迂回"]))
     
     # 龙骑兵 ×2
@@ -187,7 +187,7 @@ def build_prussia_deck() -> List[Card]:
     
     # 元帅近卫 ×3：高数值
     for i in range(3):
-        deck.append(Card("布吕歇尔的近卫", 6, 5, 6, UnitType.GUARD, Faction.PRUSSIA,
+        deck.append(Card("布吕歇尔的近卫", 6, 6, 6, UnitType.GUARD, Faction.PRUSSIA,
                          Line.MAIN, ["结阵", "守卫"]))
     
     return deck
@@ -228,12 +228,12 @@ def build_russia_deck() -> List[Card]:
     
     # 西伯利亚老兵 ×3：自残 1 点 HQ，换得超模数值（数值升级 5/4 → 6/5）
     for i in range(3):
-        deck.append(Card("西伯利亚老兵", 3, 6, 5, UnitType.INFANTRY, Faction.RUSSIA,
+        deck.append(Card("西伯利亚老兵", 3, 5, 5, UnitType.INFANTRY, Faction.RUSSIA,
                          Line.MAIN, ["结阵", "自残1"]))
     
     # 普拉托夫的哥萨克 ×3：高数值侧翼骑兵
     for i in range(3):
-        deck.append(Card("普拉托夫的哥萨克", 4, 4, 2, UnitType.CAVALRY, Faction.RUSSIA,
+        deck.append(Card("普拉托夫的哥萨克", 4, 3, 2, UnitType.CAVALRY, Faction.RUSSIA,
                          Line.MAIN, ["冲锋", "侧翼迂回"]))
     
     # 龙骑兵 ×2：标准骑兵
