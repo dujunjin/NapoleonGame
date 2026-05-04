@@ -131,14 +131,20 @@ def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict
             final_turn = turn
             break
     
+    if winner == 0:
+        winner_name = f"P1 {p1_faction.value}"
+    elif winner == 1:
+        winner_name = f"P2 {p2_faction.value}"
+    else:
+        winner_name = "超时/平局"
+
     return {
         "meta": {
             "p1_faction": p1_faction.value,
             "p2_faction": p2_faction.value,
             "seed": seed,
             "winner": winner,
-            "winner_name": ["P1 法兰西", "P2 普鲁士", "P2 俄罗斯",
-                           "平局"][winner if winner >= 0 else 3],
+            "winner_name": winner_name,
             "final_turn": final_turn,
             "end_reason": end_reason,
         },
