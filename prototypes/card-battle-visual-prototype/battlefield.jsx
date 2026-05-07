@@ -7,6 +7,29 @@ const { useState, useEffect, useRef, useCallback } = React;
 const INITIAL_MORALE = 1;
 const MAX_MORALE = 10;
 
+// ─────────── Action Queue ───────────
+function useActionQueue() {
+  const [locked, setLocked] = useState(false);
+  const pendingRef = useRef(null);
+
+  const tryRun = useCallback((fn) => {
+    if (locked) {
+      pendingRef.current = fn;
+      return false;
+    }
+    setLocked(true);
+    fn(() => {
+      setLocked(false);
+      const next = pendingRef.current;
+      pendingRef.current = null;
+      if (next) tryRun(next);
+    });
+    return true;
+  }, [locked]);
+
+  return { locked, tryRun };
+}
+
 // ─────────── Background renderers ───────────
 // Painted battlefield scene with torn flags, broken sabers, fallen soldiers,
 // muddy puddles, scattered cannonballs, firing artillery, distant beacons.
@@ -496,6 +519,7 @@ function Battlefield({ theme, onSpeed }) {
   const handRef = useRef(null);
   const unitIdRef = useRef(1);
   const hoveredSlotRef = useRef(null);
+  const { locked: animLocked, tryRun: tryRunAction } = useActionQueue();
 
   useEffect(() => {
     drawCards(4);
