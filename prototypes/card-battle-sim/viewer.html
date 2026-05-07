@@ -818,6 +818,38 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg-deep); }
 ::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* === Unit Tooltip === */
+.card-tooltip {
+    position: fixed;
+    z-index: 30;
+    min-width: 220px;
+    max-width: 280px;
+    padding: 10px 12px;
+    background: rgba(20,20,32,0.96);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    color: var(--text-primary);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 120ms, transform 120ms;
+}
+.card-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.card-tooltip .tt-name {
+    color: var(--gold-bright);
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+.card-tooltip .tt-row {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
 </style>
 </head>
 <body>
@@ -1023,6 +1055,9 @@ function buildUI() {
                 <span class="hq-hp" id="hq-player-hp">--</span>
             </div>
         </div>
+
+        <!-- Unit Tooltip -->
+        <div class="card-tooltip" id="card-tooltip" role="status" aria-live="polite"></div>
 
         <!-- Current Action Panel -->
         <div class="action-panel" aria-live="polite" aria-atomic="true" id="action-panel">
@@ -1297,6 +1332,8 @@ function renderBattlefieldLines(s, diff, node) {
     document.getElementById("row-p1-main").innerHTML = renderSlots(s.p1.main, false, "主力战列线", diff);
     // P1 rear
     document.getElementById("row-p1-rear").innerHTML = renderSlots(s.p1.rear, false, "后方线", diff);
+    // Bind tooltips for unit cards
+    bindUnitTooltips();
 }
 
 function renderSkirmish(s, diff, node) {
@@ -1391,7 +1428,8 @@ function unitCardHTML(u, isP2, lineName, classes, showOwner) {
                  data-unit-owner="${isP2 ? 'p2' : 'p1'}"
                  data-unit-line="${esc(lineName)}"
                  data-unit-slot="${u.slot}"
-                 data-unit-uid="${esc(unitKey(u, lineName, isP2))}">
+                 data-unit-uid="${esc(unitKey(u, lineName, isP2))}"
+                 data-keywords="${esc((u.keywords || []).join('|'))}">
         ${ownerMarker}
         <div class="ucard-cost">${u.cost}</div>
         <div class="ucard-name" title="${esc(u.name)}">${esc(u.name)}</div>
@@ -1898,6 +1936,46 @@ function unitFactionKey(u) {
         return "prussia";
     }
     return "france";
+}
+
+// ======================================================================
+// Unit Tooltip
+// ======================================================================
+const KEYWORD_HELP = {
+    "冲锋": "部署当回合可行动。",
+    "侧翼迂回": "骑兵在散兵线可绕过常规阻挡攻击后方目标。",
+    "结阵": "降低受到骑兵冲击的伤害。",
+    "齐射": "本回合首次攻击造成额外伤害。",
+    "远程": "炮兵可从后方攻击，满足条件时可直击 HQ。",
+    "守卫": "敌方必须优先攻击守卫单位。",
+    "突破": "击杀目标后可对 HQ 造成溢出压力。"
+};
+
+function bindUnitTooltips() {
+    const tooltip = document.getElementById("card-tooltip");
+    if (!tooltip) return;
+    document.querySelectorAll(".unit-card").forEach(card => {
+        card.onmouseenter = () => showUnitTooltip(card, tooltip);
+        card.onmousemove = (e) => positionTooltip(e, tooltip);
+        card.onmouseleave = () => tooltip.classList.remove("visible");
+    });
+}
+
+function showUnitTooltip(card, tooltip) {
+    const keywords = (card.dataset.keywords || "").split("|").filter(Boolean);
+    tooltip.innerHTML = `
+        <div class="tt-name">${esc(card.dataset.unitName || "")}</div>
+        <div class="tt-row">位置：${esc(card.dataset.unitLine || "")} · 槽位 ${Number(card.dataset.unitSlot) + 1}</div>
+        <div class="tt-row">关键词：${keywords.length ? keywords.map(k => `${esc(k)}：${esc(KEYWORD_HELP[k] || "规则文本待补充")}`).join("<br>") : "无"}</div>
+    `;
+    tooltip.classList.add("visible");
+}
+
+function positionTooltip(e, tooltip) {
+    const x = Math.min(window.innerWidth - 300, e.clientX + 14);
+    const y = Math.min(window.innerHeight - 160, e.clientY + 14);
+    tooltip.style.left = `${Math.max(8, x)}px`;
+    tooltip.style.top = `${Math.max(8, y)}px`;
 }
 
 // ======================================================================
