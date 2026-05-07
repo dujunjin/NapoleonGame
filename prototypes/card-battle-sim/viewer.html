@@ -2,557 +2,1734 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>拿破仑卡牌模拟器 - 对局回放</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拿破仑战争 - 对局回放</title>
 <style>
+/* === CSS Variables === */
+:root {
+    --bg-deep: #1a1a2e;
+    --bg-surface: #22223a;
+    --bg-raised: #2a2a48;
+    --border-main: #4a4a6a;
+    --border-dim: #3a3a58;
+    --text-primary: #e0dde8;
+    --text-secondary: #9a98a8;
+    --text-muted: #6a687a;
+    --gold: #c9a84c;
+    --gold-bright: #e0c060;
+    --red: #c2552c;
+    --red-bright: #e06040;
+    --green: #4a8a5a;
+    --green-bright: #5aaa6a;
+    --blue-gray: #5a7a9a;
+    --faction-france: #4a6fa5;
+    --faction-prussia: #5a5a5a;
+    --faction-russia: #3a6a4a;
+    --card-paper: #f0e8d0;
+    --card-paper-dark: #d8c8a0;
+    --type-infantry: #8fb0c5;
+    --type-skirmisher: #7daf64;
+    --type-cavalry: #c06a5b;
+    --type-artillery: #b79a4a;
+    --type-guard: #9f75bd;
+    --font-main: "Hiragino Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: "SF Mono", "Menlo", "Consolas", monospace;
+    --radius: 4px;
+    --radius-lg: 6px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.4);
+    --shadow-inset: inset 0 0 20px rgba(0,0,0,0.3);
+}
+
+/* === Reset & Base === */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: "Hiragino Sans", "Microsoft YaHei", sans-serif;
-    background: #1a1410;
-    color: #e8d8b8;
+    font-family: var(--font-main);
+    background: var(--bg-deep);
+    color: var(--text-primary);
     min-height: 100vh;
     background-image:
-        radial-gradient(ellipse at top, rgba(80,40,20,0.4) 0%, transparent 60%),
+        radial-gradient(ellipse at top, rgba(40,40,80,0.3) 0%, transparent 60%),
         repeating-linear-gradient(45deg, transparent 0, transparent 10px, rgba(255,255,255,0.01) 10px, rgba(255,255,255,0.01) 20px);
 }
 
-.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+/* === Page Layout === */
+.page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 
-header {
+/* === Replay Header === */
+.replay-header {
     text-align: center;
-    border-bottom: 2px solid #8b6f47;
-    padding: 16px 0;
-    margin-bottom: 20px;
-    position: relative;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
 }
-header h1 {
-    font-size: 28px;
+.replay-header h1 {
+    font-size: 22px;
     letter-spacing: 4px;
-    color: #d4a55c;
-    text-shadow: 2px 2px 0 #000;
+    color: var(--gold);
+    text-shadow: 1px 1px 0 #000;
 }
-header .subtitle { font-size: 13px; color: #8b6f47; margin-top: 6px; }
-
-/* 控制条 */
-.controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #2a1f15;
-    border: 1px solid #5a4530;
-    border-radius: 4px;
-    padding: 12px 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-.controls .turn-info {
-    font-size: 16px;
-    font-weight: bold;
-}
-.controls .turn-info .turn-num { color: #d4a55c; font-size: 22px; }
-.controls .turn-info .active { color: #c2956b; }
-
-.btn {
-    background: #5a4530;
-    color: #e8d8b8;
-    border: 1px solid #8b6f47;
-    padding: 8px 16px;
-    cursor: pointer;
-    font-family: inherit;
+.replay-header .matchup {
     font-size: 14px;
-    border-radius: 3px;
-    transition: all 0.15s;
+    color: var(--text-secondary);
+    margin-top: 4px;
 }
-.btn:hover { background: #8b6f47; }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn.primary { background: #8b3a1f; border-color: #c2552c; }
-.btn.primary:hover { background: #c2552c; }
-
-.btn-group { display: flex; gap: 6px; }
-
-/* 主战场布局 */
-.battlefield {
-    display: grid;
-    grid-template-rows: auto auto auto auto auto auto auto;
-    gap: 10px;
-    background: linear-gradient(to bottom, #3a2818 0%, #2a1f15 50%, #3a2818 100%);
-    border: 2px solid #8b6f47;
-    border-radius: 6px;
-    padding: 16px;
-    box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+.replay-header .matchup .faction-p1 { color: var(--faction-france); font-weight: bold; }
+.replay-header .matchup .faction-p2 { color: var(--faction-russia); font-weight: bold; }
+.replay-header .meta-line {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
 }
 
-/* HQ 区域 */
-.hq {
+/* === Controls Bar === */
+.controls-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px;
-    background: rgba(0,0,0,0.3);
-    border-radius: 3px;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    box-shadow: var(--shadow);
 }
-.hq.p1 { border-left: 4px solid #4a6fa5; }  /* 法兰西蓝 */
-.hq.p2-prussia { border-left: 4px solid #4a4a4a; }  /* 普鲁士黑 */
-.hq.p2-russia { border-left: 4px solid #2d5a3d; }  /* 俄罗斯绿 */
-.hq.p2-france { border-left: 4px solid #4a6fa5; }
-.hq .name { font-size: 18px; font-weight: bold; }
-.hq .stats { display: flex; gap: 24px; font-size: 14px; }
-.hq .stat-label { color: #8b6f47; margin-right: 4px; }
-.hq .hq-hp { font-size: 24px; color: #c2552c; font-weight: bold; }
-
-/* 战线 */
-.line {
-    min-height: 110px;
-    background: rgba(0,0,0,0.2);
-    border: 1px solid #5a4530;
-    border-radius: 3px;
-    padding: 8px;
+.controls-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.controls-center {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.controls-right {
     display: flex;
     align-items: center;
     gap: 8px;
 }
-.line-label {
+
+.turn-info {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.turn-info .turn-num {
+    color: var(--gold-bright);
+    font-size: 18px;
+    font-weight: bold;
+}
+.turn-info .active-player {
+    color: var(--gold);
+    font-weight: bold;
+}
+.step-counter {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+/* Buttons */
+.btn {
+    background: var(--bg-raised);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: var(--radius);
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+.btn:hover { background: var(--border-main); border-color: var(--text-muted); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+}
+.btn.primary {
+    background: var(--red);
+    border-color: var(--red-bright);
+    color: #fff;
+}
+.btn.primary:hover { background: var(--red-bright); }
+.btn.icon-btn {
+    padding: 6px 8px;
+    min-width: 32px;
+    text-align: center;
+}
+
+.speed-select {
+    background: var(--bg-raised);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+.speed-select:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+}
+
+#step-slider {
+    width: min(220px, 40vw);
+    accent-color: var(--gold);
+}
+.filter-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.filter-chip {
+    background: var(--bg-raised);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    padding: 4px 7px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.filter-chip.active {
+    color: #1a1a1a;
+    background: var(--gold);
+    border-color: var(--gold-bright);
+}
+
+.match-select {
+    background: var(--bg-raised);
+    color: var(--text-primary);
+    border: 1px solid var(--border-main);
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    max-width: 200px;
+}
+.match-select:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+}
+
+/* === Player Info Strips === */
+.info-strips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.player-strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+.player-strip.active {
+    border-color: var(--gold);
+    box-shadow: 0 0 6px rgba(201,168,76,0.3);
+}
+.player-strip .strip-name {
+    font-weight: bold;
+    font-size: 13px;
+    min-width: 80px;
+}
+.player-strip .strip-name.p1 { color: var(--faction-france); }
+.player-strip .strip-name.p2 { color: var(--faction-russia); }
+.player-strip .strip-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+}
+.player-strip .strip-stat .label {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+.player-strip .strip-stat .value {
+    color: var(--text-primary);
+    font-weight: bold;
+}
+.player-strip .strip-stat .value.hq-hp {
+    color: var(--red-bright);
+    font-size: 15px;
+}
+.player-strip .strip-stat .value.orders {
+    color: var(--gold);
+}
+
+/* === Battle Board === */
+.battle-board {
+    background: var(--bg-surface);
+    border: 2px solid var(--border-main);
+    border-radius: var(--radius-lg);
+    padding: 12px;
+    box-shadow: var(--shadow), var(--shadow-inset);
+    position: relative;
+    overflow: hidden;
+}
+
+/* HQ strips */
+.hq-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: rgba(0,0,0,0.25);
+    border-radius: var(--radius);
+    margin-bottom: 6px;
+}
+.hq-strip.enemy {
+    border-left: 4px solid var(--faction-russia);
+}
+.hq-strip.player {
+    border-left: 4px solid var(--faction-france);
+}
+.hq-strip.enemy.p2-prussia { border-left-color: var(--faction-prussia); }
+.hq-strip.enemy.p2-russia { border-left-color: var(--faction-russia); }
+.hq-strip.enemy.p2-france { border-left-color: var(--faction-france); }
+.hq-strip .hq-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--text-secondary);
+}
+.hq-strip .hq-hp {
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--red-bright);
+}
+.hq-strip .hq-hp.damaged { color: var(--red); }
+.hq-strip.hq-target {
+    box-shadow: 0 0 12px rgba(194,85,44,0.6);
+    border-color: var(--red-bright);
+}
+
+/* Battlefield lines */
+.bf-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.bf-line {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    background: rgba(0,0,0,0.15);
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    min-height: 90px;
+    overflow: hidden;
+}
+.bf-line.skirmish-line {
+    background: linear-gradient(to bottom, rgba(201,168,76,0.08), rgba(201,168,76,0.04));
+    border: 1px dashed var(--border-main);
+}
+.bf-line-divider {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 4px;
+    padding: 2px 0;
+    user-select: none;
+}
+
+.line-label-col {
     writing-mode: vertical-rl;
     text-orientation: mixed;
     width: 28px;
-    color: #8b6f47;
-    font-size: 12px;
+    min-width: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 11px;
     letter-spacing: 2px;
-    border-right: 1px dashed #5a4530;
-    padding-right: 8px;
+    border-right: 1px solid var(--border-dim);
+    background: rgba(0,0,0,0.1);
     flex-shrink: 0;
 }
-.units-container {
+.line-label-col .skirmish-state {
+    font-size: 9px;
+    color: var(--gold);
+    display: block;
+    margin-top: 4px;
+    writing-mode: horizontal-tb;
+}
+
+.units-row {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(4, 90px);
-    gap: 8px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 6px;
     align-items: center;
-    min-height: 110px;
+    min-height: 90px;
 }
 .slot-empty {
-    width: 90px;
-    height: 110px;
-    border: 1px dashed rgba(139,111,71,0.45);
+    border: 1px dashed rgba(74,74,106,0.4);
+    border-radius: var(--radius);
+    background: rgba(0,0,0,0.08);
+    min-height: 78px;
+    min-width: 0;
+}
+
+/* SVG arrow overlay */
+.arrow-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+.arrow-line {
+    stroke: var(--red);
+    stroke-width: 3;
+    marker-end: url(#arrowhead);
+    filter: drop-shadow(0 0 4px rgba(194,85,44,0.6));
+}
+.arrow-damage {
+    font-size: 13px;
+    font-weight: bold;
+    fill: var(--red-bright);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
+}
+.attack-badge {
+    position: absolute;
+    background: rgba(194,85,44,0.9);
+    color: #fff;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 5px;
     border-radius: 3px;
-    background: rgba(0,0,0,0.12);
-    box-sizing: border-box;
+    pointer-events: none;
+    z-index: 11;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
-.line.skirmish {
-    background: linear-gradient(to bottom, rgba(180,120,60,0.15), rgba(120,80,40,0.15));
-    border: 1px dashed #8b6f47;
-}
-
-.line-divider {
-    text-align: center;
-    color: #8b6f47;
-    font-size: 11px;
-    letter-spacing: 6px;
-    padding: 4px 0;
-    border-top: 1px dashed #5a4530;
-    border-bottom: 1px dashed #5a4530;
-}
-
-/* 单位卡 */
-.unit {
-    width: 90px;
-    height: 110px;
-    background: linear-gradient(135deg, #f4e4c1 0%, #d4b88a 100%);
-    border: 2px solid #2a1f15;
-    border-radius: 3px;
-    color: #2a1f15;
+/* === Unit Cards === */
+.unit-card {
+    background: linear-gradient(135deg, var(--card-paper) 0%, var(--card-paper-dark) 100%);
+    border: 2px solid var(--border-dim);
+    border-radius: var(--radius);
+    color: #2a2a2a;
     padding: 4px;
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
     font-size: 10px;
     position: relative;
-    flex-shrink: 0;
+    min-width: 0;
+    transition: box-shadow 0.2s, opacity 0.3s;
 }
-.unit.faction-法兰西 { border-color: #4a6fa5; }
-.unit.faction-普鲁士 { border-color: #1a1a1a; }
-.unit.faction-俄罗斯 { border-color: #2d5a3d; }
-.unit.type-infantry { background: linear-gradient(135deg, #d8e7f2 0%, #8fb0c5 100%); }
-.unit.type-skirmisher { background: linear-gradient(135deg, #dff0cf 0%, #8daf64 100%); }
-.unit.type-cavalry { background: linear-gradient(135deg, #f2d5d1 0%, #c06a5b 100%); }
-.unit.type-artillery { background: linear-gradient(135deg, #ece1be 0%, #b79a4a 100%); }
-.unit.type-guard { background: linear-gradient(135deg, #eadcf4 0%, #9f75bd 100%); }
+.unit-card.p2-unit {
+    transform: scaleY(-1);
+}
+.unit-card.p2-unit > * { transform: scaleY(-1); }
 
-.unit .cost {
+/* Faction borders */
+.unit-card.faction-france { border-color: var(--faction-france); }
+.unit-card.faction-prussia { border-color: var(--faction-prussia); }
+.unit-card.faction-russia { border-color: var(--faction-russia); }
+
+/* Type backgrounds */
+.unit-card.type-infantry { background: linear-gradient(135deg, #d8e7f2 0%, #a0c0d4 100%); }
+.unit-card.type-skirmisher { background: linear-gradient(135deg, #dff0cf 0%, #a0c878 100%); }
+.unit-card.type-cavalry { background: linear-gradient(135deg, #f2d5d1 0%, #d08070 100%); }
+.unit-card.type-artillery { background: linear-gradient(135deg, #ece1be 0%, #c8aa58 100%); }
+.unit-card.type-guard { background: linear-gradient(135deg, #eadcf4 0%, #b088cc 100%); }
+
+/* Unit cost badge */
+.ucard-cost {
     position: absolute;
-    top: -6px;
-    left: -6px;
-    width: 22px;
-    height: 22px;
-    background: #8b3a1f;
+    top: -5px;
+    left: -5px;
+    width: 20px;
+    height: 20px;
+    background: var(--red);
     color: #fff;
-    border: 2px solid #2a1f15;
+    border: 2px solid #2a2a2a;
     border-radius: 50%;
     text-align: center;
-    line-height: 18px;
-    font-weight: bold;
-    font-size: 12px;
-}
-.unit .name {
+    line-height: 16px;
     font-weight: bold;
     font-size: 11px;
+    z-index: 1;
+}
+.ucard-name {
+    font-weight: bold;
+    font-size: 10px;
     text-align: center;
-    margin-top: 6px;
+    margin-top: 4px;
     line-height: 1.2;
-    height: 28px;
     overflow: hidden;
-    border-bottom: 1px solid #8b6f47;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
     padding-bottom: 2px;
 }
-.unit .type {
+.ucard-type {
     font-size: 9px;
-    color: #5a4530;
+    color: #5a5a5a;
     text-align: center;
-    margin: 2px 0;
+    margin: 1px 0;
 }
-.unit .keywords {
+.ucard-keywords {
     font-size: 8px;
     color: #2a4a8b;
     text-align: center;
     flex: 1;
     line-height: 1.3;
+    overflow: hidden;
 }
-.unit .stats-row {
+.ucard-stats {
     display: flex;
     justify-content: space-between;
-    border-top: 1px solid #8b6f47;
+    border-top: 1px solid rgba(0,0,0,0.15);
     padding-top: 2px;
     font-weight: bold;
 }
-.unit .atk { color: #8b3a1f; font-size: 13px; }
-.unit .hp { font-size: 13px; }
-.unit .hp.damaged { color: #c2552c; }
-.unit .hp.full { color: #2d5a3d; }
+.ucard-atk { color: var(--red); font-size: 12px; }
+.ucard-hp { font-size: 12px; }
+.ucard-hp.damaged { color: var(--red); }
+.ucard-hp.full { color: var(--green); }
 
-/* 玩家2 单位翻转 */
-.p2-unit {
-    transform: scaleY(-1);
+/* Unit states */
+.unit-card.is-source {
+    box-shadow: 0 0 8px rgba(201,168,76,0.7), 0 0 2px var(--gold);
+    border-color: var(--gold);
 }
-.p2-unit > * { transform: scaleY(-1); }
+.unit-card.is-target {
+    box-shadow: 0 0 8px rgba(194,85,44,0.7), 0 0 2px var(--red-bright);
+    border-color: var(--red-bright);
+}
+.unit-card.is-dead {
+    opacity: 0.35;
+    filter: grayscale(0.8);
+    border-style: dashed;
+}
+.unit-card.is-new {
+    animation: deploy-pulse 0.8s ease-out;
+}
+.unit-card.is-hp-changed .ucard-hp {
+    animation: hp-flash 0.6s ease-out;
+}
 
-/* 日志区 */
-.log-panel {
-    margin-top: 20px;
-    background: #2a1f15;
-    border: 1px solid #5a4530;
-    border-radius: 4px;
-    padding: 12px 16px;
-    max-height: 220px;
-    overflow-y: auto;
-    font-family: "SF Mono", Consolas, monospace;
-    font-size: 13px;
-    line-height: 1.6;
+@keyframes deploy-pulse {
+    0% { box-shadow: 0 0 16px rgba(74,138,90,0.8); transform: scale(1.05); }
+    100% { box-shadow: none; transform: scale(1); }
 }
-.log-panel .log-line { margin: 1px 0; }
-.log-panel .log-line.deploy { color: #d4a55c; }
-.log-panel .log-line.attack { color: #c2552c; }
-.log-panel .log-line.special { color: #6f9f6f; }
+@keyframes hp-flash {
+    0% { background: rgba(194,85,44,0.3); }
+    100% { background: transparent; }
+}
 
-/* 信息面板 */
-.info-bar {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 12px;
+/* Owner marker for skirmish */
+.owner-marker {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    z-index: 1;
 }
-.player-info {
-    background: rgba(0,0,0,0.3);
-    border: 1px solid #5a4530;
+.owner-marker.p1 { background: var(--faction-france); }
+.owner-marker.p2 { background: var(--faction-russia); }
+
+/* === Current Action Panel === */
+.action-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    box-shadow: var(--shadow);
+}
+.action-panel .action-summary {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+.action-panel .action-summary .action-label {
+    display: inline-block;
+    padding: 1px 6px;
     border-radius: 3px;
-    padding: 8px 12px;
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    font-size: 13px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-right: 6px;
+    vertical-align: middle;
 }
-.player-info.active { border-color: #d4a55c; box-shadow: 0 0 8px rgba(212,165,92,0.4); }
-.player-info .label { color: #8b6f47; }
-.player-info .value { color: #e8d8b8; font-weight: bold; }
+.action-label.deploy { background: var(--gold); color: #1a1a1a; }
+.action-label.advance { background: var(--blue-gray); color: #fff; }
+.action-label.attack { background: var(--red); color: #fff; }
+.action-label.event { background: var(--green); color: #fff; }
+.action-label.hq_attack { background: #8b2a1f; color: #fff; }
+.action-label.start { background: var(--text-muted); color: #fff; }
+.action-label.end { background: var(--green); color: #fff; }
 
-/* 加载状态 */
-.loading, .error {
+/* === Battle History === */
+.history-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+}
+.history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-dim);
+}
+.history-header .panel-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--gold);
+    letter-spacing: 1px;
+}
+.history-toggle-btn {
+    background: none;
+    border: 1px solid var(--border-dim);
+    color: var(--text-secondary);
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    font-family: inherit;
+}
+.history-toggle-btn:hover { border-color: var(--text-muted); }
+.history-toggle-btn:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+}
+
+.history-table-wrap {
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.history-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-raised);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: bold;
+    text-align: left;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border-dim);
+    white-space: nowrap;
+}
+.history-table tbody tr {
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.history-table tbody tr:hover {
+    background: rgba(201,168,76,0.08);
+}
+.history-table tbody tr.current-row {
+    background: rgba(201,168,76,0.15);
+    border-left: 3px solid var(--gold);
+}
+.history-table tbody tr:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: -2px;
+}
+.history-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(74,74,106,0.2);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.history-table td.desc-cell {
+    white-space: normal;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.history-table .faction-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #fff;
+}
+.faction-badge.f1 { background: var(--faction-france); }
+.faction-badge.f2 { background: var(--faction-russia); }
+.faction-badge.f-neutral { background: var(--text-muted); }
+.history-table .action-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+}
+.history-table .marker {
+    font-size: 10px;
+}
+
+/* Raw log area */
+.raw-log-area {
+    border-top: 1px solid var(--border-dim);
+    display: none;
+}
+.raw-log-area.visible { display: block; }
+.raw-log-content {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.raw-log-content .log-line { margin: 1px 0; }
+.raw-log-content .log-line.log-deploy { color: var(--gold); }
+.raw-log-content .log-line.log-attack { color: var(--red-bright); }
+.raw-log-content .log-line.log-special { color: var(--green-bright); }
+
+/* === Final Result Banner === */
+.result-banner {
+    display: none;
+    background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 12px 20px;
+    text-align: center;
+    box-shadow: 0 0 12px rgba(201,168,76,0.2);
+}
+.result-banner.visible { display: block; }
+.result-banner .result-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--gold-bright);
+    letter-spacing: 2px;
+}
+.result-banner .result-detail {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* === Loading & Error === */
+.state-message {
     text-align: center;
     padding: 60px 20px;
-    color: #8b6f47;
+    color: var(--text-muted);
+    font-size: 14px;
 }
-.error { color: #c2552c; }
+.state-message.error {
+    color: var(--red-bright);
+}
+.state-message code {
+    background: var(--bg-raised);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+/* === Accessibility: reduced motion === */
+@media (prefers-reduced-motion: reduce) {
+    .unit-card.is-new { animation: none; }
+    .unit-card.is-hp-changed .ucard-hp { animation: none; }
+    .arrow-line { filter: none; }
+}
+
+/* === Responsive === */
+@media (max-width: 900px) {
+    .info-strips {
+        grid-template-columns: 1fr;
+    }
+    .controls-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .controls-left, .controls-center, .controls-right {
+        justify-content: center;
+    }
+    .history-table td.desc-cell {
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 500px) {
+    .page { padding: 6px 8px; gap: 8px; }
+    .replay-header h1 { font-size: 16px; letter-spacing: 2px; }
+    .battle-board { padding: 6px; }
+    .bf-line { min-height: 70px; }
+    .units-row {
+        gap: 3px;
+        padding: 3px;
+        min-height: 70px;
+    }
+    .unit-card { font-size: 9px; }
+    .ucard-name { font-size: 9px; }
+    .ucard-atk, .ucard-hp { font-size: 10px; }
+    .ucard-cost { width: 16px; height: 16px; font-size: 9px; line-height: 12px; top: -4px; left: -4px; }
+    .slot-empty { min-height: 60px; }
+    .btn { padding: 5px 8px; font-size: 12px; }
+    .controls-center { flex-wrap: wrap; }
+    .player-strip { gap: 6px; font-size: 11px; }
+    .history-table { font-size: 11px; }
+    .history-table td.desc-cell { max-width: 120px; }
+    #step-slider { width: 100%; }
+    .controls-right { flex-direction: column; align-items: stretch; }
+}
+
+/* === Focus visible global === */
+:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 </style>
 </head>
 <body>
-<div class="container">
-    <header>
-        <h1>拿 破 仑 战 争 · 对 局 回 放</h1>
-        <div class="subtitle">RULE PROTOTYPE · 三线战场 · 军令系统</div>
-    </header>
-
-    <div id="root">
-        <div class="loading">加载对局数据中...</div>
-    </div>
+<div class="page" id="app">
+    <div class="state-message" id="loading-state">加载对局数据中...</div>
 </div>
 
 <script>
+// ======================================================================
+// State
+// ======================================================================
 let MATCH_DATA = null;
 let currentStep = 0;
+let playInterval = null;
+let playSpeed = 1; // 0.5, 1, 2, 4
+let prevStepState = null; // for snapshot diff
+let rawLogVisible = false;
+let activeHistoryFilter = "all";
 
-async function loadMatch(filename = "match_data.json") {
+const ACTION_LABELS = {
+    deploy: "部署", advance: "行军", attack: "攻击",
+    event: "事件", hq_attack: "直击HQ", start: "开局", end: "终局"
+};
+
+const BASE_INTERVAL = 500; // ms at 1x
+
+// ======================================================================
+// Data Loading
+// ======================================================================
+async function loadMatch(filename) {
+    filename = filename || "match_data.json";
+    const app = document.getElementById("app");
+    app.innerHTML = `<div class="state-message">加载 <strong>${escapeHtml(filename)}</strong> 中...</div>`;
     try {
         const res = await fetch(filename);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         MATCH_DATA = await res.json();
-        renderUI();
+        currentStep = 0;
+        prevStepState = null;
+        buildUI();
     } catch (e) {
-        document.getElementById("root").innerHTML =
-            `<div class="error">无法加载 ${filename}<br>请先运行：<code>python3 export_match.py</code><br><br>错误：${e.message}</div>`;
+        app.innerHTML = `
+            <div class="state-message error">
+                <p>无法加载 <strong>${escapeHtml(filename)}</strong></p>
+                <p style="margin-top:12px;font-size:13px;color:var(--text-secondary)">
+                    可能是本地文件访问问题。请尝试启动本地服务器：
+                </p>
+                <p style="margin-top:8px">
+                    <code>cd prototypes/card-battle-sim && python3 -m http.server 8000</code>
+                </p>
+                <p style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+                    然后访问 <code>http://localhost:8000/viewer.html</code>
+                </p>
+                <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">
+                    错误信息：${escapeHtml(e.message)}
+                </p>
+            </div>`;
     }
 }
 
 async function loadDifferent(filename) {
-    if (playInterval) {
-        clearInterval(playInterval);
-        playInterval = null;
-    }
-    currentStep = 0;
+    stopAutoplay();
     await loadMatch(filename);
-    // 切换后保持下拉框选中状态
     const sel = document.getElementById("match-select");
     if (sel) sel.value = filename;
 }
 
-function renderUI() {
-    const root = document.getElementById("root");
-    root.innerHTML = `
-        <div class="controls">
-            <div class="turn-info">
-                <span>对局：</span>
-                <span class="active">${MATCH_DATA.meta.p1_faction}</span>
+// ======================================================================
+// UI Construction
+// ======================================================================
+function buildUI() {
+    const meta = MATCH_DATA.meta;
+    const app = document.getElementById("app");
+    const p2FactionClass = factionClass(meta.p2_faction);
+
+    app.innerHTML = `
+        <!-- Replay Header -->
+        <div class="replay-header" role="banner">
+            <h1>拿破仑战争 · 对局回放</h1>
+            <div class="matchup">
+                <span class="faction-p1">${esc(meta.p1_faction)}</span>
                 <span> vs </span>
-                <span class="active">${MATCH_DATA.meta.p2_faction}</span>
-                <span style="margin-left:24px">回合 <span class="turn-num" id="turn-display">0</span></span>
-                <span style="margin-left:16px;color:#8b6f47" id="active-display"></span>
+                <span class="faction-p2">${esc(meta.p2_faction)}</span>
             </div>
-            <div class="btn-group">
-                <select class="btn" id="match-select" onchange="loadDifferent(this.value)" style="cursor:pointer">
+            <div class="meta-line">
+                种子 ${meta.seed} · 最终回合 ${meta.final_turn} · ${esc(meta.end_reason)} · 胜者：${esc(meta.winner_name)}
+            </div>
+        </div>
+
+        <!-- Controls Bar -->
+        <div class="controls-bar" role="toolbar" aria-label="回放控制">
+            <div class="controls-left">
+                <select class="match-select" id="match-select" aria-label="选择对局"
+                        onchange="loadDifferent(this.value)">
                     <option value="match_data.json">默认对局</option>
-                    <option value="match_france_vs_prussia.json">法兰西 vs 普鲁士 (seed=10)</option>
-                    <option value="match_prussia_vs_russia.json">普鲁士 vs 俄罗斯 (seed=7)</option>
+                    <option value="match_france_vs_prussia.json">法兰西 vs 普鲁士</option>
+                    <option value="match_prussia_vs_russia.json">普鲁士 vs 俄罗斯</option>
                 </select>
-                <button class="btn" onclick="goto(0)">⏮ 起始</button>
-                <button class="btn" onclick="step(-1)" id="btn-prev">◀ 上一步</button>
-                <button class="btn primary" onclick="togglePlay()" id="btn-play">▶ 播放</button>
-                <button class="btn" onclick="step(1)" id="btn-next">下一步 ▶</button>
-                <button class="btn" onclick="goto(MATCH_DATA.timeline.length - 1)">最终 ⏭</button>
-            </div>
-        </div>
-
-        <div class="info-bar">
-            <div class="player-info" id="p1-info">
-                <span><span class="label">玩家：</span><span class="value">${MATCH_DATA.timeline[0].state.p1.name}</span></span>
-                <span><span class="label">HQ：</span><span class="value" id="p1-hq">25</span></span>
-                <span><span class="label">军令：</span><span class="value" id="p1-orders">1/1</span></span>
-                <span><span class="label">手牌：</span><span class="value" id="p1-hand">4</span></span>
-                <span><span class="label">牌库：</span><span class="value" id="p1-deck">26</span></span>
-                <span><span class="label">弃牌：</span><span class="value" id="p1-discard">0</span></span>
-            </div>
-            <div class="player-info" id="p2-info">
-                <span><span class="label">玩家：</span><span class="value">${MATCH_DATA.timeline[0].state.p2.name}</span></span>
-                <span><span class="label">HQ：</span><span class="value" id="p2-hq">25</span></span>
-                <span><span class="label">军令：</span><span class="value" id="p2-orders">1/1</span></span>
-                <span><span class="label">手牌：</span><span class="value" id="p2-hand">5</span></span>
-                <span><span class="label">牌库：</span><span class="value" id="p2-deck">25</span></span>
-                <span><span class="label">弃牌：</span><span class="value" id="p2-discard">0</span></span>
-            </div>
-        </div>
-
-        <div class="battlefield">
-            <div class="hq p2-${factionClass(MATCH_DATA.meta.p2_faction)}">
-                <div class="name">${MATCH_DATA.meta.p2_faction} HQ</div>
-                <div class="stats">
-                    <span><span class="stat-label">血量</span><span class="hq-hp" id="p2-hq-big">25</span></span>
+                <div class="turn-info">
+                    回合 <span class="turn-num" id="turn-display">0</span>
+                    <span class="active-player" id="active-display"></span>
+                    <span class="step-counter" id="step-counter"></span>
                 </div>
             </div>
-            <div class="line" id="line-p2-rear">
-                <div class="line-label">敌·后方</div>
-                <div class="units-container"></div>
+            <div class="controls-center">
+                <button class="btn icon-btn" id="btn-first" aria-label="第一步" title="第一步 (Home)">⏮</button>
+                <button class="btn icon-btn" id="btn-prev-turn" aria-label="上一回合" title="上一回合">⏮⌂</button>
+                <button class="btn icon-btn" id="btn-prev" aria-label="上一步" title="上一步 (Left)">◀</button>
+                <button class="btn primary icon-btn" id="btn-play" aria-label="播放" title="播放/暂停 (Space)">▶</button>
+                <button class="btn icon-btn" id="btn-next" aria-label="下一步" title="下一步 (Right)">▶</button>
+                <button class="btn icon-btn" id="btn-next-turn" aria-label="下一回合" title="下一回合">⌂⏭</button>
+                <button class="btn icon-btn" id="btn-last" aria-label="最终步" title="最终步 (End)">⏭</button>
             </div>
-            <div class="line" id="line-p2-main">
-                <div class="line-label">敌·主力</div>
-                <div class="units-container"></div>
+            <div class="controls-right">
+                <input type="range" id="step-slider" min="0" max="0" value="0"
+                       aria-label="时间轴" title="拖动时间轴">
+                <div class="filter-group" role="group" aria-label="动作过滤">
+                    <button class="filter-chip active" data-filter="all">全部</button>
+                    <button class="filter-chip" data-filter="deploy">部署</button>
+                    <button class="filter-chip" data-filter="event">事件</button>
+                    <button class="filter-chip" data-filter="attack">攻击</button>
+                    <button class="filter-chip" data-filter="hq_attack">HQ</button>
+                </div>
+                <label class="sr-only" for="speed-select">播放速度</label>
+                <select class="speed-select" id="speed-select" aria-label="播放速度" title="播放速度">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                    <option value="4">4x</option>
+                </select>
             </div>
-            <div class="line skirmish" id="line-skirmish">
-                <div class="line-label">散 兵 线</div>
-                <div class="units-container" id="skirmish-shared"></div>
+        </div>
+
+        <!-- Player Info Strips -->
+        <div class="info-strips">
+            <div class="player-strip" id="p1-strip">
+                <span class="strip-name p1" id="p1-name">P1</span>
+                <div class="strip-stat"><span class="label">HQ</span><span class="value hq-hp" id="p1-hq">--</span></div>
+                <div class="strip-stat"><span class="label">军令</span><span class="value orders" id="p1-orders">--</span></div>
+                <div class="strip-stat"><span class="label">手牌</span><span class="value" id="p1-hand">--</span></div>
+                <div class="strip-stat"><span class="label">牌库</span><span class="value" id="p1-deck">--</span></div>
+                <div class="strip-stat"><span class="label">弃牌</span><span class="value" id="p1-discard">--</span></div>
             </div>
-            <div class="line" id="line-p1-main">
-                <div class="line-label">我·主力</div>
-                <div class="units-container"></div>
+            <div class="player-strip" id="p2-strip">
+                <span class="strip-name p2" id="p2-name">P2</span>
+                <div class="strip-stat"><span class="label">HQ</span><span class="value hq-hp" id="p2-hq">--</span></div>
+                <div class="strip-stat"><span class="label">军令</span><span class="value orders" id="p2-orders">--</span></div>
+                <div class="strip-stat"><span class="label">手牌</span><span class="value" id="p2-hand">--</span></div>
+                <div class="strip-stat"><span class="label">牌库</span><span class="value" id="p2-deck">--</span></div>
+                <div class="strip-stat"><span class="label">弃牌</span><span class="value" id="p2-discard">--</span></div>
             </div>
-            <div class="line" id="line-p1-rear">
-                <div class="line-label">我·后方</div>
-                <div class="units-container"></div>
+        </div>
+
+        <!-- Battle Board -->
+        <div class="battle-board" id="battlefield">
+            <svg class="arrow-overlay" id="arrow-overlay" aria-hidden="true">
+                <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                        <polygon points="0 0, 10 3.5, 0 7" fill="${'#c2552c'}" />
+                    </marker>
+                </defs>
+            </svg>
+
+            <!-- Enemy HQ -->
+            <div class="hq-strip enemy p2-${p2FactionClass}" id="hq-enemy">
+                <span class="hq-label">${esc(meta.p2_faction)} 指挥部</span>
+                <span class="hq-hp" id="hq-enemy-hp">--</span>
             </div>
-            <div class="hq p1">
-                <div class="name">${MATCH_DATA.meta.p1_faction} HQ</div>
-                <div class="stats">
-                    <span><span class="stat-label">血量</span><span class="hq-hp" id="p1-hq-big">25</span></span>
+
+            <!-- Battlefield Lines -->
+            <div class="bf-lines" id="bf-lines">
+                <div class="bf-line" id="line-p2-rear">
+                    <div class="line-label-col">敌·后方</div>
+                    <div class="units-row" id="row-p2-rear"></div>
+                </div>
+                <div class="bf-line-divider">--- 敌 主 力 ---</div>
+                <div class="bf-line" id="line-p2-main">
+                    <div class="line-label-col">敌·主力</div>
+                    <div class="units-row" id="row-p2-main"></div>
+                </div>
+                <div class="bf-line-divider">--- 散 兵 线 ---</div>
+                <div class="bf-line skirmish-line" id="line-skirmish">
+                    <div class="line-label-col">
+                        散兵线
+                        <span class="skirmish-state" id="skirmish-state"></span>
+                    </div>
+                    <div class="units-row" id="row-skirmish"></div>
+                </div>
+                <div class="bf-line-divider">--- 我 主 力 ---</div>
+                <div class="bf-line" id="line-p1-main">
+                    <div class="line-label-col">我·主力</div>
+                    <div class="units-row" id="row-p1-main"></div>
+                </div>
+                <div class="bf-line" id="line-p1-rear">
+                    <div class="line-label-col">我·后方</div>
+                    <div class="units-row" id="row-p1-rear"></div>
                 </div>
             </div>
+
+            <!-- Player HQ -->
+            <div class="hq-strip player" id="hq-player">
+                <span class="hq-label">${esc(meta.p1_faction)} 指挥部</span>
+                <span class="hq-hp" id="hq-player-hp">--</span>
+            </div>
         </div>
 
-        <div class="log-panel" id="log-panel">
-            <div class="log-line">对局开始 · 种子 ${MATCH_DATA.meta.seed}</div>
+        <!-- Current Action Panel -->
+        <div class="action-panel" aria-live="polite" aria-atomic="true" id="action-panel">
+            <div class="action-summary" id="action-summary">--</div>
         </div>
-    `;
-    
-    renderStep(0);
-    document.addEventListener("keydown", handleKey);
-}
 
-function factionClass(faction) {
-    if (faction === "法兰西") return "france";
-    if (faction === "普鲁士") return "prussia";
-    if (faction === "俄罗斯") return "russia";
-    return "france";
-}
+        <!-- Result Banner -->
+        <div class="result-banner" id="result-banner">
+            <div class="result-title" id="result-title"></div>
+            <div class="result-detail" id="result-detail"></div>
+        </div>
 
-function unitTypeClass(type) {
-    if (type === "线列步兵") return "type-infantry";
-    if (type === "散兵") return "type-skirmisher";
-    if (type === "骑兵") return "type-cavalry";
-    if (type === "炮兵") return "type-artillery";
-    if (type === "近卫") return "type-guard";
-    return "type-infantry";
-}
-
-function unitHTML(u, isP2) {
-    const damaged = u.current_hp < u.max_hp;
-    const hpClass = damaged ? "damaged" : "full";
-    const kw = (u.keywords || []).filter(k => !k.startsWith("光环")).slice(0, 3).join("·");
-    const typeClass = unitTypeClass(u.type);
-    return `
-        <div class="unit ${typeClass} ${isP2 ? 'p2-unit' : ''} faction-${u.name.includes('俄') || u.name.includes('哥萨克') || u.name.includes('库图') || u.name.includes('巴格') || u.name.includes('普拉') || u.name.includes('独角') || u.name.includes('莫斯科') || u.name.includes('帝国大军') || u.name.includes('东正') || u.name.includes('西伯') || u.name.includes('猎兵团') ? '俄罗斯' : (u.name.includes('普鲁') || u.name.includes('耶格') || u.name.includes('黑色') || u.name.includes('死骑') || u.name.includes('布吕') || u.name.includes('西里') ? '普鲁士' : '法兰西')}">
-            <div class="cost">${u.cost}</div>
-            <div class="name">${u.name}</div>
-            <div class="type">${u.type}</div>
-            <div class="keywords">${kw}</div>
-            <div class="stats-row">
-                <span class="atk">⚔ ${u.attack}</span>
-                <span class="hp ${hpClass}">♥ ${u.current_hp}/${u.max_hp}</span>
+        <!-- Battle History -->
+        <div class="history-panel">
+            <div class="history-header">
+                <span class="panel-title">战 斗 历 史</span>
+                <button class="history-toggle-btn" id="toggle-raw-log"
+                        aria-expanded="false" aria-controls="raw-log-area">
+                    显示原始日志
+                </button>
+            </div>
+            <div class="history-table-wrap">
+                <table class="history-table" aria-label="战斗历史步骤列表">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th style="width:40px">回合</th>
+                            <th style="width:56px">阵营</th>
+                            <th style="width:64px">动作</th>
+                            <th>描述</th>
+                            <th style="width:60px">标记</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+            <div class="raw-log-area" id="raw-log-area">
+                <div class="raw-log-content" id="raw-log-content"></div>
             </div>
         </div>
     `;
-}
 
-function slotsHTML(units, isP2) {
-    const slots = Array.from({ length: 4 }, () => null);
-    units.forEach((u, index) => {
-        const slot = Number.isInteger(u.slot) ? u.slot : index;
-        if (slot >= 0 && slot < 4 && slots[slot] === null) {
-            slots[slot] = u;
-        }
+    // Bind controls
+    document.getElementById("btn-first").onclick = () => goto(0);
+    document.getElementById("btn-prev").onclick = () => step(-1);
+    document.getElementById("btn-play").onclick = () => togglePlay();
+    document.getElementById("btn-next").onclick = () => step(1);
+    document.getElementById("btn-last").onclick = () => goto(MATCH_DATA.timeline.length - 1);
+    document.getElementById("btn-prev-turn").onclick = () => gotoPrevTurn();
+    document.getElementById("btn-next-turn").onclick = () => gotoNextTurn();
+    document.getElementById("speed-select").onchange = (e) => {
+        playSpeed = parseFloat(e.target.value);
+        if (playInterval) { stopAutoplay(); startAutoplay(); }
+    };
+    document.getElementById("toggle-raw-log").onclick = () => toggleRawLog();
+
+    // Timeline scrubber
+    const slider = document.getElementById("step-slider");
+    slider.max = MATCH_DATA.timeline.length - 1;
+    slider.oninput = (e) => goto(parseInt(e.target.value, 10));
+
+    // Filter chips
+    document.querySelectorAll(".filter-chip").forEach(btn => {
+        btn.onclick = () => {
+            activeHistoryFilter = btn.dataset.filter;
+            document.querySelectorAll(".filter-chip").forEach(b => b.classList.toggle("active", b === btn));
+            buildHistoryTable();
+            highlightHistoryRow();
+        };
     });
-    return slots.map(u => u ? unitHTML(u, isP2) : `<div class="slot-empty"></div>`).join("");
+
+    // Build history table
+    buildHistoryTable();
+
+    // Keyboard
+    document.addEventListener("keydown", handleKeydown);
+
+    // Initial render
+    renderStep(0);
 }
 
-function sharedSkirmishHTML(p1Units, p2Units) {
-    const slots = Array.from({ length: 4 }, () => null);
-    p2Units.forEach((u, index) => {
-        const slot = Number.isInteger(u.slot) ? u.slot : index;
-        if (slot >= 0 && slot < 4 && slots[slot] === null) {
+// ======================================================================
+// History Table
+// ======================================================================
+function buildHistoryTable() {
+    const tbody = document.getElementById("history-body");
+    const timeline = MATCH_DATA.timeline;
+    let html = "";
+    for (let i = 0; i < timeline.length; i++) {
+        const node = timeline[i];
+        if (activeHistoryFilter !== "all" && node.action !== activeHistoryFilter) continue;
+        const stepData = deriveHistoryRow(node, i);
+        html += `<tr data-step="${i}" tabindex="0"
+                     role="button" aria-label="跳转到步骤 ${i+1}"
+                     onclick="goto(${i})" onkeydown="if(event.key==='Enter'){goto(${i})}">
+                    <td>${i + 1}</td>
+                    <td>${node.turn}</td>
+                    <td>${stepData.factionBadge}</td>
+                    <td>${stepData.actionBadge}</td>
+                    <td class="desc-cell" title="${esc(stepData.desc)}">${esc(stepData.desc)}</td>
+                    <td class="marker">${stepData.marker}</td>
+                 </tr>`;
+    }
+    tbody.innerHTML = html;
+}
+
+function getAttackerName(ae) { return ae.attacker_name || (ae.attacker && ae.attacker.name) || "?"; }
+function getDefenderName(ae) { return ae.defender_name || (ae.defender && ae.defender.name) || "?"; }
+
+function deriveHistoryRow(node, idx) {
+    const action = node.action || "";
+    const ap = node.active_player;
+    let factionBadge = '<span class="faction-badge f-neutral">--</span>';
+    if (ap === 0) factionBadge = `<span class="faction-badge f1">${esc(factionShort(MATCH_DATA.meta.p1_faction))}</span>`;
+    else if (ap === 1) factionBadge = `<span class="faction-badge f2">${esc(factionShort(MATCH_DATA.meta.p2_faction))}</span>`;
+
+    const actionBadge = `<span class="action-label ${esc(action)}">${esc(ACTION_LABELS[action] || action)}</span>`;
+    let desc = "";
+    let marker = "";
+
+    if (action === "start") {
+        desc = "对局开始";
+    } else if (action === "deploy") {
+        desc = extractDeployDesc(node);
+    } else if (action === "event") {
+        desc = extractEventDesc(node);
+    } else if (action === "advance") {
+        desc = extractAdvanceDesc(node);
+    } else if (action === "attack") {
+        const ae = node.attack_event;
+        if (ae) {
+            desc = `${esc(getAttackerName(ae))} → ${esc(getDefenderName(ae))} · 造成 ${ae.dmg_to_defender} 伤害`;
+            if (ae.defender_killed) { desc += " · 击杀"; marker = "💀"; }
+            if (ae.dmg_to_attacker > 0) marker += (marker ? " " : "") + `反击${ae.dmg_to_attacker}`;
+        } else {
+            desc = "攻击";
+        }
+    } else if (action === "hq_attack") {
+        const ae = node.attack_event;
+        if (ae) {
+            desc = `${esc(getAttackerName(ae))} 直击 HQ · 造成 ${ae.dmg_to_defender} 伤害`;
+        } else {
+            desc = "直击 HQ";
+        }
+    }
+
+    return { factionBadge, actionBadge, desc, marker };
+}
+
+function extractDeployDesc(node) {
+    for (const line of (node.log || [])) {
+        const m = line.match(/▶\s*\S+\s+部署\s+(\S+)\s+到\s+(\S+)\s+槽位(\d+)/);
+        if (m) return `${m[1]} → ${m[2]} 槽位${m[3]}`;
+    }
+    return "部署单位";
+}
+
+function extractEventDesc(node) {
+    for (const line of (node.log || [])) {
+        const m = line.match(/📜\s*\S+\s+打出事件卡【([^】]+)】→\s*(.+)/);
+        if (m) return `${m[1]} · ${m[2]}`;
+    }
+    return "打出事件卡";
+}
+
+function extractAdvanceDesc(node) {
+    for (const line of (node.log || [])) {
+        const m = line.match(/⇒\s*(\S+)\s+(\S+)→(\S+)\s+槽位(\d+)/);
+        if (m) return `${m[1]} ${m[2]}→${m[3]} 槽位${m[4]}`;
+    }
+    return "行军移动";
+}
+
+// ======================================================================
+// Render Step
+// ======================================================================
+function renderStep(idx) {
+    const timeline = MATCH_DATA.timeline;
+    currentStep = Math.max(0, Math.min(idx, timeline.length - 1));
+    const node = timeline[currentStep];
+    const s = node.state;
+
+    // Snapshot diff
+    const diff = computeDiff(prevStepState, s, node);
+
+    // Turn info
+    const turnDisplay = document.getElementById("turn-display");
+    const activeDisplay = document.getElementById("active-display");
+    const stepCounter = document.getElementById("step-counter");
+    if (turnDisplay) turnDisplay.textContent = node.turn;
+
+    let activeText = "";
+    if (node.active_player === 0) activeText = s.p1.faction;
+    else if (node.active_player === 1) activeText = s.p2.faction;
+    if (node.action && ACTION_LABELS[node.action]) {
+        activeText += activeText ? ` · ${ACTION_LABELS[node.action]}` : ACTION_LABELS[node.action];
+    }
+    if (activeDisplay) activeDisplay.textContent = activeText ? ` · ${activeText}` : "";
+    if (stepCounter) stepCounter.textContent = `[${currentStep + 1} / ${timeline.length}]`;
+
+    // Player strips
+    updatePlayerStrip("p1", s.p1, node.active_player === 0);
+    updatePlayerStrip("p2", s.p2, node.active_player === 1);
+
+    // HQ
+    const hqEnemyHp = document.getElementById("hq-enemy-hp");
+    const hqPlayerHp = document.getElementById("hq-player-hp");
+    if (hqEnemyHp) {
+        hqEnemyHp.textContent = Math.max(0, s.p2.hq_hp);
+        hqEnemyHp.classList.toggle("damaged", s.p2.hq_hp < startingHqHp("p2"));
+    }
+    if (hqPlayerHp) {
+        hqPlayerHp.textContent = Math.max(0, s.p1.hq_hp);
+        hqPlayerHp.classList.toggle("damaged", s.p1.hq_hp < startingHqHp("p1"));
+    }
+
+    // HQ target highlight for HQ attacks
+    const hqEnemy = document.getElementById("hq-enemy");
+    const hqPlayerEl = document.getElementById("hq-player");
+    const hqTarget = getHqTargetElement(node.active_player);
+    if (hqEnemy) hqEnemy.classList.toggle("hq-target", node.action === "hq_attack" && hqTarget === hqEnemy);
+    if (hqPlayerEl) hqPlayerEl.classList.toggle("hq-target", node.action === "hq_attack" && hqTarget === hqPlayerEl);
+
+    // Battlefield lines
+    renderBattlefieldLines(s, diff, node);
+
+    // Action summary
+    renderActionSummary(node);
+
+    // Result banner
+    renderResultBanner();
+
+    // Arrows
+    requestAnimationFrame(() => drawAttackArrows(node.attack_event || null, node.active_player));
+
+    // Sync timeline scrubber
+    const slider = document.getElementById("step-slider");
+    if (slider) slider.value = currentStep;
+
+    // History: highlight current row
+    highlightHistoryRow();
+
+    // Raw log
+    renderRawLog(node);
+
+    // Button states
+    updateButtonStates();
+
+    // Save for next diff
+    prevStepState = JSON.parse(JSON.stringify(s));
+}
+
+function updatePlayerStrip(prefix, player, isActive) {
+    const strip = document.getElementById(`${prefix}-strip`);
+    if (strip) strip.classList.toggle("active", isActive);
+    setText(`${prefix}-name`, player.name);
+    setText(`${prefix}-hq`, Math.max(0, player.hq_hp));
+    setText(`${prefix}-orders`, player.orders);
+    setText(`${prefix}-hand`, player.hand_size);
+    setText(`${prefix}-deck`, player.deck_size);
+    setText(`${prefix}-discard`, player.discard_size ?? 0);
+}
+
+function renderBattlefieldLines(s, diff, node) {
+    // P2 rear
+    document.getElementById("row-p2-rear").innerHTML = renderSlots(s.p2.rear, true, "后方线", diff);
+    // P2 main
+    document.getElementById("row-p2-main").innerHTML = renderSlots(s.p2.main, true, "主力战列线", diff);
+    // Skirmish (shared)
+    renderSkirmish(s, diff, node);
+    // P1 main
+    document.getElementById("row-p1-main").innerHTML = renderSlots(s.p1.main, false, "主力战列线", diff);
+    // P1 rear
+    document.getElementById("row-p1-rear").innerHTML = renderSlots(s.p1.rear, false, "后方线", diff);
+}
+
+function renderSkirmish(s, diff, node) {
+    const container = document.getElementById("row-skirmish");
+    const stateLabel = document.getElementById("skirmish-state");
+    const p1Units = s.p1.skirmish || [];
+    const p2Units = s.p2.skirmish || [];
+
+    // Skirmish state label
+    if (stateLabel) {
+        if (p1Units.length === 0 && p2Units.length === 0) {
+            stateLabel.textContent = "[ 未接敌 ]";
+        } else if (p1Units.length > 0 && p2Units.length === 0) {
+            stateLabel.textContent = "[ 我方压制 ]";
+        } else if (p1Units.length === 0 && p2Units.length > 0) {
+            stateLabel.textContent = "[ 敌方压制 ]";
+        } else {
+            stateLabel.textContent = "[ 交战 ]";
+        }
+    }
+
+    // Merge into 4 slots: P2 first, then P1
+    const slots = [null, null, null, null];
+    p2Units.forEach(u => {
+        const slot = (Number.isInteger(u.slot) ? u.slot : 0);
+        if (slot >= 0 && slot < 4 && !slots[slot]) {
             slots[slot] = { unit: u, isP2: true };
         }
     });
-    p1Units.forEach((u, index) => {
-        const slot = Number.isInteger(u.slot) ? u.slot : index;
-        if (slot >= 0 && slot < 4 && slots[slot] === null) {
+    p1Units.forEach(u => {
+        const slot = (Number.isInteger(u.slot) ? u.slot : 0);
+        if (slot >= 0 && slot < 4 && !slots[slot]) {
             slots[slot] = { unit: u, isP2: false };
         }
     });
-    return slots.map(entry => entry
-        ? unitHTML(entry.unit, entry.isP2)
-        : `<div class="slot-empty"></div>`
-    ).join("");
+
+    container.innerHTML = slots.map(entry => {
+        if (!entry) return '<div class="slot-empty"></div>';
+        const classes = unitCardClasses(entry.unit, entry.isP2, "散兵线", diff, node);
+        const showOwner = true; // always show owner marker in skirmish
+        return unitCardHTML(entry.unit, entry.isP2, "散兵线", classes, showOwner);
+    }).join("");
 }
 
-function renderStep(idx) {
-    currentStep = Math.max(0, Math.min(idx, MATCH_DATA.timeline.length - 1));
-    const node = MATCH_DATA.timeline[currentStep];
-    const s = node.state;
-    
-    // 顶部信息
-    document.getElementById("turn-display").textContent = node.turn;
-    let activeText = "";
-    if (node.active_player === 0) activeText = `· ${s.p1.faction} 行动`;
-    else if (node.active_player === 1) activeText = `· ${s.p2.faction} 行动`;
-    document.getElementById("active-display").textContent = activeText;
-    
-    // 玩家面板
-    document.getElementById("p1-hq").textContent = s.p1.hq_hp;
-    document.getElementById("p1-orders").textContent = s.p1.orders;
-    document.getElementById("p1-hand").textContent = s.p1.hand_size;
-    document.getElementById("p1-deck").textContent = s.p1.deck_size;
-    document.getElementById("p1-discard").textContent = s.p1.discard_size ?? 0;
-    document.getElementById("p2-hq").textContent = s.p2.hq_hp;
-    document.getElementById("p2-orders").textContent = s.p2.orders;
-    document.getElementById("p2-hand").textContent = s.p2.hand_size;
-    document.getElementById("p2-deck").textContent = s.p2.deck_size;
-    document.getElementById("p2-discard").textContent = s.p2.discard_size ?? 0;
-    
-    document.getElementById("p1-hq-big").textContent = s.p1.hq_hp;
-    document.getElementById("p2-hq-big").textContent = s.p2.hq_hp;
-    
-    document.getElementById("p1-info").classList.toggle("active", node.active_player === 0);
-    document.getElementById("p2-info").classList.toggle("active", node.active_player === 1);
-    
-    // 战线
-    document.querySelector("#line-p2-rear .units-container").innerHTML =
-        slotsHTML(s.p2.rear, true);
-    document.querySelector("#line-p2-main .units-container").innerHTML =
-        slotsHTML(s.p2.main, true);
-    document.getElementById("skirmish-shared").innerHTML =
-        sharedSkirmishHTML(s.p1.skirmish, s.p2.skirmish);
-    document.querySelector("#line-p1-main .units-container").innerHTML =
-        slotsHTML(s.p1.main, false);
-    document.querySelector("#line-p1-rear .units-container").innerHTML =
-        slotsHTML(s.p1.rear, false);
-    
-    // 累积日志（显示从开始到当前步骤的所有日志）
-    const logPanel = document.getElementById("log-panel");
-    let allLogs = `<div class="log-line">对局开始 · 种子 ${MATCH_DATA.meta.seed}</div>`;
-    for (let i = 1; i <= currentStep; i++) {
-        const n = MATCH_DATA.timeline[i];
-        if (n.log && n.log.length > 0) {
-            for (const line of n.log) {
-                let cls = "";
-                if (line.includes("▶") || line.includes("部署")) cls = "deploy";
-                else if (line.includes("⚔") || line.includes("💥")) cls = "attack";
-                else if (line.includes("⚠") || line.includes("✨") || line.includes("⇒")) cls = "special";
-                allLogs += `<div class="log-line ${cls}">${escapeHtml(line)}</div>`;
+function renderSlots(units, isP2, lineName, diff) {
+    const slots = [null, null, null, null];
+    (units || []).forEach((u, i) => {
+        const slot = Number.isInteger(u.slot) ? u.slot : i;
+        if (slot >= 0 && slot < 4 && !slots[slot]) {
+            slots[slot] = u;
+        }
+    });
+    return slots.map(u => {
+        if (!u) return '<div class="slot-empty"></div>';
+        const classes = unitCardClasses(u, isP2, lineName, diff, null);
+        return unitCardHTML(u, isP2, lineName, classes, false);
+    }).join("");
+}
+
+function unitCardClasses(u, isP2, lineName, diff, node) {
+    let cls = "unit-card";
+    cls += ` type-${unitTypeKey(u.type)}`;
+    cls += ` faction-${unitFactionKey(u)}`;
+    if (isP2) cls += " p2-unit";
+    if (u.current_hp <= 0) cls += " is-dead";
+
+    // Diff-based states
+    if (diff) {
+        const uid = unitKey(u, lineName, isP2);
+        if (diff.newUnits.has(uid)) cls += " is-new";
+        if (diff.hpChanged.has(uid)) cls += " is-hp-changed";
+        if (diff.destroyed.has(uid)) cls += " is-dead";
+    }
+
+    // Attack event source/target
+    if (node && node.attack_event) {
+        if (unitMatchesAttackRef(u, isP2, lineName, node.attack_event.attacker, getAttackerName(node.attack_event))) cls += " is-source";
+        if (unitMatchesAttackRef(u, isP2, lineName, node.attack_event.defender, getDefenderName(node.attack_event))) cls += " is-target";
+    }
+
+    return cls;
+}
+
+function unitCardHTML(u, isP2, lineName, classes, showOwner) {
+    const damaged = u.current_hp > 0 && u.current_hp < u.max_hp;
+    const hpClass = u.current_hp <= 0 ? "damaged" : damaged ? "damaged" : "full";
+    const kw = (u.keywords || []).filter(k => !k.startsWith("光环")).slice(0, 3).join("·");
+    const ownerMarker = showOwner
+        ? `<span class="owner-marker ${isP2 ? 'p2' : 'p1'}" aria-label="${isP2 ? '敌方' : '我方'}"></span>`
+        : "";
+    return `<div class="${classes}" data-unit-name="${esc(u.name)}"
+                 data-unit-owner="${isP2 ? 'p2' : 'p1'}"
+                 data-unit-line="${esc(lineName)}"
+                 data-unit-slot="${u.slot}"
+                 data-unit-uid="${esc(unitKey(u, lineName, isP2))}">
+        ${ownerMarker}
+        <div class="ucard-cost">${u.cost}</div>
+        <div class="ucard-name" title="${esc(u.name)}">${esc(u.name)}</div>
+        <div class="ucard-type">${esc(u.type)}</div>
+        <div class="ucard-keywords">${esc(kw)}</div>
+        <div class="ucard-stats">
+            <span class="ucard-atk" aria-label="攻击力 ${u.attack}">${u.attack}</span>
+            <span class="ucard-hp ${hpClass}" aria-label="生命 ${Math.max(0,u.current_hp)}/${u.max_hp}">${Math.max(0,u.current_hp)}/${u.max_hp}</span>
+        </div>
+    </div>`;
+}
+
+// ======================================================================
+// Snapshot Diff
+// ======================================================================
+function computeDiff(prev, curr, node) {
+    if (!prev) return null;
+    const newUnits = new Set();
+    const hpChanged = new Set();
+    const destroyed = new Set();
+
+    const prevKeys = collectUnitKeys(prev);
+    const currKeys = collectUnitKeys(curr);
+
+    // New units
+    for (const k of currKeys.keys()) {
+        if (!prevKeys.has(k)) newUnits.add(k);
+    }
+
+    // HP changes and destroyed
+    for (const [k, currU] of currKeys) {
+        const prevU = prevKeys.get(k);
+        if (prevU) {
+            if (currU.current_hp !== prevU.current_hp) {
+                hpChanged.add(k);
+            }
+            if (currU.current_hp <= 0 && prevU.current_hp > 0) {
+                destroyed.add(k);
             }
         }
     }
-    
-    // 终局信息
-    if (currentStep === MATCH_DATA.timeline.length - 1) {
-        allLogs += `<div class="log-line" style="margin-top:8px;color:#d4a55c;font-weight:bold">━━ ${MATCH_DATA.meta.end_reason} · 胜者：${MATCH_DATA.meta.winner_name} ━━</div>`;
+
+    return { newUnits, hpChanged, destroyed };
+}
+
+function collectUnitKeys(state) {
+    const map = new Map();
+    const addUnits = (units, lineName, isP2) => {
+        for (const u of (units || [])) {
+            const key = unitKey(u, lineName, isP2);
+            map.set(key, u);
+        }
+    };
+    addUnits(state.p1.rear, "后方线", false);
+    addUnits(state.p1.main, "主力战列线", false);
+    addUnits(state.p1.skirmish, "散兵线", false);
+    addUnits(state.p2.rear, "后方线", true);
+    addUnits(state.p2.main, "主力战列线", true);
+    addUnits(state.p2.skirmish, "散兵线", true);
+    return map;
+}
+
+function unitKey(u, lineName, isP2) {
+    return u.uid || `${isP2 ? "P2" : "P1"}|${lineName}|${u.slot}|${u.name}`;
+}
+
+function unitMatchesAttackRef(u, isP2, lineName, ref, fallbackName) {
+    if (!ref || ref.line === "hq") return false;
+    const owner = isP2 ? "p2" : "p1";
+    const refOwner = ref.owner ? String(ref.owner).toLowerCase() : "";
+    if (refOwner && refOwner !== owner) return false;
+    if (ref.line && ref.line !== lineName) return false;
+    if (Number.isInteger(ref.slot) && ref.slot !== u.slot) return false;
+    const refName = ref.name || fallbackName;
+    return !refName || refName === u.name;
+}
+
+// ======================================================================
+// Action Summary
+// ======================================================================
+function renderActionSummary(node) {
+    const el = document.getElementById("action-summary");
+    if (!el) return;
+
+    const action = node.action || "";
+    const ap = node.active_player;
+    const activeName = node.active_name || "";
+    const faction = ap === 0 ? MATCH_DATA.meta.p1_faction
+                   : ap === 1 ? MATCH_DATA.meta.p2_faction : "";
+
+    let html = `<span class="action-label ${esc(action)}">${esc(ACTION_LABELS[action] || action)}</span>`;
+
+    if (action === "start") {
+        html += `对局开始 · ${esc(MATCH_DATA.meta.p1_faction)} vs ${esc(MATCH_DATA.meta.p2_faction)} · 种子 ${MATCH_DATA.meta.seed}`;
+    } else if (action === "deploy") {
+        const info = parseDeployLog(node);
+        html += `<strong>${esc(faction)}</strong>`;
+        if (info.unit) html += ` 部署 <strong>${esc(info.unit)}</strong>`;
+        if (info.line) html += ` 到 ${esc(info.line)}`;
+        if (info.slot >= 0) html += ` 槽位${info.slot}`;
+    } else if (action === "event") {
+        const info = parseEventLog(node);
+        html += `<strong>${esc(faction)}</strong>`;
+        if (info.card) html += ` 打出事件 <strong>${esc(info.card)}</strong>`;
+        if (info.effect) html += ` · ${esc(info.effect)}`;
+    } else if (action === "advance") {
+        const info = parseAdvanceLog(node);
+        html += `<strong>${esc(faction)}</strong>`;
+        if (info.unit) html += ` <strong>${esc(info.unit)}</strong>`;
+        if (info.from && info.to) html += ` ${esc(info.from)} → ${esc(info.to)}`;
+    } else if (action === "attack") {
+        const ae = node.attack_event;
+        if (ae) {
+            html += `<strong>${esc(faction)}</strong> `;
+            html += `<strong>${esc(getAttackerName(ae))}</strong>`;
+            html += ` → <strong>${esc(getDefenderName(ae))}</strong>`;
+            html += ` · 造成 ${ae.dmg_to_defender} 伤害`;
+            if (ae.dmg_to_attacker > 0) html += ` · 受到 ${ae.dmg_to_attacker} 反击`;
+            if (ae.defender_killed) html += " · <em>目标击杀</em>";
+            if (ae.attacker_killed) html += " · <em>攻击方阵亡</em>";
+        } else {
+            html += `<strong>${esc(faction)}</strong> 发起攻击`;
+        }
+    } else if (action === "hq_attack") {
+        const ae = node.attack_event;
+        if (ae) {
+            html += `<strong>${esc(faction)}</strong> `;
+            html += `<strong>${esc(getAttackerName(ae))}</strong>`;
+            html += ` 直击${esc(getHqTargetLabel(ap))} · 造成 ${ae.dmg_to_defender} 伤害`;
+        } else {
+            html += `<strong>${esc(faction)}</strong> 直击 HQ`;
+        }
+    } else {
+        if (faction) html += `<strong>${esc(faction)}</strong>`;
     }
-    
-    logPanel.innerHTML = allLogs;
-    logPanel.scrollTop = logPanel.scrollHeight;
-    
-    // 按钮状态
-    document.getElementById("btn-prev").disabled = currentStep === 0;
-    document.getElementById("btn-next").disabled = currentStep === MATCH_DATA.timeline.length - 1;
+
+    el.innerHTML = html;
 }
 
-function escapeHtml(s) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function parseDeployLog(node) {
+    for (const line of (node.log || [])) {
+        const m = line.match(/▶\s*\S+\s+部署\s+(\S+)\s+到\s+(\S+)\s+槽位(\d+)/);
+        if (m) return { unit: m[1], line: m[2], slot: parseInt(m[3]) };
+    }
+    return { unit: null, line: null, slot: -1 };
 }
 
+function parseEventLog(node) {
+    for (const line of (node.log || [])) {
+        const m = line.match(/📜\s*\S+\s+打出事件卡【([^】]+)】→\s*(.+)/);
+        if (m) return { card: m[1], effect: m[2] };
+    }
+    return { card: null, effect: null };
+}
+
+function parseAdvanceLog(node) {
+    for (const line of (node.log || [])) {
+        const m = line.match(/⇒\s*(\S+)\s+(\S+)→(\S+)\s+槽位(\d+)/);
+        if (m) return { unit: m[1], from: m[2], to: m[3], slot: parseInt(m[4]) };
+    }
+    return { unit: null, from: null, to: null, slot: -1 };
+}
+
+// ======================================================================
+// Attack Arrows
+// ======================================================================
+function drawAttackArrows(attackEvent, activePlayer) {
+    const svg = document.getElementById("arrow-overlay");
+    if (!svg) return;
+    // Clear
+    svg.querySelectorAll("line, text").forEach(el => el.remove());
+    document.querySelectorAll(".attack-badge").forEach(el => el.remove());
+    if (!attackEvent) return;
+
+    const bf = document.getElementById("battlefield");
+    if (!bf) return;
+    const bfRect = bf.getBoundingClientRect();
+
+    const atkEl = findUnitElementForAttack(attackEvent.attacker, getAttackerName(attackEvent));
+    let defEl;
+    if (attackEvent.defender && attackEvent.defender.line === "hq") {
+        defEl = getHqTargetElement(activePlayer);
+    } else {
+        defEl = findUnitElementForAttack(attackEvent.defender, getDefenderName(attackEvent));
+    }
+
+    if (!atkEl || !defEl) return;
+
+    const atkRect = atkEl.getBoundingClientRect();
+    const defRect = defEl.getBoundingClientRect();
+
+    const x1 = atkRect.left + atkRect.width / 2 - bfRect.left;
+    const y1 = atkRect.top + atkRect.height / 2 - bfRect.top;
+    const x2 = defRect.left + defRect.width / 2 - bfRect.left;
+    const y2 = defRect.top + defRect.height / 2 - bfRect.top;
+
+    // Arrow line
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x1);
+    line.setAttribute("y1", y1);
+    line.setAttribute("x2", x2);
+    line.setAttribute("y2", y2);
+    line.classList.add("arrow-line");
+    svg.appendChild(line);
+
+    // Damage label at midpoint
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+    const dmgText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    dmgText.setAttribute("x", midX);
+    dmgText.setAttribute("y", midY - 10);
+    dmgText.classList.add("arrow-damage");
+    let dmgLabel = `-${attackEvent.dmg_to_defender}`;
+    if (attackEvent.defender_killed) dmgLabel += " KILL";
+    dmgText.textContent = dmgLabel;
+    svg.appendChild(dmgText);
+
+    // Defender HP badge
+    if (attackEvent.defender_hp_after !== undefined && attackEvent.defender.line !== "hq") {
+        const badge = document.createElement("div");
+        badge.className = "attack-badge";
+        const hpBefore = attackEvent.defender_hp_after + attackEvent.dmg_to_defender;
+        badge.textContent = `HP: ${Math.max(0,attackEvent.defender_hp_after)}/${hpBefore}`;
+        badge.style.left = (defRect.left - bfRect.left + defRect.width / 2 - 25) + "px";
+        badge.style.top = (defRect.top - bfRect.top + defRect.height + 2) + "px";
+        bf.appendChild(badge);
+    }
+
+    // Attacker damage badge
+    if (attackEvent.dmg_to_attacker > 0 && attackEvent.attacker_hp_after !== undefined) {
+        const badge = document.createElement("div");
+        badge.className = "attack-badge";
+        badge.style.background = "rgba(90,90,90,0.9)";
+        const hpBefore = attackEvent.attacker_hp_after + attackEvent.dmg_to_attacker;
+        badge.textContent = `HP: ${Math.max(0,attackEvent.attacker_hp_after)}/${hpBefore}`;
+        badge.style.left = (atkRect.left - bfRect.left + atkRect.width / 2 - 25) + "px";
+        badge.style.top = (atkRect.top - bfRect.top - 18) + "px";
+        bf.appendChild(badge);
+    }
+}
+
+function findUnitElementForAttack(ref, fallbackName) {
+    if (!ref && !fallbackName) return null;
+    const cards = document.querySelectorAll(".unit-card[data-unit-name]");
+    for (const el of cards) {
+        const ownerMatches = !ref?.owner || el.dataset.unitOwner === String(ref.owner).toLowerCase();
+        const lineMatches = !ref?.line || el.dataset.unitLine === ref.line;
+        const slotMatches = ref?.slot === undefined || Number(el.dataset.unitSlot) === ref.slot;
+        const nameMatches = !fallbackName || el.dataset.unitName === fallbackName;
+        if (ownerMatches && lineMatches && slotMatches && nameMatches) return el;
+    }
+    return null;
+}
+
+function getHqTargetElement(activePlayer) {
+    if (activePlayer === 0) return document.getElementById("hq-enemy");
+    if (activePlayer === 1) return document.getElementById("hq-player");
+    return null;
+}
+
+function getHqTargetLabel(activePlayer) {
+    if (activePlayer === 0) return "敌方 HQ";
+    if (activePlayer === 1) return "我方 HQ";
+    return "HQ";
+}
+
+function startingHqHp(playerKey) {
+    if (MATCH_DATA?.meta?.starting_hq_hp) return MATCH_DATA.meta.starting_hq_hp;
+    const firstState = MATCH_DATA?.timeline?.[0]?.state;
+    if (playerKey === "p1") return firstState?.p1?.hq_hp ?? 14;
+    return firstState?.p2?.hq_hp ?? 14;
+}
+
+// ======================================================================
+// Result Banner
+// ======================================================================
+function renderResultBanner() {
+    const banner = document.getElementById("result-banner");
+    if (!banner) return;
+    const isFinal = currentStep === MATCH_DATA.timeline.length - 1;
+    banner.classList.toggle("visible", isFinal);
+    if (isFinal) {
+        const m = MATCH_DATA.meta;
+        document.getElementById("result-title").textContent =
+            `胜者：${m.winner_name}`;
+        document.getElementById("result-detail").textContent =
+            `${m.p1_faction} vs ${m.p2_faction} · 回合 ${m.final_turn} · ${m.end_reason} · 种子 ${m.seed}`;
+    }
+}
+
+// ======================================================================
+// Raw Log
+// ======================================================================
+function renderRawLog(node) {
+    const content = document.getElementById("raw-log-content");
+    if (!content) return;
+    let html = `<div class="log-line">对局开始 · 种子 ${MATCH_DATA.meta.seed}</div>`;
+    for (const line of (node.log || [])) {
+        let cls = "log-line";
+        if (line.includes("▶") || line.includes("部署")) cls += " log-deploy";
+        else if (line.includes("⚔") || line.includes("💥")) cls += " log-attack";
+        else if (line.includes("⚠") || line.includes("✨") || line.includes("⇒")) cls += " log-special";
+        html += `<div class="${cls}">${esc(line)}</div>`;
+    }
+    content.innerHTML = html;
+    content.scrollTop = content.scrollHeight;
+}
+
+function toggleRawLog() {
+    rawLogVisible = !rawLogVisible;
+    const area = document.getElementById("raw-log-area");
+    const btn = document.getElementById("toggle-raw-log");
+    if (area) area.classList.toggle("visible", rawLogVisible);
+    if (btn) {
+        btn.textContent = rawLogVisible ? "隐藏原始日志" : "显示原始日志";
+        btn.setAttribute("aria-expanded", rawLogVisible);
+    }
+}
+
+// ======================================================================
+// History Highlight
+// ======================================================================
+function highlightHistoryRow() {
+    const rows = document.querySelectorAll("#history-body tr");
+    rows.forEach(row => {
+        const stepIdx = parseInt(row.dataset.step, 10);
+        row.classList.toggle("current-row", stepIdx === currentStep);
+    });
+    // Scroll current row into view
+    const currentRow = document.querySelector("#history-body tr.current-row");
+    if (currentRow) {
+        currentRow.scrollIntoView({ block: "nearest", behavior: "auto" });
+    }
+}
+
+// ======================================================================
+// Navigation
+// ======================================================================
 function step(delta) {
     renderStep(currentStep + delta);
 }
@@ -561,33 +1738,181 @@ function goto(idx) {
     renderStep(idx);
 }
 
-let playInterval = null;
-function togglePlay() {
-    const btn = document.getElementById("btn-play");
-    if (playInterval) {
-        clearInterval(playInterval);
-        playInterval = null;
-        btn.textContent = "▶ 播放";
-        return;
+function gotoPrevTurn() {
+    const currentTurn = MATCH_DATA.timeline[currentStep].turn;
+    for (let i = currentStep - 1; i >= 0; i--) {
+        if (MATCH_DATA.timeline[i].turn < currentTurn) {
+            // Go to first step of this turn
+            const targetTurn = MATCH_DATA.timeline[i].turn;
+            for (let j = i; j >= 0; j--) {
+                if (MATCH_DATA.timeline[j].turn === targetTurn && (j === 0 || MATCH_DATA.timeline[j-1].turn < targetTurn)) {
+                    goto(j);
+                    return;
+                }
+            }
+            goto(i);
+            return;
+        }
     }
-    btn.textContent = "⏸ 暂停";
+    goto(0);
+}
+
+function gotoNextTurn() {
+    const currentTurn = MATCH_DATA.timeline[currentStep].turn;
+    for (let i = currentStep + 1; i < MATCH_DATA.timeline.length; i++) {
+        if (MATCH_DATA.timeline[i].turn > currentTurn) {
+            goto(i);
+            return;
+        }
+    }
+    goto(MATCH_DATA.timeline.length - 1);
+}
+
+function updateButtonStates() {
+    const len = MATCH_DATA.timeline.length;
+    setDisabled("btn-first", currentStep === 0);
+    setDisabled("btn-prev", currentStep === 0);
+    setDisabled("btn-next", currentStep >= len - 1);
+    setDisabled("btn-last", currentStep >= len - 1);
+    setDisabled("btn-prev-turn", currentStep === 0 || MATCH_DATA.timeline[currentStep].turn <= 0);
+    setDisabled("btn-next-turn", currentStep >= len - 1);
+}
+
+// ======================================================================
+// Autoplay
+// ======================================================================
+function togglePlay() {
+    if (playInterval) {
+        stopAutoplay();
+    } else {
+        if (currentStep >= MATCH_DATA.timeline.length - 1) goto(0);
+        startAutoplay();
+    }
+}
+
+function startAutoplay() {
+    const btn = document.getElementById("btn-play");
+    if (btn) { btn.textContent = "⏸"; btn.setAttribute("aria-label", "暂停"); }
+    const interval = BASE_INTERVAL / playSpeed;
     playInterval = setInterval(() => {
         if (currentStep >= MATCH_DATA.timeline.length - 1) {
-            clearInterval(playInterval);
-            playInterval = null;
-            btn.textContent = "▶ 播放";
+            stopAutoplay();
             return;
         }
         step(1);
-    }, 1500);
+    }, interval);
 }
 
-function handleKey(e) {
-    if (e.key === "ArrowLeft") step(-1);
-    else if (e.key === "ArrowRight") step(1);
-    else if (e.key === " ") { e.preventDefault(); togglePlay(); }
+function stopAutoplay() {
+    if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+    }
+    const btn = document.getElementById("btn-play");
+    if (btn) { btn.textContent = "▶"; btn.setAttribute("aria-label", "播放"); }
 }
 
+// ======================================================================
+// Keyboard
+// ======================================================================
+function handleKeydown(e) {
+    // Ignore if focus is in a select or input
+    if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
+
+    switch (e.key) {
+        case "ArrowLeft":
+            e.preventDefault();
+            step(-1);
+            break;
+        case "ArrowRight":
+            e.preventDefault();
+            step(1);
+            break;
+        case " ":
+            e.preventDefault();
+            togglePlay();
+            break;
+        case "Home":
+            e.preventDefault();
+            goto(0);
+            break;
+        case "End":
+            e.preventDefault();
+            goto(MATCH_DATA.timeline.length - 1);
+            break;
+    }
+}
+
+// ======================================================================
+// Helpers
+// ======================================================================
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+
+function setDisabled(id, disabled) {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+}
+
+function esc(s) {
+    if (s == null) return "";
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function escapeHtml(s) { return esc(s); }
+
+function factionClass(faction) {
+    if (faction === "法兰西") return "france";
+    if (faction === "普鲁士") return "prussia";
+    if (faction === "俄罗斯") return "russia";
+    return "france";
+}
+
+function factionShort(faction) {
+    if (faction === "法兰西") return "法兰西";
+    if (faction === "普鲁士") return "普鲁士";
+    if (faction === "俄罗斯") return "俄罗斯";
+    return faction || "";
+}
+
+function unitTypeKey(type) {
+    if (type === "线列步兵") return "infantry";
+    if (type === "散兵") return "skirmisher";
+    if (type === "骑兵") return "cavalry";
+    if (type === "炮兵") return "artillery";
+    if (type === "近卫") return "guard";
+    return "infantry";
+}
+
+function unitFactionKey(u) {
+    const n = u.name || "";
+    if (n.includes('俄') || n.includes('哥萨克') || n.includes('库图') || n.includes('巴格') ||
+        n.includes('普拉') || n.includes('独角') || n.includes('莫斯科') || n.includes('帝国大军') ||
+        n.includes('东正') || n.includes('西伯') || n.includes('猎兵团') || n.includes('俄国')) {
+        return "russia";
+    }
+    if (n.includes('普鲁') || n.includes('耶格') || n.includes('黑色') || n.includes('死骑') ||
+        n.includes('布吕') || n.includes('西里')) {
+        return "prussia";
+    }
+    return "france";
+}
+
+// ======================================================================
+// Screen reader only utility
+// ======================================================================
+// Add .sr-only class via JS injection
+(function() {
+    const style = document.createElement("style");
+    style.textContent = ".sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}";
+    document.head.appendChild(style);
+})();
+
+// ======================================================================
+// Init
+// ======================================================================
 loadMatch();
 </script>
 </body>
