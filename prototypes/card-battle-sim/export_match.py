@@ -44,6 +44,19 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "rear": [unit_to_dict(u) for u in bf.p1_rear],
             "main": [unit_to_dict(u) for u in bf.p1_main],
             "skirmish": [unit_to_dict(u) for u in bf.p1_skirmish],
+            "commander": {
+                "id": p1.commander_id,
+                "name": p1.commander_name,
+                "used": p1.commander_used,
+                "use_turn": p1.commander_use_turn,
+            },
+            "objective": {
+                "id": p1.objective_id,
+                "name": p1.objective_name,
+                "completed": p1.objective_completed,
+                "completed_turn": p1.objective_completed_turn,
+                "reward_pending": p1.objective_reward_pending,
+            },
         },
         "p2": {
             "name": p2.name,
@@ -56,19 +69,32 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "rear": [unit_to_dict(u) for u in bf.p2_rear],
             "main": [unit_to_dict(u) for u in bf.p2_main],
             "skirmish": [unit_to_dict(u) for u in bf.p2_skirmish],
+            "commander": {
+                "id": p2.commander_id,
+                "name": p2.commander_name,
+                "used": p2.commander_used,
+                "use_turn": p2.commander_use_turn,
+            },
+            "objective": {
+                "id": p2.objective_id,
+                "name": p2.objective_name,
+                "completed": p2.objective_completed,
+                "completed_turn": p2.objective_completed_turn,
+                "reward_pending": p2.objective_reward_pending,
+            },
         },
     }
 
 
 def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict:
-    """跑一局，返回完整的播放数据"""
+    """跑一局，返回完整的播放数据（逐动作时间轴）"""
     random.seed(seed)
-    
+
     p1 = Player(name=f"P1-{p1_faction.value}", faction=p1_faction,
                 deck=DECK_BUILDERS[p1_faction](), hq_hp=STARTING_HQ_HP)
     p2 = Player(name=f"P2-{p2_faction.value}", faction=p2_faction,
                 deck=DECK_BUILDERS[p2_faction](), hq_hp=STARTING_HQ_HP)
-    
+
     p1.shuffle_deck()
     p2.shuffle_deck()
     p1.draw(STARTING_HAND_SIZE)
@@ -78,59 +104,78 @@ def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict
     p2.max_orders = INITIAL_ORDERS
     p2.current_orders = INITIAL_ORDERS
     p2.draw(SECOND_PLAYER_BONUS_DRAW)
-    
+
     battlefield = Battlefield()
-    
-    # 收集每一步快照
+    from game import initialize_command_layer
+    initialize_command_layer(p1, p2, seed)
+
+    # 收集每一步快照（逐动作）
     timeline = []
-    
+
     # 初始状态
     timeline.append({
         "turn": 0,
         "active_player": None,
+        "action": "start",
         "log": ["对局开始"],
         "state": snapshot_battlefield(p1, p2, battlefield),
     })
-    
+
     winner = -1
     end_reason = "超时"
     final_turn = MAX_TURNS
-    
+
     for turn in range(1, MAX_TURNS + 1):
         # P1 回合
         log = []
-        play_turn(p1, p2, battlefield, 0, turn, log)
-        timeline.append({
-            "turn": turn,
-            "active_player": 0,
-            "active_name": p1.name,
-            "log": log,
-            "state": snapshot_battlefield(p1, p2, battlefield),
-        })
-        
-        if p2.hq_hp <= 0:
-            winner = 0
-            end_reason = "P2 HQ 摧毁"
-            final_turn = turn
-            break
-        
+        sub_steps = []
+        play_turn(p1, p2, battlefield, 0, turn, log,
+                  sub_steps=sub_steps, snapshot_fn=snapshot_battlefield)
+
+        # 将子步骤展开为时间轴节点
+        for step in sub_steps:
+            step["turn"] = turn
+            step["active_player"] = 0
+            step["active_name"] = p1.name
+            timeline.append(step)
+
         # P2 回合
         log = []
-        play_turn(p2, p1, battlefield, 1, turn, log)
-        timeline.append({
-            "turn": turn,
-            "active_player": 1,
-            "active_name": p2.name,
-            "log": log,
-            "state": snapshot_battlefield(p1, p2, battlefield),
-        })
-        
-        if p1.hq_hp <= 0:
-            winner = 1
-            end_reason = "P1 HQ 摧毁"
+        sub_steps = []
+        play_turn(p2, p1, battlefield, 1, turn, log,
+                  sub_steps=sub_steps, snapshot_fn=snapshot_battlefield)
+
+        for step in sub_steps:
+            step["turn"] = turn
+            step["active_player"] = 1
+            step["active_name"] = p2.name
+            timeline.append(step)
+
+        # 胜负在完整轮结束后统一结算（与 game.py play_one_game 一致）
+        if p1.hq_hp <= 0 or p2.hq_hp <= 0:
+            if p1.hq_hp > p2.hq_hp:
+                winner = 0
+                end_reason = "P2 HQ 摧毁"
+            elif p2.hq_hp > p1.hq_hp:
+                winner = 1
+                end_reason = "P1 HQ 摧毁"
+            else:
+                winner = -1
+                end_reason = "双方 HQ 同时摧毁"
             final_turn = turn
             break
-    
+
+    # 超时判定：比较 HQ 剩余血量（与 game.py 一致）
+    if winner == -1 and final_turn >= MAX_TURNS:
+        if p1.hq_hp > p2.hq_hp:
+            winner = 0
+            end_reason = f"倒计时结束，HQ血量判定 (P1:{p1.hq_hp} vs P2:{p2.hq_hp})"
+        elif p2.hq_hp > p1.hq_hp:
+            winner = 1
+            end_reason = f"倒计时结束，HQ血量判定 (P1:{p1.hq_hp} vs P2:{p2.hq_hp})"
+        else:
+            end_reason = f"倒计时结束，平局 (P1:{p1.hq_hp} vs P2:{p2.hq_hp})"
+
     if winner == 0:
         winner_name = f"P1 {p1_faction.value}"
     elif winner == 1:
@@ -147,6 +192,19 @@ def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict
             "winner_name": winner_name,
             "final_turn": final_turn,
             "end_reason": end_reason,
+            "p1_commander": p1.commander_name,
+            "p2_commander": p2.commander_name,
+            "p1_objective": p1.objective_name,
+            "p2_objective": p2.objective_name,
+            "p1_objective_completed": p1.objective_completed,
+            "p2_objective_completed": p2.objective_completed,
+            "trigger_fire_counts": {},
+            "trigger_avg_impact": {},
+            "sequence_trigger_satisfaction_rate": 0.0,
+            "sub_faction_tag_deck_presence": {},
+            "same_line_threshold_trigger_count": 0,
+            "trigger_first_fire_turn": {},
+            "new_card_play_counts": {},
         },
         "timeline": timeline,
     }
