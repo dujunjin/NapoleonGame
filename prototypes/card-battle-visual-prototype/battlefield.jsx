@@ -824,75 +824,106 @@ function Battlefield({ theme, onSpeed }) {
   }, [animLocked, activePlayer, board, p1Morale]);
 
   function attackTarget(line, idx, targetLine, targetIdx) {
-    const unit = board[line][idx];
-    if (!unit || unit.justDeployed || unit.owner !== 'p1') return;
-    const slotEl = document.querySelector(`[data-slot][data-line="${line}"][data-idx="${idx}"]`);
-    const targetEl = targetLine
-      ? document.querySelector(`[data-slot][data-line="${targetLine}"][data-idx="${targetIdx}"]`)
-      : document.querySelector('[data-hq="p2"]');
-    if (!slotEl || !targetEl) return;
-    const sr = stage.current.getBoundingClientRect();
-    const a = slotEl.getBoundingClientRect();
-    const t = targetEl.getBoundingClientRect();
-    const dx = t.left - a.left;
-    const dy = t.top - a.top;
-    setAttacking({ line, idx, dx: dx*0.55, dy: dy*0.55 });
+    tryRunAction((done) => {
+      const unit = board[line][idx];
+      if (!unit || unit.justDeployed || unit.owner !== 'p1') { done(); return; }
+      const slotEl = document.querySelector(`[data-slot][data-line="${line}"][data-idx="${idx}"]`);
+      const targetEl = targetLine
+        ? document.querySelector(`[data-slot][data-line="${targetLine}"][data-idx="${targetIdx}"]`)
+        : document.querySelector('[data-hq="p2"]');
+      if (!slotEl || !targetEl) { done(); return; }
+      const sr = stage.current.getBoundingClientRect();
+      const a = slotEl.getBoundingClientRect();
+      const t = targetEl.getBoundingClientRect();
+      const dx = t.left - a.left;
+      const dy = t.top - a.top;
+      const dist = Math.hypot(dx, dy);
 
-    setTimeout(() => {
-      const impactX = a.left + a.width/2 + dx*0.55 - sr.left;
-      const impactY = a.top + a.height/2 + dy*0.55 - sr.top;
-      spawnParticle(fxLayer.current, impactX, impactY, 'flash');
-      for (let i = 0; i < 12; i++) spawnParticle(fxLayer.current, impactX, impactY, 'spark');
-      for (let i = 0; i < 6; i++) {
-        setTimeout(() => spawnParticle(fxLayer.current, impactX + (Math.random()-0.5)*30, impactY + (Math.random()-0.5)*30, 'smoke'), i*50);
+      // Stage 0: wind-up (0..80ms)
+      const unitEl = slotEl.querySelector('[style]');
+      if (unitEl) {
+        unitEl.style.transition = `transform 80ms var(--ease-snap-in)`;
+        unitEl.style.transform = `scale(0.95) rotate(${dx > 0 ? -5 : 5}deg)`;
       }
-      const dmg = unit.atk;
-      spawnParticle(fxLayer.current, impactX, impactY, 'damage', '-' + dmg);
-      setShake(true); setFlash(true);
-      setTimeout(() => { setShake(false); setFlash(false); }, 250);
 
+      // Stage 1: lunge (80..80+L ms)
+      const L = Math.min(380, 240 + dist / 3);
+      setTimeout(() => {
+        setAttacking({ line, idx, dx: dx * 0.55, dy: dy * 0.55 });
+        if (unitEl) {
+          unitEl.style.transition = `transform ${L}ms var(--ease-overshoot)`;
+          unitEl.style.transform = '';
+        }
+      }, 80 / speed);
+
+      // Stage 2: freeze + impact (80+L ms)
+      setTimeout(() => {
+        const impactX = a.left + a.width/2 + dx*0.55 - sr.left;
+        const impactY = a.top + a.height/2 + dy*0.55 - sr.top;
+        spawnParticle(fxLayer.current, impactX, impactY, 'flash');
+        for (let i = 0; i < 12; i++) spawnParticle(fxLayer.current, impactX, impactY, 'spark');
+        for (let i = 0; i < 6; i++) {
+          setTimeout(() => spawnParticle(fxLayer.current, impactX + (Math.random()-0.5)*30, impactY + (Math.random()-0.5)*30, 'smoke'), i*50);
+        }
+        const dmg = unit.atk;
+        spawnParticle(fxLayer.current, impactX, impactY, 'damage', '-' + dmg);
+        setShake(true); setFlash(true);
+        setTimeout(() => { setShake(false); setFlash(false); }, 200);
+
+        if (targetLine) {
+          setBoard(b => {
+            const ln = [...b[targetLine]];
+            const tgt = ln[targetIdx];
+            if (!tgt) return b;
+            const newHp = tgt.hp - dmg;
+            if (newHp <= 0) {
+              ln[targetIdx] = { ...tgt, hp: 0, dead: true };
+              setTimeout(() => setBoard(bb => {
+                const l2 = [...bb[targetLine]];
+                discardCard(l2[targetIdx]);
+                l2[targetIdx] = null;
+                return { ...bb, [targetLine]: l2 };
+              }), 420 / speed);
+            } else {
+              ln[targetIdx] = { ...tgt, hp: newHp };
+            }
+            return { ...b, [targetLine]: ln };
+          });
+        } else {
+          setP2HP(h => Math.max(0, h - dmg));
+        }
+      }, (80 + L) / speed);
+
+      // Stage 3: recoil (170+L ms)
+      setTimeout(() => { setAttacking(null); }, (170 + L) / speed);
+
+      // Stage 4: counter (390+L ms)
       if (targetLine) {
-        setBoard(b => {
-          const ln = [...b[targetLine]];
-          const tgt = ln[targetIdx];
-          if (!tgt) return b;
-          const newHp = tgt.hp - dmg;
-          if (newHp <= 0) {
-            ln[targetIdx] = { ...tgt, hp: 0, dead: true };
-            setTimeout(() => setBoard(bb => {
-              const l2 = [...bb[targetLine]];
-              discardCard(l2[targetIdx]);
-              l2[targetIdx] = null;
-              return { ...bb, [targetLine]: l2 };
-            }), 800/speed);
-            // counter
+        setTimeout(() => {
+          setBoard(b2 => {
+            const tgt = b2[targetLine]?.[targetIdx];
+            if (!tgt || tgt.dead) return b2;
             const counter = tgt.atk;
-            setTimeout(() => setBoard(b2 => {
-              const myLn = [...b2[line]];
-              if (myLn[idx]) {
-                myLn[idx] = { ...myLn[idx], hp: myLn[idx].hp - counter };
-                if (myLn[idx].hp <= 0) {
-                  setTimeout(() => setBoard(bb => {
-                    const l3 = [...bb[line]];
-                    discardCard(l3[idx]);
-                    l3[idx] = null;
-                    return { ...bb, [line]: l3 };
-                  }), 800/speed);
-                }
+            const myLn = [...b2[line]];
+            if (myLn[idx]) {
+              myLn[idx] = { ...myLn[idx], hp: myLn[idx].hp - counter };
+              if (myLn[idx].hp <= 0) {
+                setTimeout(() => setBoard(bb => {
+                  const l3 = [...bb[line]];
+                  discardCard(l3[idx]);
+                  l3[idx] = null;
+                  return { ...bb, [line]: l3 };
+                }), 420 / speed);
               }
-              return { ...b2, [line]: myLn };
-            }), 100);
-          } else {
-            ln[targetIdx] = { ...tgt, hp: newHp };
-          }
-          return { ...b, [targetLine]: ln };
-        });
-      } else {
-        setP2HP(h => Math.max(0, h - dmg));
+            }
+            return { ...b2, [line]: myLn };
+          });
+        }, (390 + L) / speed);
       }
-    }, 280 / speed);
 
-    setTimeout(() => setAttacking(null), 600 / speed);
+      // Done
+      setTimeout(() => { done(); }, (590 + L) / speed);
+    });
   }
 
   function endTurn() {
