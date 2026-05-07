@@ -320,6 +320,20 @@ body {
     box-shadow: 0 0 12px rgba(194,85,44,0.6);
     border-color: var(--red-bright);
 }
+.hq-threat {
+    margin-left: auto;
+    margin-right: 10px;
+    padding: 2px 6px;
+    border: 1px solid var(--border-dim);
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.hq-threat.danger {
+    color: #fff;
+    background: rgba(194,85,44,0.75);
+    border-color: var(--red-bright);
+}
 
 /* Battlefield lines */
 .bf-lines {
@@ -1274,6 +1288,9 @@ function renderStep(idx) {
         hqPlayerHp.classList.toggle("damaged", s.p1.hq_hp < startingHqHp("p1"));
     }
 
+    // HQ threat badges
+    renderHqThreat(s);
+
     // HQ target highlight for HQ attacks
     const hqEnemy = document.getElementById("hq-enemy");
     const hqPlayerEl = document.getElementById("hq-player");
@@ -1879,6 +1896,37 @@ function handleKeydown(e) {
             goto(MATCH_DATA.timeline.length - 1);
             break;
     }
+}
+
+// ======================================================================
+// HQ Threat
+// ======================================================================
+function renderHqThreat(s) {
+    const p1Threat = estimateHqThreat(s.p1, s.p2);
+    const p2Threat = estimateHqThreat(s.p2, s.p1);
+    setHqThreat("hq-player", p2Threat);
+    setHqThreat("hq-enemy", p1Threat);
+}
+
+function estimateHqThreat(attacker, defender) {
+    const blockers = (defender.skirmish || []).length + (defender.main || []).length;
+    if (blockers > 0) return 0;
+    return [...(attacker.skirmish || []), ...(attacker.rear || [])]
+        .filter(u => (u.keywords || []).includes("远程") || attacker.skirmish?.includes(u))
+        .reduce((sum, u) => sum + Math.max(0, u.attack || 0), 0);
+}
+
+function setHqThreat(hqId, threat) {
+    const hq = document.getElementById(hqId);
+    if (!hq) return;
+    let badge = hq.querySelector(".hq-threat");
+    if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "hq-threat";
+        hq.appendChild(badge);
+    }
+    badge.textContent = threat > 0 ? `威胁 ${threat}` : "安全";
+    badge.classList.toggle("danger", threat > 0);
 }
 
 // ======================================================================
