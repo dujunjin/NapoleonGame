@@ -11,6 +11,7 @@
 from typing import List, Tuple, Optional
 from cards import UnitType, Line
 from game_state import BattleUnit, Battlefield
+from triggers import IMPERIAL_GUARD_ATK_CAP
 
 
 def effective_attack(unit: BattleUnit, battlefield: Battlefield, owner_idx: int) -> int:
@@ -37,6 +38,15 @@ def effective_attack(unit: BattleUnit, battlefield: Battlefield, owner_idx: int)
         if enemy.slot == unit.slot and "死神威慑" in enemy.card.keywords
     )
     atk = max(0, atk - intimidations)
+
+    # v0.3B: Imperial Guard sub-faction attack bonus
+    if unit.card.subfaction and unit.card.subfaction.value == "imperial_guard":
+        guard_count = sum(
+            1 for u in battlefield.all_units(owner_idx)
+            if u.card.subfaction and u.card.subfaction.value == "imperial_guard"
+        )
+        atk += min(guard_count, IMPERIAL_GUARD_ATK_CAP)
+
     return atk
 
 

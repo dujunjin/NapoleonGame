@@ -1104,6 +1104,23 @@ class RuleTuningTests(unittest.TestCase):
         # Prussia — no Landwehr retro-tag (西里西亚国民军 too numerous)
         self.assertIsNone(prussia["西里西亚国民军"].subfaction)
 
+    def test_imperial_guard_bonus_caps_at_plus_3(self):
+        """Imperial Guard tag bonus caps at +3 attack."""
+        bf = Battlefield()
+        # Deploy 4 Imperial Guard units
+        units = []
+        for i in range(4):
+            card = self.make_card(f"近卫{i}", attack=3, health=3,
+                                  subfaction=SubFaction.IMPERIAL_GUARD)
+            unit = BattleUnit(card=card, current_hp=3, current_line=Line.MAIN, slot=i,
+                              deployed_this_turn=False)
+            units.append(unit)
+        bf.p1_main = units
+        # With 4 Imperial Guard units, each should get +3 (capped from count=4)
+        for u in bf.p1_main:
+            bonus = effective_attack(u, bf, 0) - u.card.attack
+            self.assertEqual(bonus, 3)
+
 
 if __name__ == "__main__":
     unittest.main()
