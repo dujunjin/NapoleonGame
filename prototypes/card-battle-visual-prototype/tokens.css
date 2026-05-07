@@ -23,3 +23,14 @@
   --shake-per-dmg:   1.5;
   --shake-cap:       12;
 }
+
+/* Drop-zone telegraph */
+.battlefield-stage.drag-active [data-slot] {
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+.battlefield-stage.drag-active [data-slot].slot-hover-valid {
+  opacity: 1;
+  box-shadow: inset 0 0 12px rgba(212,165,92,0.4), 0 0 16px rgba(212,165,92,0.6);
+  border-color: #d4a55c;
+}

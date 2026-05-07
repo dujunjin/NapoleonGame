@@ -504,7 +504,9 @@ function Battlefield({ theme, onSpeed }) {
     p1rear:   [null, null, null, null],
   });
   const [draggingCard, setDraggingCard] = useState(null);
-  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const dragRef = useRef({ x: 0, y: 0, startX: 0, startY: 0, lifted: false });
+  const ghostRef = useRef(null);
+  const rafIdRef = useRef(null);
   const [hoveredSlot, setHoveredSlot] = useState(null);
   const [hoveredHandIndex, setHoveredHandIndex] = useState(-1);
   const [shake, setShake] = useState(false);
@@ -571,95 +573,154 @@ function Battlefield({ theme, onSpeed }) {
     return lineKey === 'p1rear';
   }
 
-  function onCardMouseDown(e, card) {
+  function onCardPointerDown(e, card) {
     if (card.cost > p1Morale || activePlayer !== 1) return;
+    if (animLocked) return;
     e.preventDefault();
-    setDraggingCard(card);
     const rect = stage.current.getBoundingClientRect();
-    setDragPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    dragRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      startX: e.clientX,
+      startY: e.clientY,
+      lifted: false,
+    };
+    setDraggingCard(card);
   }
 
   useEffect(() => {
     if (!draggingCard) return;
+    stage.current?.classList.add('drag-active');
+
     function onMove(e) {
       const rect = stage.current.getBoundingClientRect();
-      setDragPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const slot = el?.closest('[data-slot]');
-      if (slot) {
-        const nextHoveredSlot = {
-          line: slot.dataset.line,
-          idx: parseInt(slot.dataset.idx),
-        };
-        hoveredSlotRef.current = nextHoveredSlot;
-        setHoveredSlot(nextHoveredSlot);
-      } else {
-        hoveredSlotRef.current = null;
-        setHoveredSlot(null);
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = e.clientY - dragRef.current.startY;
+      if (!dragRef.current.lifted) {
+        if (Math.hypot(dx, dy) <= 8) return;
+        dragRef.current.lifted = true;
       }
-    }
-    function onUp(e) {
+      dragRef.current.x = x;
+      dragRef.current.y = y;
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = requestAnimationFrame(() => {
+        if (ghostRef.current) {
+          ghostRef.current.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(-2deg) scale(1.1)`;
+        }
+      });
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const slot = el?.closest('[data-slot]');
-      const dropSlot = slot
-        ? { line: slot.dataset.line, idx: parseInt(slot.dataset.idx) }
-        : hoveredSlotRef.current;
+      const prev = hoveredSlotRef.current;
+      const next = slot ? { line: slot.dataset.line, idx: parseInt(slot.dataset.idx) } : null;
+      if (prev && (!next || prev.line !== next.line || prev.idx !== next.idx)) {
+        const prevEl = document.querySelector(`[data-slot][data-line="${prev.line}"][data-idx="${prev.idx}"]`);
+        if (prevEl) prevEl.classList.remove('slot-hover-valid');
+      }
+      if (next && canP1Deploy(next.line)) {
+        slot.classList.add('slot-hover-valid');
+      }
+      hoveredSlotRef.current = next;
+    }
+
+    function onUp(e) {
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      if (!dragRef.current.lifted) { cleanup(); return; }
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const slot = el?.closest('[data-slot]');
+      const dropSlot = slot ? { line: slot.dataset.line, idx: parseInt(slot.dataset.idx) } : hoveredSlotRef.current;
       if (dropSlot && draggingCard && canP1Deploy(dropSlot.line)) {
         const slotData = board[dropSlot.line][dropSlot.idx];
-        if (!slotData) deployCard(draggingCard, dropSlot.line, dropSlot.idx);
+        if (!slotData) { deployCard(draggingCard, dropSlot.line, dropSlot.idx); cleanup(); return; }
       }
-      hoveredSlotRef.current = null;
-      setDraggingCard(null);
-      setHoveredSlot(null);
-    }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-  }, [draggingCard, hoveredSlot, board]);
-
-  function deployCard(card, line, idx) {
-    setSelectedAttacker(null);
-    if (card.kind === 'event') {
-      setHand(h => h.filter(c => c.id !== card.id));
-      setP1Morale(m => m - card.cost);
-      discardCard({ ...card, owner: 'p1' });
-      spawnParticle(fxLayer.current, dragPos.x, dragPos.y, 'flash');
-      return;
-    }
-
-    setBoard(b => {
-      if (b[line][idx]) return b;
-      const nextLine = [...b[line]];
-      nextLine[idx] = { ...card, owner: 'p1', deployedTurn: turn, justDeployed: true };
-      return { ...b, [line]: nextLine };
-    });
-    setHand(h => h.filter(c => c.id !== card.id));
-    setP1Morale(m => m - card.cost);
-
-    setTimeout(() => {
-      const slotEl = document.querySelector(`[data-slot][data-line="${line}"][data-idx="${idx}"]`);
-      if (slotEl) {
-        const r = slotEl.getBoundingClientRect();
-        const sr = stage.current.getBoundingClientRect();
-        const cx = r.left + r.width/2 - sr.left;
-        const cy = r.top + r.height/2 - sr.top;
-        spawnParticle(fxLayer.current, cx, cy, 'flash');
-        for (let i = 0; i < 8; i++) spawnParticle(fxLayer.current, cx, cy, 'spark');
-        for (let i = 0; i < 5; i++) {
-          setTimeout(() => spawnParticle(fxLayer.current, cx + (Math.random()-0.5)*40, cy + (Math.random()-0.5)*40, 'smoke'), i*60);
+      // Bounce-back
+      if (ghostRef.current) {
+        const handCard = document.querySelector(`[data-hand-card="${draggingCard.id}"]`);
+        if (handCard) {
+          const cr = handCard.getBoundingClientRect();
+          const sr = stage.current.getBoundingClientRect();
+          const tx = cr.left + cr.width/2 - sr.left;
+          const ty = cr.top + cr.height/2 - sr.top;
+          ghostRef.current.style.transition = `transform 250ms var(--ease-rest)`;
+          ghostRef.current.style.transform = `translate(${tx}px, ${ty}px) translate(-50%, -50%) rotate(0deg) scale(1.0)`;
+          setTimeout(() => cleanup(), 250);
+          return;
         }
       }
-    }, 50);
+      cleanup();
+    }
 
-    setTimeout(() => {
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+        cleanup();
+      }
+    }
+
+    function cleanup() {
+      document.querySelectorAll('.slot-hover-valid').forEach(el => el.classList.remove('slot-hover-valid'));
+      hoveredSlotRef.current = null;
+      setDraggingCard(null);
+      stage.current?.classList.remove('drag-active');
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('keydown', onKeyDown);
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      stage.current?.classList.remove('drag-active');
+    };
+  }, [draggingCard, board, p1Morale, activePlayer]);
+
+  function deployCard(card, line, idx) {
+    tryRunAction((done) => {
+      setSelectedAttacker(null);
+      if (card.kind === 'event') {
+        setHand(h => h.filter(c => c.id !== card.id));
+        setP1Morale(m => m - card.cost);
+        discardCard({ ...card, owner: 'p1' });
+        spawnParticle(fxLayer.current, dragRef.current.x, dragRef.current.y, 'flash');
+        done();
+        return;
+      }
+
       setBoard(b => {
-        const ln = b[line].map(u => u?.id === card.id ? { ...u, justDeployed: false } : u);
-        return { ...b, [line]: ln };
+        if (b[line][idx]) return b;
+        const nextLine = [...b[line]];
+        nextLine[idx] = { ...card, owner: 'p1', deployedTurn: turn, justDeployed: true };
+        return { ...b, [line]: nextLine };
       });
-    }, 700 / speed);
+      setHand(h => h.filter(c => c.id !== card.id));
+      setP1Morale(m => m - card.cost);
+
+      setTimeout(() => {
+        const slotEl = document.querySelector(`[data-slot][data-line="${line}"][data-idx="${idx}"]`);
+        if (slotEl) {
+          const r = slotEl.getBoundingClientRect();
+          const sr = stage.current.getBoundingClientRect();
+          const cx = r.left + r.width/2 - sr.left;
+          const cy = r.top + r.height/2 - sr.top;
+          spawnParticle(fxLayer.current, cx, cy, 'flash');
+          for (let i = 0; i < 8; i++) spawnParticle(fxLayer.current, cx, cy, 'spark');
+          for (let i = 0; i < 5; i++) {
+            setTimeout(() => spawnParticle(fxLayer.current, cx + (Math.random()-0.5)*40, cy + (Math.random()-0.5)*40, 'smoke'), i*60);
+          }
+        }
+      }, 50);
+
+      setTimeout(() => {
+        setBoard(b => {
+          const ln = b[line].map(u => u?.id === card.id ? { ...u, justDeployed: false } : u);
+          return { ...b, [line]: ln };
+        });
+        done();
+      }, 700 / speed);
+    });
   }
 
   function handleUnitClick(line, idx) {
@@ -1000,7 +1061,7 @@ function Battlefield({ theme, onSpeed }) {
               opacity: card.cost > p1Morale ? 0.65 : 1,
               filter: isHovered ? 'drop-shadow(0 12px 24px rgba(0,0,0,0.8)) drop-shadow(0 0 20px rgba(212,165,92,0.4))' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
             }}
-            onMouseDown={(e) => onCardMouseDown(e, card)}
+            onPointerDown={(e) => onCardPointerDown(e, card)}
             >
               <window.Card style={cardStyle} unit={card} faction={card.faction} scale={0.74} onCard/>
             </div>
@@ -1010,11 +1071,12 @@ function Battlefield({ theme, onSpeed }) {
 
       {/* dragging ghost */}
       {draggingCard && (
-        <div style={{
-          position: 'absolute', left: dragPos.x, top: dragPos.y,
-          transform: 'translate(-50%, -50%) rotate(-2deg) scale(1.1)',
+        <div ref={ghostRef} style={{
+          position: 'absolute', left: 0, top: 0,
+          transform: `translate(${dragRef.current.x}px, ${dragRef.current.y}px) translate(-50%, -50%) rotate(-2deg) scale(1.1)`,
           pointerEvents: 'none', zIndex: 999,
           filter: 'drop-shadow(0 16px 30px rgba(0,0,0,0.7))',
+          willChange: 'transform',
         }}>
           <window.Card style={cardStyle} unit={draggingCard} faction={draggingCard.faction} onCard/>
         </div>
