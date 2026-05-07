@@ -141,7 +141,10 @@ def deploy_card(player: Player, card: Card, battlefield: Battlefield,
                     u.current_hp += 1  # 当前 hp 也 +1（不只是上限）
             if log is not None:
                 log.append(f"    ✨ 光环：所有其他友军 +1 血")
-    
+
+    # v0.3B: On Deploy trigger
+    unit.on_deploy_fired = True
+
     return True
 
 
