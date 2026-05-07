@@ -20,8 +20,12 @@ from game import (
 
 def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
     """把当前战场状态序列化为 dict"""
-    def unit_to_dict(u: BattleUnit) -> dict:
+    def unit_uid(owner: str, line: Line, u: BattleUnit) -> str:
+        return f"{owner}|{line.value}|{u.slot}|{u.card.name}"
+
+    def unit_to_dict(owner: str, line: Line, u: BattleUnit) -> dict:
         return {
+            "uid": unit_uid(owner, line, u),
             "name": u.card.name,
             "type": u.card.unit_type.value,
             "attack": u.card.attack,
@@ -41,9 +45,9 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "hand_size": len(p1.hand),
             "deck_size": len(p1.deck),
             "discard_size": len(p1.discard_pile),
-            "rear": [unit_to_dict(u) for u in bf.p1_rear],
-            "main": [unit_to_dict(u) for u in bf.p1_main],
-            "skirmish": [unit_to_dict(u) for u in bf.p1_skirmish],
+            "rear": [unit_to_dict("P1", Line.REAR, u) for u in bf.p1_rear],
+            "main": [unit_to_dict("P1", Line.MAIN, u) for u in bf.p1_main],
+            "skirmish": [unit_to_dict("P1", Line.SKIRMISH, u) for u in bf.p1_skirmish],
             "commander": {
                 "id": p1.commander_id,
                 "name": p1.commander_name,
@@ -66,9 +70,9 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "hand_size": len(p2.hand),
             "deck_size": len(p2.deck),
             "discard_size": len(p2.discard_pile),
-            "rear": [unit_to_dict(u) for u in bf.p2_rear],
-            "main": [unit_to_dict(u) for u in bf.p2_main],
-            "skirmish": [unit_to_dict(u) for u in bf.p2_skirmish],
+            "rear": [unit_to_dict("P2", Line.REAR, u) for u in bf.p2_rear],
+            "main": [unit_to_dict("P2", Line.MAIN, u) for u in bf.p2_main],
+            "skirmish": [unit_to_dict("P2", Line.SKIRMISH, u) for u in bf.p2_skirmish],
             "commander": {
                 "id": p2.commander_id,
                 "name": p2.commander_name,
@@ -84,6 +88,18 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             },
         },
     }
+
+
+def _enrich_event_step(step: dict) -> None:
+    """Parse event log to extract event card name and effect text."""
+    for line in reversed(step.get("log", [])):
+        text = line.strip()
+        if "打出事件卡【" in text:
+            card = text.split("打出事件卡【", 1)[1].split("】", 1)[0]
+            effect = text.split("→", 1)[1].strip() if "→" in text else ""
+            step["event_card"] = card
+            step["event_effect_text"] = effect
+            return
 
 
 def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict:
@@ -183,6 +199,12 @@ def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict
     else:
         winner_name = "超时/平局"
 
+    # Assign stable action_id and enrich event steps with card metadata
+    for idx, step in enumerate(timeline):
+        step["action_id"] = idx
+        if step["action"] == "event":
+            _enrich_event_step(step)
+
     return {
         "meta": {
             "p1_faction": p1_faction.value,
@@ -190,6 +212,7 @@ def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict
             "seed": seed,
             "winner": winner,
             "winner_name": winner_name,
+            "starting_hq_hp": STARTING_HQ_HP,
             "final_turn": final_turn,
             "end_reason": end_reason,
             "p1_commander": p1.commander_name,
