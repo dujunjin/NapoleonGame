@@ -278,6 +278,7 @@ class RuleTuningTests(unittest.TestCase):
             "沙恩霍斯特参谋长",
         ])
         self.assertEqual(russia_events, [
+            "库图佐夫的传令兵",
             "库图佐夫的战略后撤", "焦土政策", "冬将军",
             "巴格拉季昂后卫军", "库图佐夫的撤退令", "焦土伏击",
         ])
@@ -290,6 +291,7 @@ class RuleTuningTests(unittest.TestCase):
             },
             Faction.PRUSSIA: {},
             Faction.RUSSIA: {
+                "库图佐夫的传令兵": (1, "buff_cossack_death_extend"),
                 "巴格拉季昂后卫军": (2, "fortify_target_INF_GUARD+0+2_guard"),
                 "库图佐夫的撤退令": (2, "retreat_friendly_heal2_hq1"),
                 "焦土伏击": (1, "self_hq1_damage_enemy_skirmish1"),
@@ -1154,6 +1156,21 @@ class RuleTuningTests(unittest.TestCase):
         self.assertEqual(cards_by_name["勃兰登堡后备营"].subfaction, SubFaction.LANDWEHR)
         self.assertIn("On Wounded", cards_by_name["勃兰登堡后备营"].keywords)
         self.assertIn("死神威慑", cards_by_name["反冲击突击队"].keywords)
+
+    def test_russia_v03b_cards_exist(self):
+        """Russia v0.3B cards are in the deck."""
+        from cards import SubFaction
+        deck = DECK_BUILDERS[Faction.RUSSIA]()
+        names = [c.name for c in deck]
+        self.assertIn("顿河哥萨克猎骑", names)
+        self.assertIn("撤退中的炮兵队", names)
+        self.assertIn("焦土游击", names)
+        self.assertIn("库图佐夫的传令兵", names)
+        cards_by_name = {c.name: c for c in deck}
+        self.assertEqual(cards_by_name["顿河哥萨克猎骑"].subfaction, SubFaction.COSSACK)
+        self.assertEqual(cards_by_name["焦土游击"].subfaction, SubFaction.COSSACK)
+        self.assertIn("焦土补给", cards_by_name["焦土游击"].keywords)
+        self.assertIn("On Destroy", cards_by_name["焦土游击"].keywords)
 
     def test_imperial_guard_bonus_caps_at_plus_3(self):
         """Imperial Guard tag bonus caps at +3 attack."""

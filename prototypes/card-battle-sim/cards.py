@@ -318,13 +318,13 @@ def build_russia_deck() -> List[Card]:
                          Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术"],
                          subfaction=SubFaction.COSSACK))
 
-    # 俄军猎兵团 ×2：占据散兵线的低费散兵
-    for _ in range(2):
+    # 俄军猎兵团 ×1：占据散兵线的低费散兵（v0.3B: 2→1 为新卡腾位）
+    for _ in range(1):
         deck.append(Card("俄军猎兵团", 1, 1, 2, UnitType.SKIRMISHER, Faction.RUSSIA,
                          Line.SKIRMISH, ["闪避"]))
 
-    # 东正教民兵 ×3：超低费铺场 + 焦土补给
-    for _ in range(3):
+    # 东正教民兵 ×2：超低费铺场 + 焦土补给（v0.3B: 3→2 为新卡腾位）
+    for _ in range(2):
         deck.append(Card("东正教民兵", 2, 2, 3, UnitType.INFANTRY, Faction.RUSSIA,
                          Line.MAIN, ["结阵", "焦土补给"]))
 
@@ -333,8 +333,8 @@ def build_russia_deck() -> List[Card]:
         deck.append(Card("俄国线列军", 3, 2, 5, UnitType.INFANTRY, Faction.RUSSIA,
                          Line.MAIN, ["结阵"]))
 
-    # 步兵炮 ×2：基础炮兵
-    for _ in range(2):
+    # 步兵炮 ×1：基础炮兵（v0.3B: 2→1 为新卡腾位）
+    for _ in range(1):
         deck.append(Card("俄军步兵炮", 3, 3, 2, UnitType.ARTILLERY, Faction.RUSSIA,
                          Line.REAR, ["远程"]))
 
@@ -349,8 +349,8 @@ def build_russia_deck() -> List[Card]:
                          Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术"],
                          subfaction=SubFaction.COSSACK))
 
-    # 龙骑兵 ×2：标准骑兵
-    for _ in range(2):
+    # 龙骑兵 ×1：标准骑兵（v0.3B: 2→1 为新卡腾位）
+    for _ in range(1):
         deck.append(Card("俄军龙骑", 4, 4, 3, UnitType.CAVALRY, Faction.RUSSIA,
                          Line.MAIN, ["冲锋"]))
 
@@ -376,6 +376,26 @@ def build_russia_deck() -> List[Card]:
     # 帝国大军 ×1：自残 1，全场 +1 血
     deck.append(Card("帝国大军", 5, 3, 5, UnitType.INFANTRY, Faction.RUSSIA,
                      Line.MAIN, ["结阵", "自残1", "光环+1血"]))
+
+    # === v0.3B 新卡 ===
+    # 顿河哥萨克猎骑：Cossack swarm economy
+    deck.append(Card("顿河哥萨克猎骑", 3, 3, 3, UnitType.CAVALRY, Faction.RUSSIA,
+                     Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术", "On Destroy"],
+                     subfaction=SubFaction.COSSACK))
+
+    # 撤退中的炮兵队：On Advance cameo (Russia surprise)
+    deck.append(Card("撤退中的炮兵队", 4, 3, 3, UnitType.ARTILLERY, Faction.RUSSIA,
+                     Line.REAR, ["远程", "焦土补给", "On Advance"]))
+
+    # 焦土游击：Cheap Cossack meat with On Destroy
+    deck.append(Card("焦土游击", 2, 2, 2, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.MAIN, ["自残1", "焦土补给", "On Destroy"],
+                     subfaction=SubFaction.COSSACK))
+
+    # 库图佐夫的传令兵：EVENT with On Deploy (death → extend)
+    deck.append(Card("库图佐夫的传令兵", 1, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, ["On Deploy"],
+                     CardType.EVENT, "buff_cossack_death_extend"))
 
     # === 事件卡 ===
     deck.append(Card("库图佐夫的战略后撤", 1, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
