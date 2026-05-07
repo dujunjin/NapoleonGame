@@ -1064,6 +1064,28 @@ class RuleTuningTests(unittest.TestCase):
                     if "On Destroy" in kw:
                         self.assertNotIn("HQ", kw, f"{card.name}: On Destroy cannot damage HQ")
 
+    def test_on_advance_fires_when_unit_moves_to_skirmish(self):
+        """On Advance fires when unit crosses line boundary."""
+        bf = Battlefield()
+        unit = BattleUnit(card=self.make_card("前压单位", attack=3, health=3,
+                                               keywords=["On Advance"]),
+                          current_hp=3, current_line=Line.MAIN, slot=1,
+                          deployed_this_turn=False)
+        bf.p1_main = [unit]
+        # Simulate advance MAIN→SKIRMISH
+        bf.get_line(0, Line.MAIN).remove(unit)
+        unit.current_line = Line.SKIRMISH
+        unit.has_acted_this_turn = True
+        bf.get_line(0, Line.SKIRMISH).append(unit)
+        self.assertEqual(unit.current_line, Line.SKIRMISH)
+        self.assertIn("On Advance", unit.card.keywords)
+
+    def test_export_includes_trigger_fire_counts(self):
+        """Export meta block includes trigger_fire_counts field."""
+        data = play_and_export(Faction.FRANCE, Faction.RUSSIA, seed=42)
+        self.assertIn("trigger_fire_counts", data["meta"])
+        self.assertIsInstance(data["meta"]["trigger_fire_counts"], dict)
+
 
 if __name__ == "__main__":
     unittest.main()
