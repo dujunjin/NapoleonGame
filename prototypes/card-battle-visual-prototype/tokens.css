@@ -1,0 +1,25 @@
+/* prototypes/card-battle-visual-prototype/tokens.css */
+:root {
+  /* 4 named curves — all animations must use one of these */
+  --ease-snap-in:    cubic-bezier(0.20, 0.90, 0.30, 1.00);
+  --ease-rest:       cubic-bezier(0.00, 0.00, 0.20, 1.00);
+  --ease-overshoot:  cubic-bezier(0.34, 1.56, 0.64, 1.00);
+  --ease-hover:      ease-in-out;
+
+  /* Durations */
+  --dur-snap:        240ms;
+  --dur-rest:        280ms;
+  --dur-overshoot:   380ms;
+  --dur-hover:       150ms;
+
+  /* Interaction tunables */
+  --drag-threshold:  8px;
+  --bounce-back:     250ms;
+  --ai-pause:        800ms;
+  --banner-hold:     600ms;
+
+  /* Shake (px = base + dmg * per_dmg, capped) */
+  --shake-base:      4;
+  --shake-per-dmg:   1.5;
+  --shake-cap:       12;
+}
