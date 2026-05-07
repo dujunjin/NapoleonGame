@@ -437,7 +437,7 @@ function spawnParticle(layer, x, y, kind = 'smoke', extra) {
       text-shadow:0 0 8px rgba(0,0,0,0.9),0 2px 0 #1a0a04;
       font-family:Georgia,serif;
       transform:translate(-50%,-50%);
-      animation:damage-pop 1s ease-out forwards;`;
+      animation:damage-pop 0.7s ease-out forwards;`;
   }
   layer.appendChild(p);
   setTimeout(() => p.remove(), 1500);
@@ -509,7 +509,7 @@ function Battlefield({ theme, onSpeed }) {
   const rafIdRef = useRef(null);
   const [hoveredSlot, setHoveredSlot] = useState(null);
   const [hoveredHandIndex, setHoveredHandIndex] = useState(-1);
-  const [shake, setShake] = useState(false);
+  const [shakeAmp, setShakeAmp] = useState(0);
   const [flash, setFlash] = useState(false);
   const [turnBanner, setTurnBanner] = useState(null);
   const [endScreen, setEndScreen] = useState(null);
@@ -867,8 +867,9 @@ function Battlefield({ theme, onSpeed }) {
         }
         const dmg = unit.atk;
         spawnParticle(fxLayer.current, impactX, impactY, 'damage', '-' + dmg);
-        setShake(true); setFlash(true);
-        setTimeout(() => { setShake(false); setFlash(false); }, 200);
+        const amp = Math.min(12, 4 + dmg * 1.5);
+        setShakeAmp(amp); setFlash(true);
+        setTimeout(() => { setShakeAmp(0); setFlash(false); }, 200);
 
         if (targetLine) {
           setBoard(b => {
@@ -1014,12 +1015,12 @@ function Battlefield({ theme, onSpeed }) {
   };
 
   return (
-    <div ref={stage} className={'battlefield-stage' + (shake ? ' shake' : '')} style={{
+    <div ref={stage} className={'battlefield-stage' + (shakeAmp > 0 ? ' shake' : '') + (draggingCard ? ' drag-active' : '')} style={{
       position: 'relative', width: '100%', height: '100%',
       borderRadius: 6, overflow: 'hidden',
       background: 'linear-gradient(180deg, #0e0a06 0%, #19100a 48%, #0e0a06 100%)',
-      transform: shake ? `translate(${(Math.random()-0.5)*8}px,${(Math.random()-0.5)*8}px)` : 'none',
-      transition: shake ? 'none' : 'transform 0.1s',
+      transform: shakeAmp > 0 ? `translate(${(Math.random()-0.5)*shakeAmp}px,${(Math.random()-0.5)*shakeAmp}px)` : 'none',
+      transition: shakeAmp > 0 ? 'none' : 'transform 0.1s',
     }}>
       {/* HQ bars top + bottom */}
       <HQBar side="p2" faction={f2} hp={p2HP} morale={p2Morale} active={activePlayer===2}/>
