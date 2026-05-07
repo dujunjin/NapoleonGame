@@ -1086,6 +1086,24 @@ class RuleTuningTests(unittest.TestCase):
         self.assertIn("trigger_fire_counts", data["meta"])
         self.assertIsInstance(data["meta"]["trigger_fire_counts"], dict)
 
+    def test_existing_cards_have_subfaction_tags(self):
+        """Retroactive sub-faction tags applied to matching existing cards."""
+        france = {c.name: c for c in DECK_BUILDERS[Faction.FRANCE]()}
+        prussia = {c.name: c for c in DECK_BUILDERS[Faction.PRUSSIA]()}
+        russia = {c.name: c for c in DECK_BUILDERS[Faction.RUSSIA]()}
+
+        # France Imperial Guard candidates
+        self.assertEqual(france["近卫掷弹兵"].subfaction, SubFaction.IMPERIAL_GUARD)
+        self.assertEqual(france["老近卫军"].subfaction, SubFaction.IMPERIAL_GUARD)
+        self.assertEqual(france["近卫马炮兵"].subfaction, SubFaction.IMPERIAL_GUARD)
+
+        # Russia Cossack candidates
+        self.assertEqual(russia["哥萨克轻骑"].subfaction, SubFaction.COSSACK)
+        self.assertEqual(russia["普拉托夫的哥萨克"].subfaction, SubFaction.COSSACK)
+
+        # Prussia — no Landwehr retro-tag (西里西亚国民军 too numerous)
+        self.assertIsNone(prussia["西里西亚国民军"].subfaction)
+
 
 if __name__ == "__main__":
     unittest.main()

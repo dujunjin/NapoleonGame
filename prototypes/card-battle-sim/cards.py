@@ -129,7 +129,8 @@ def build_france_deck() -> List[Card]:
     # 高费精锐线列 ×3：法军核心
     for _ in range(3):
         deck.append(Card("近卫掷弹兵", 5, 5, 5, UnitType.INFANTRY, Faction.FRANCE,
-                         Line.MAIN, ["结阵", "齐射", "守卫"]))
+                         Line.MAIN, ["结阵", "齐射", "守卫"],
+                         subfaction=SubFaction.IMPERIAL_GUARD))
 
     # 龙骑兵 ×3：中费骑兵（攻击 4→3；与 军团联动 联动后回到 4 攻）
     for _ in range(3):
@@ -143,7 +144,8 @@ def build_france_deck() -> List[Card]:
     # 骑炮 ×2：机动炮兵 + 军团联动
     for _ in range(2):
         deck.append(Card("近卫马炮兵", 4, 3, 3, UnitType.ARTILLERY, Faction.FRANCE,
-                         Line.REAR, ["远程", "阿尔科莱精神", "军团联动"]))
+                         Line.REAR, ["远程", "阿尔科莱精神", "军团联动"],
+                         subfaction=SubFaction.IMPERIAL_GUARD))
 
     # 重炮 ×2：高费后排炮（无 军团联动 — 重炮固定不机动，不能与骑兵协同）
     for _ in range(2):
@@ -152,7 +154,8 @@ def build_france_deck() -> List[Card]:
 
     # 老近卫 ×1：终极牌（攻击 7→6 削弱）
     deck.append(Card("老近卫军", 8, 6, 8, UnitType.GUARD, Faction.FRANCE,
-                     Line.MAIN, ["结阵", "齐射", "守卫", "突破"]))
+                     Line.MAIN, ["结阵", "齐射", "守卫", "突破"],
+                     subfaction=SubFaction.IMPERIAL_GUARD))
 
     # 轻骑兵 ×3：低费骑兵
     for _ in range(3):
@@ -277,7 +280,8 @@ def build_russia_deck() -> List[Card]:
     # 哥萨克轻骑 ×2：低费骚扰骑兵 + 熔岩战术（cavalry-to-skirmish AI 让 1 费过强，回到 2 费 2/2）
     for _ in range(2):
         deck.append(Card("哥萨克轻骑", 2, 2, 2, UnitType.CAVALRY, Faction.RUSSIA,
-                         Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术"]))
+                         Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术"],
+                         subfaction=SubFaction.COSSACK))
 
     # 俄军猎兵团 ×2：占据散兵线的低费散兵
     for _ in range(2):
@@ -307,7 +311,8 @@ def build_russia_deck() -> List[Card]:
     # 普拉托夫的哥萨克 ×2：高数值侧翼骑兵 + 熔岩战术
     for _ in range(2):
         deck.append(Card("普拉托夫的哥萨克", 4, 3, 2, UnitType.CAVALRY, Faction.RUSSIA,
-                         Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术"]))
+                         Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术"],
+                         subfaction=SubFaction.COSSACK))
 
     # 龙骑兵 ×2：标准骑兵
     for _ in range(2):
