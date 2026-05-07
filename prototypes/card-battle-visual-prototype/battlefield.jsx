@@ -514,7 +514,6 @@ function Battlefield({ theme, onSpeed }) {
   const [turnBanner, setTurnBanner] = useState(null);
   const [endScreen, setEndScreen] = useState(null);
   const [attacking, setAttacking] = useState(null);
-  const [selectedAttacker, setSelectedAttacker] = useState(null);
 
   const fxLayer = useRef(null);
   const stage = useRef(null);
@@ -522,6 +521,8 @@ function Battlefield({ theme, onSpeed }) {
   const unitIdRef = useRef(1);
   const hoveredSlotRef = useRef(null);
   const { locked: animLocked, tryRun: tryRunAction } = useActionQueue();
+  const targetingRef = useRef(null);
+  const arrowRef = useRef(null);
 
   useEffect(() => {
     drawCards(4);
@@ -679,7 +680,6 @@ function Battlefield({ theme, onSpeed }) {
 
   function deployCard(card, line, idx) {
     tryRunAction((done) => {
-      setSelectedAttacker(null);
       if (card.kind === 'event') {
         setHand(h => h.filter(c => c.id !== card.id));
         setP1Morale(m => m - card.cost);
@@ -723,66 +723,105 @@ function Battlefield({ theme, onSpeed }) {
     });
   }
 
-  function handleUnitClick(line, idx) {
-    const unit = board[line][idx];
-    if (!unit) return;
-
-    if (unit.owner === 'p1') {
-      if (unit.hasAdvanced || activePlayer !== 1) return;
-      setSelectedAttacker(current =>
-        current?.line === line && current?.idx === idx ? null : { line, idx }
-      );
-      return;
-    }
-
-    if (unit.owner === 'p2' && selectedAttacker && activePlayer === 1) {
-      attackTarget(selectedAttacker.line, selectedAttacker.idx, line, idx);
-    }
-  }
-
   function nextP1Line(line) {
     if (line === 'p1rear') return 'p1front';
     if (line === 'p1front') return 'skirmish';
     return null;
   }
 
-  function canAdvanceSelectedTo(line, idx) {
-    if (!selectedAttacker || activePlayer !== 1 || p1Morale < 1) return false;
-    const unit = board[selectedAttacker.line]?.[selectedAttacker.idx];
-    if (!unit || unit.owner !== 'p1' || unit.hasAdvanced) return false;
-    const toLine = nextP1Line(selectedAttacker.line);
-    return toLine === line && selectedAttacker.idx === idx && !board[line][idx];
-  }
-
-  function advanceSelectedTo(line, idx) {
-    if (!canAdvanceSelectedTo(line, idx)) return;
-    const fromLine = selectedAttacker.line;
-    const fromIdx = selectedAttacker.idx;
-    setBoard(b => {
-      const unit = b[fromLine][fromIdx];
-      if (!unit || b[line][idx]) return b;
-      const from = [...b[fromLine]];
-      const to = [...b[line]];
-      from[fromIdx] = null;
-      to[idx] = { ...unit, justDeployed: false, hasAdvanced: true };
-      return { ...b, [fromLine]: from, [line]: to };
+  function advanceUnit(fromLine, fromIdx, toLine, toIdx) {
+    tryRunAction((done) => {
+      setBoard(b => {
+        const unit = b[fromLine][fromIdx];
+        if (!unit || b[toLine][toIdx]) return b;
+        const from = [...b[fromLine]];
+        const to = [...b[toLine]];
+        from[fromIdx] = null;
+        to[toIdx] = { ...unit, justDeployed: false, hasAdvanced: true };
+        return { ...b, [fromLine]: from, [toLine]: to };
+      });
+      setP1Morale(m => Math.max(0, m - 1));
+      setTimeout(() => {
+        const slotEl = document.querySelector(`[data-slot][data-line="${toLine}"][data-idx="${toIdx}"]`);
+        if (slotEl && stage.current) {
+          const r = slotEl.getBoundingClientRect();
+          const sr = stage.current.getBoundingClientRect();
+          spawnParticle(fxLayer.current, r.left+r.width/2-sr.left, r.top+r.height/2-sr.top, 'flash');
+        }
+        done();
+      }, 40);
     });
-    setP1Morale(m => Math.max(0, m - 1));
-    setSelectedAttacker(null);
-
-    setTimeout(() => {
-      const slotEl = document.querySelector(`[data-slot][data-line="${line}"][data-idx="${idx}"]`);
-      if (!slotEl || !stage.current) return;
-      const r = slotEl.getBoundingClientRect();
-      const sr = stage.current.getBoundingClientRect();
-      spawnParticle(fxLayer.current, r.left + r.width/2 - sr.left, r.top + r.height/2 - sr.top, 'flash');
-    }, 40);
   }
 
-  function handleHqClick(side) {
-    if (side !== 'p2' || !selectedAttacker || activePlayer !== 1) return;
-    attackTarget(selectedAttacker.line, selectedAttacker.idx, null, null);
-  }
+  useEffect(() => {
+    if (animLocked || activePlayer !== 1) return;
+    function onPointerDown(e) {
+      const slot = e.target.closest('[data-slot]');
+      if (!slot) return;
+      const line = slot.dataset.line;
+      const idx = parseInt(slot.dataset.idx);
+      const unit = board[line]?.[idx];
+      if (!unit || unit.owner !== 'p1' || unit.hasAdvanced) return;
+      e.preventDefault();
+      const rect = stage.current.getBoundingClientRect();
+      targetingRef.current = { line, idx, originX: e.clientX - rect.left, originY: e.clientY - rect.top };
+      if (arrowRef.current) arrowRef.current.style.display = 'block';
+    }
+    function onPointerMove(e) {
+      if (!targetingRef.current) return;
+      const rect = stage.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const { originX, originY } = targetingRef.current;
+      const svg = arrowRef.current;
+      if (svg) {
+        const path = svg.querySelector('path');
+        const cpX = (originX + x) / 2;
+        const cpY = Math.min(originY, y) - 30;
+        path.setAttribute('d', `M${originX},${originY} Q${cpX},${cpY} ${x},${y}`);
+      }
+    }
+    function onPointerUp(e) {
+      if (!targetingRef.current) return;
+      const { line, idx } = targetingRef.current;
+      if (arrowRef.current) arrowRef.current.style.display = 'none';
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const slot = el?.closest('[data-slot]');
+      const hq = el?.closest('[data-hq]');
+      if (hq?.dataset.hq === 'p2') {
+        attackTarget(line, idx, null, null);
+      } else if (slot) {
+        const tl = slot.dataset.line;
+        const ti = parseInt(slot.dataset.idx);
+        const tu = board[tl]?.[ti];
+        if (tu?.owner === 'p2') {
+          attackTarget(line, idx, tl, ti);
+        } else if (!tu) {
+          const nextLine = nextP1Line(line);
+          if (nextLine === tl && idx === ti && p1Morale >= 1) {
+            advanceUnit(line, idx, tl, ti);
+          }
+        }
+      }
+      targetingRef.current = null;
+    }
+    function onCancel() {
+      targetingRef.current = null;
+      if (arrowRef.current) arrowRef.current.style.display = 'none';
+    }
+    const el = stage.current;
+    if (!el) return;
+    el.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onCancel);
+    return () => {
+      el.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onCancel);
+    };
+  }, [animLocked, activePlayer, board, p1Morale]);
 
   function attackTarget(line, idx, targetLine, targetIdx) {
     const unit = board[line][idx];
@@ -798,7 +837,6 @@ function Battlefield({ theme, onSpeed }) {
     const dx = t.left - a.left;
     const dy = t.top - a.top;
     setAttacking({ line, idx, dx: dx*0.55, dy: dy*0.55 });
-    setSelectedAttacker(null);
 
     setTimeout(() => {
       const impactX = a.left + a.width/2 + dx*0.55 - sr.left;
@@ -858,7 +896,6 @@ function Battlefield({ theme, onSpeed }) {
   }
 
   function endTurn() {
-    setSelectedAttacker(null);
     setActivePlayer(2);
     setTurnBanner({ turn, player: 2 });
     // simulated AI deploy
@@ -954,8 +991,7 @@ function Battlefield({ theme, onSpeed }) {
       transition: shake ? 'none' : 'transform 0.1s',
     }}>
       {/* HQ bars top + bottom */}
-      <HQBar side="p2" faction={f2} hp={p2HP} morale={p2Morale} active={activePlayer===2}
-        targetable={!!selectedAttacker} onClick={() => handleHqClick('p2')}/>
+      <HQBar side="p2" faction={f2} hp={p2HP} morale={p2Morale} active={activePlayer===2}/>
       <HQBar side="p1" faction={f1} hp={p1HP} morale={p1Morale} active={activePlayer===1}/>
 
       {/* Central battlefield only: background + tactical lines live here. */}
@@ -969,10 +1005,7 @@ function Battlefield({ theme, onSpeed }) {
           {lineDefs.map(def => (
           <Line key={def.key} def={def} board={board} hovered={hoveredSlot}
             f1={f1} f2={f2} cardStyle={cardStyle}
-            attacking={attacking} onUnitClick={handleUnitClick}
-            onSlotClick={(line, idx) => advanceSelectedTo(line, idx)}
-            selectedAttacker={selectedAttacker}
-            canAdvanceTo={(line, idx) => canAdvanceSelectedTo(line, idx)}
+            attacking={attacking}
             speed={speed}
             canHover={!!draggingCard && canP1Deploy(def.key)}
           />
@@ -1117,6 +1150,15 @@ function Battlefield({ theme, onSpeed }) {
 
       <div ref={fxLayer} style={{position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 60}}/>
 
+      <svg ref={arrowRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 55, display: 'none' }}>
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#d4a55c" opacity="0.9"/>
+          </marker>
+        </defs>
+        <path d="" fill="none" stroke="#d4a55c" strokeWidth="2.5" strokeDasharray="8,4" markerEnd="url(#arrowhead)" opacity="0.8"/>
+      </svg>
+
       {turnBanner && <TurnBanner turn={turnBanner.turn} player={turnBanner.player} faction={turnBanner.player===1 ? f1 : f2} speed={speed}/>}
       {endScreen && <EndScreen kind={endScreen} faction={f1}/>}
       {showDiscard && (
@@ -1258,34 +1300,24 @@ function DiscardOverlay({ title, faction, cards, cardStyle, onClose }) {
 }
 
 // ─────────── HQ Bar ───────────
-function HQBar({ side, faction, hp, morale, active, targetable = false, onClick }) {
+function HQBar({ side, faction, hp, morale, active }) {
   const top = side === 'p2';
   return (
-    <div data-hq={side} data-morale={morale} onClick={onClick} style={{
+    <div data-hq={side} data-morale={morale} style={{
       position: 'absolute',
       [top ? 'top' : 'bottom']: top ? 56 : 142,
       left: 92, right: 110,
       height: 36, padding: '4px 12px',
       background: `linear-gradient(90deg, ${faction.primary}cc 0%, rgba(0,0,0,0.6) 100%)`,
-      borderTopStyle: 'solid',
-      borderRightStyle: 'solid',
-      borderBottomStyle: 'solid',
-      borderLeftStyle: 'solid',
-      borderTopColor: targetable ? '#f5d889' : faction.gold,
-      borderRightColor: targetable ? '#f5d889' : faction.gold,
-      borderBottomColor: targetable ? '#f5d889' : faction.gold,
-      borderLeftColor: faction.gold,
-      borderTopWidth: targetable ? 2 : 1,
-      borderRightWidth: targetable ? 2 : 1,
-      borderBottomWidth: targetable ? 2 : 1,
-      borderLeftWidth: 4,
+      borderTop: `1px solid ${faction.gold}`,
+      borderRight: `1px solid ${faction.gold}`,
+      borderBottom: `1px solid ${faction.gold}`,
+      borderLeft: `4px solid ${faction.gold}`,
       borderRadius: 3,
       display: 'flex', alignItems: 'center', gap: 14,
       color: '#f4ead0', fontFamily: 'Georgia, serif',
-      boxShadow: targetable
-        ? `0 0 22px ${faction.gold}, inset 0 0 12px rgba(0,0,0,0.4)`
-        : active ? `0 0 16px ${faction.gold}88, inset 0 0 12px rgba(0,0,0,0.4)` : 'inset 0 0 12px rgba(0,0,0,0.4)',
-      cursor: targetable ? 'crosshair' : 'default',
+      boxShadow: active ? `0 0 16px ${faction.gold}88, inset 0 0 12px rgba(0,0,0,0.4)` : 'inset 0 0 12px rgba(0,0,0,0.4)',
+      cursor: 'default',
       zIndex: 5,
     }}>
       <div dangerouslySetInnerHTML={{__html: faction.crest(28)}}/>
@@ -1308,7 +1340,7 @@ function HQBar({ side, faction, hp, morale, active, targetable = false, onClick 
 }
 
 // ─────────── Line ───────────
-function Line({ def, board, hovered, f1, f2, cardStyle, attacking, onUnitClick, onSlotClick, selectedAttacker, canAdvanceTo, speed, canHover }) {
+function Line({ def, board, hovered, f1, f2, cardStyle, attacking, speed, canHover }) {
   const { key, label, owner, kind } = def;
   const slots = board[key];
   // Visual treatment per line kind
@@ -1348,11 +1380,6 @@ function Line({ def, board, hovered, f1, f2, cardStyle, attacking, onUnitClick, 
             hovered={hovered?.line===key && hovered?.idx===i}
             cardStyle={cardStyle}
             attacking={attacking?.line===key && attacking?.idx===i ? attacking : null}
-            selected={selectedAttacker?.line===key && selectedAttacker?.idx===i}
-            targetable={!!selectedAttacker && u?.owner === 'p2'}
-            advanceTarget={canAdvanceTo(key, i)}
-            onSlotClick={() => onSlotClick(key, i)}
-            onUnitClick={() => onUnitClick(key, i)}
             speed={speed}
             canHover={canHover}
             kind={kind}
@@ -1364,7 +1391,7 @@ function Line({ def, board, hovered, f1, f2, cardStyle, attacking, onUnitClick, 
 }
 
 // ─────────── Slot ───────────
-function Slot({ line, idx, unit, f1, f2, ownerLine, hovered, cardStyle, attacking, selected, targetable, advanceTarget, onUnitClick, onSlotClick, speed, canHover, kind }) {
+function Slot({ line, idx, unit, f1, f2, ownerLine, hovered, cardStyle, attacking, speed, canHover, kind }) {
   const isP2Unit = unit?.owner === 'p2';
   const transform = attacking
     ? `translate(${attacking.dx}px, ${attacking.dy}px) scale(1.05)`
@@ -1374,33 +1401,25 @@ function Slot({ line, idx, unit, f1, f2, ownerLine, hovered, cardStyle, attackin
       data-unit-id={unit?.id || ''}
       data-unit-owner={unit?.owner || ''}
       data-unit-name={unit?.name || ''}
-      onClick={!unit ? onSlotClick : undefined}
       style={{
       width: 66, height: 66,
-      border: selected
-        ? `2px solid ${f1.gold}`
-        : advanceTarget
-          ? `2px solid #f5d889`
-        : targetable
-          ? `2px solid #c8504c`
-          : hovered && canHover
+      border: hovered && canHover
         ? `2px solid ${f1.gold}`
         : `1px dashed ${kind === 'skirmish' ? 'rgba(212,165,92,0.4)' : (ownerLine === 'p1' ? `${f1.gold}55` : `${f2.gold}55`)}`,
       borderRadius: 3,
-      background: selected ? `${f1.gold}28` : advanceTarget ? 'rgba(245,216,137,0.18)' : targetable ? 'rgba(200,80,76,0.18)' : hovered && canHover ? `${f1.gold}30` : 'rgba(0,0,0,0.25)',
-      boxShadow: selected ? `0 0 18px ${f1.gold}` : advanceTarget ? '0 0 18px rgba(245,216,137,0.9)' : targetable ? '0 0 18px rgba(200,80,76,0.9)' : hovered && canHover ? `0 0 16px ${f1.gold}88` : 'inset 0 0 12px rgba(0,0,0,0.35)',
+      background: hovered && canHover ? `${f1.gold}30` : 'rgba(0,0,0,0.25)',
+      boxShadow: hovered && canHover ? `0 0 16px ${f1.gold}88` : 'inset 0 0 12px rgba(0,0,0,0.35)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s',
       position: 'relative',
-      cursor: advanceTarget ? 'pointer' : 'default',
+      cursor: 'default',
     }}>
       {unit && (
         <div
-          onClick={onUnitClick}
           style={{
             transform: `${isP2Unit ? 'rotate(180deg) ' : ''}${transform}`,
             transition: attacking ? `transform ${0.28/speed}s cubic-bezier(.5,-0.4,.5,1.4)` : `transform ${0.4/speed}s ease-out`,
-            cursor: unit.owner === 'p1' && !unit.hasAdvanced ? 'pointer' : targetable ? 'crosshair' : 'default',
+            cursor: unit.owner === 'p1' && !unit.hasAdvanced ? 'grab' : 'default',
             animation: unit.justDeployed ? `card-deploy ${0.6/speed}s ease-out` : 'none',
             filter: unit.dead ? 'opacity(0.5) grayscale(1)' : (unit.justDeployed ? `drop-shadow(0 0 12px ${f1.gold})` : 'none'),
           }}>
