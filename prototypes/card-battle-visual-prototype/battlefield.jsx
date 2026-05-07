@@ -1038,8 +1038,8 @@ function Battlefield({ theme, onSpeed }) {
       >
         {hand.map((card, i) => {
           const N = hand.length;
-          const angle = (i - (N-1)/2) * 6;
-          const offY = Math.abs(i - (N-1)/2) * 6;
+          const angle = (i - (N-1)/2) * Math.min(8, 70 / N);
+          const offY = Math.abs(i - (N-1)/2) * Math.min(6, 42 / N);
           const isHovered = hoveredHandIndex === i && !draggingCard;
           const isDragging = draggingCard?.id === card.id;
           if (isDragging) return null;
@@ -1051,7 +1051,7 @@ function Battlefield({ theme, onSpeed }) {
             data-card-kind={card.kind || 'unit'}
             style={{
               position: 'relative',
-              transform: `translateY(${card.drawing ? 200 : (isHovered ? -78 : offY)}px) rotate(${isHovered ? 0 : angle}deg) scale(${isHovered ? 1.25 : 1})`,
+              transform: `translateY(${card.drawing ? 200 : (isHovered ? -78 : offY)}px) rotate(${isHovered ? 0 : angle}deg) scale(${isHovered ? 1.45 : 1})`,
               transformOrigin: 'bottom center',
               transition: `transform ${0.4/speed}s cubic-bezier(.2,.8,.3,1)`,
               marginLeft: i ? -28 : 0,
@@ -1068,6 +1068,19 @@ function Battlefield({ theme, onSpeed }) {
           );
         })}
       </div>
+
+      {/* Hover preview — large card in top-right */}
+      {hoveredHandIndex >= 0 && !draggingCard && hand[hoveredHandIndex] && (
+        <div style={{
+          position: 'absolute', right: 220, top: 80,
+          zIndex: 200, pointerEvents: 'none',
+          transform: 'scale(2.2)', transformOrigin: 'top right',
+          filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.8))',
+          transition: 'opacity var(--dur-hover) var(--ease-hover)',
+        }}>
+          <window.Card style={cardStyle} unit={hand[hoveredHandIndex]} faction={hand[hoveredHandIndex].faction} onCard/>
+        </div>
+      )}
 
       {/* dragging ghost */}
       {draggingCard && (
