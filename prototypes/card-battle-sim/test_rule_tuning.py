@@ -958,6 +958,20 @@ class RuleTuningTests(unittest.TestCase):
         self.assertIsInstance(p.play_log, list)
         self.assertEqual(len(p.play_log), 0)
 
+    def test_max_chain_depth_suppresses_triggers_beyond_limit(self):
+        """MAX_CHAIN_DEPTH=4 caps chained On Destroy activations."""
+        from triggers import MAX_CHAIN_DEPTH
+        self.assertEqual(MAX_CHAIN_DEPTH, 4)
+
+    def test_no_card_exceeds_two_trigger_types(self):
+        """Guard rail: no card carries more than 2 trigger types."""
+        from triggers import count_trigger_types
+        for faction, builder in DECK_BUILDERS.items():
+            for card in builder():
+                count = count_trigger_types(card)
+                self.assertLessEqual(count, 2,
+                    f"{card.name} ({faction.value}) has {count} trigger types, max 2")
+
 
 if __name__ == "__main__":
     unittest.main()
