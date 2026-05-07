@@ -972,6 +972,23 @@ class RuleTuningTests(unittest.TestCase):
                 self.assertLessEqual(count, 2,
                     f"{card.name} ({faction.value}) has {count} trigger types, max 2")
 
+    def test_event_card_creates_play_log_entry(self):
+        """EVENT cards are logged to PlayLog on successful play."""
+        bf = Battlefield()
+        target = BattleUnit(
+            card=self.make_card("步兵", attack=2, health=3, unit_type=UnitType.INFANTRY),
+            current_hp=3, current_line=Line.REAR, slot=1, deployed_this_turn=False,
+        )
+        bf.p1_rear = [target]
+        event = Card("国防动员", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.REAR, [], CardType.EVENT, "buff_target_INF+1+2")
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=14,
+                    hand=[event], max_orders=3, current_orders=3)
+        deploy_card(p1, event, bf, 0)
+        self.assertEqual(len(p1.play_log), 1)
+        self.assertEqual(p1.play_log[0].card_name, "国防动员")
+        self.assertEqual(p1.play_log[0].card_type, "event")
+
 
 if __name__ == "__main__":
     unittest.main()
