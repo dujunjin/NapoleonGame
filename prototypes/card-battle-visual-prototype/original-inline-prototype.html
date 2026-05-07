@@ -1,0 +1,2937 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>拿破仑战争 · 卡牌对战</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Hiragino Sans", "Microsoft YaHei", Georgia, serif;
+  background: #0e0a06;
+  color: #e8d8b8;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Animation keyframes ── */
+@keyframes smoke-rise {
+  0%   { opacity: 0.7; transform: translate(-50%,-50%) scale(0.6); }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% - 50px)) scale(1.6); }
+}
+@keyframes spark-fly {
+  0%   { opacity: 1; transform: translate(-50%,-50%) translate(0,0); }
+  100% { opacity: 0; transform: translate(-50%,-50%) translate(var(--dx), var(--dy)); }
+}
+@keyframes flash-burst {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.3); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.8); }
+}
+@keyframes damage-pop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.5); }
+  20%  { opacity: 1; transform: translate(-50%,-50%) scale(1.3); }
+  60%  { opacity: 1; transform: translate(-50%, calc(-50% - 30px)) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% - 60px)) scale(0.8); }
+}
+@keyframes flash-fade {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes card-deploy {
+  0%   { transform: scale(1.5) rotateY(80deg); opacity: 0; filter: brightness(2); }
+  60%  { transform: scale(1.1) rotateY(0); opacity: 1; filter: brightness(1.5); }
+  100% { transform: scale(1) rotateY(0); opacity: 1; filter: brightness(1); }
+}
+@keyframes banner-sweep {
+  0%   { opacity: 0; transform: translateX(-100%) skewX(-15deg); }
+  20%  { opacity: 1; transform: translateX(0) skewX(0); }
+  80%  { opacity: 1; transform: translateX(0) skewX(0); }
+  100% { opacity: 0; transform: translateX(100%) skewX(15deg); }
+}
+@keyframes end-fade {
+  0%   { opacity: 0; backdrop-filter: blur(0); }
+  100% { opacity: 1; backdrop-filter: blur(8px); }
+}
+@keyframes drawn-arrive {
+  0%   { transform: translateY(200px) rotate(0); opacity: 0; }
+  100% { transform: translateY(0) rotate(0); opacity: 1; }
+}
+
+.battlefield-stage.shake { animation: none; }
+
+/* canvas root */
+#root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script>
+// Tweaks defaults — persisted via host
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "bgKind": "painting",
+  "cardStyle": "oil",
+  "mood": "cold",
+  "speed": 1
+}/*EDITMODE-END*/;
+window.TWEAK_DEFAULTS = TWEAK_DEFAULTS;
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel">
+
+// DesignCanvas.jsx — Figma-ish design canvas wrapper
+// Warm gray grid bg + Sections + Artboards + PostIt notes.
+// Artboards are reorderable (grip-drag), labels/titles are inline-editable,
+// and any artboard can be opened in a fullscreen focus overlay (←/→/Esc).
+// State persists to a .design-canvas.state.json sidecar via the host
+// bridge. No assets, no deps.
+//
+// Usage:
+//   <DesignCanvas>
+//     <DCSection id="onboarding" title="Onboarding" subtitle="First-run variants">
+//       <DCArtboard id="a" label="A · Dusk" width={260} height={480}>…</DCArtboard>
+//       <DCArtboard id="b" label="B · Minimal" width={260} height={480}>…</DCArtboard>
+//     </DCSection>
+//   </DesignCanvas>
+
+const DC = {
+  bg: '#f0eee9',
+  grid: 'rgba(0,0,0,0.06)',
+  label: 'rgba(60,50,40,0.7)',
+  title: 'rgba(40,30,20,0.85)',
+  subtitle: 'rgba(60,50,40,0.6)',
+  postitBg: '#fef4a8',
+  postitText: '#5a4a2a',
+  font: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+};
+
+// One-time CSS injection (classes are dc-prefixed so they don't collide with
+// the hosted design's own styles).
+if (typeof document !== 'undefined' && !document.getElementById('dc-styles')) {
+  const s = document.createElement('style');
+  s.id = 'dc-styles';
+  s.textContent = [
+    '.dc-editable{cursor:text;outline:none;white-space:nowrap;border-radius:3px;padding:0 2px;margin:0 -2px}',
+    '.dc-editable:focus{background:#fff;box-shadow:0 0 0 1.5px #c96442}',
+    '[data-dc-slot]{transition:transform .18s cubic-bezier(.2,.7,.3,1)}',
+    '[data-dc-slot].dc-dragging{transition:none;z-index:10;pointer-events:none}',
+    '[data-dc-slot].dc-dragging .dc-card{box-shadow:0 12px 40px rgba(0,0,0,.25),0 0 0 2px #c96442;transform:scale(1.02)}',
+    '.dc-card{transition:box-shadow .15s,transform .15s}',
+    '.dc-card *{scrollbar-width:none}',
+    '.dc-card *::-webkit-scrollbar{display:none}',
+    '.dc-labelrow{display:flex;align-items:center;gap:4px;height:24px}',
+    '.dc-grip{cursor:grab;display:flex;align-items:center;padding:5px 4px;border-radius:4px;transition:background .12s}',
+    '.dc-grip:hover{background:rgba(0,0,0,.08)}',
+    '.dc-grip:active{cursor:grabbing}',
+    '.dc-labeltext{cursor:pointer;border-radius:4px;padding:3px 6px;display:flex;align-items:center;transition:background .12s}',
+    '.dc-labeltext:hover{background:rgba(0,0,0,.05)}',
+    '.dc-expand{position:absolute;bottom:100%;right:0;margin-bottom:5px;z-index:2;opacity:0;transition:opacity .12s,background .12s;',
+    '  width:22px;height:22px;border-radius:5px;border:none;cursor:pointer;padding:0;',
+    '  background:transparent;color:rgba(60,50,40,.7);display:flex;align-items:center;justify-content:center}',
+    '.dc-expand:hover{background:rgba(0,0,0,.06);color:#2a251f}',
+    '[data-dc-slot]:hover .dc-expand{opacity:1}',
+  ].join('\n');
+  document.head.appendChild(s);
+}
+
+const DCCtx = React.createContext(null);
+
+// ─────────────────────────────────────────────────────────────
+// DesignCanvas — stateful wrapper around the pan/zoom viewport.
+// Owns runtime state (per-section order, renamed titles/labels, focused
+// artboard). Order/titles/labels persist to a .design-canvas.state.json
+// sidecar next to the HTML. Reads go via plain fetch() so the saved
+// arrangement is visible anywhere the HTML + sidecar are served together
+// (omelette preview, direct link, downloaded zip). Writes go through the
+// host's window.omelette bridge — editing requires the omelette runtime.
+// Focus is ephemeral.
+// ─────────────────────────────────────────────────────────────
+const DC_STATE_FILE = '.design-canvas.state.json';
+
+function DesignCanvas({ children, minScale, maxScale, style }) {
+  const [state, setState] = React.useState({ sections: {}, focus: null });
+  // Hold rendering until the sidecar read settles so the saved order/titles
+  // appear on first paint (no source-order flash). didRead gates writes until
+  // the read settles so the empty initial state can't clobber a slow read;
+  // skipNextWrite suppresses the one echo-write that would otherwise follow
+  // hydration.
+  const [ready, setReady] = React.useState(false);
+  const didRead = React.useRef(false);
+  const skipNextWrite = React.useRef(false);
+
+  React.useEffect(() => {
+    let off = false;
+    fetch('./' + DC_STATE_FILE)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((saved) => {
+        if (off || !saved || !saved.sections) return;
+        skipNextWrite.current = true;
+        setState((s) => ({ ...s, sections: saved.sections }));
+      })
+      .catch(() => {})
+      .finally(() => { didRead.current = true; if (!off) setReady(true); });
+    const t = setTimeout(() => { if (!off) setReady(true); }, 150);
+    return () => { off = true; clearTimeout(t); };
+  }, []);
+
+  React.useEffect(() => {
+    if (!didRead.current) return;
+    if (skipNextWrite.current) { skipNextWrite.current = false; return; }
+    const t = setTimeout(() => {
+      window.omelette?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections })).catch(() => {});
+    }, 250);
+    return () => clearTimeout(t);
+  }, [state.sections]);
+
+  // Build registries synchronously from children so FocusOverlay can read
+  // them in the same render. Only direct DCSection > DCArtboard children are
+  // walked — wrapping them in other elements opts out of focus/reorder.
+  const registry = {};     // slotId -> { sectionId, artboard }
+  const sectionMeta = {};  // sectionId -> { title, subtitle, slotIds[] }
+  const sectionOrder = [];
+  React.Children.forEach(children, (sec) => {
+    if (!sec || sec.type !== DCSection) return;
+    const sid = sec.props.id ?? sec.props.title;
+    if (!sid) return;
+    sectionOrder.push(sid);
+    const persisted = state.sections[sid] || {};
+    const srcIds = [];
+    React.Children.forEach(sec.props.children, (ab) => {
+      if (!ab || ab.type !== DCArtboard) return;
+      const aid = ab.props.id ?? ab.props.label;
+      if (!aid) return;
+      registry[`${sid}/${aid}`] = { sectionId: sid, artboard: ab };
+      srcIds.push(aid);
+    });
+    const kept = (persisted.order || []).filter((k) => srcIds.includes(k));
+    sectionMeta[sid] = {
+      title: persisted.title ?? sec.props.title,
+      subtitle: sec.props.subtitle,
+      slotIds: [...kept, ...srcIds.filter((k) => !kept.includes(k))],
+    };
+  });
+
+  const api = React.useMemo(() => ({
+    state,
+    section: (id) => state.sections[id] || {},
+    patchSection: (id, p) => setState((s) => ({
+      ...s,
+      sections: { ...s.sections, [id]: { ...s.sections[id], ...(typeof p === 'function' ? p(s.sections[id] || {}) : p) } },
+    })),
+    setFocus: (slotId) => setState((s) => ({ ...s, focus: slotId })),
+  }), [state]);
+
+  // Esc exits focus; any outside pointerdown commits an in-progress rename.
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') api.setFocus(null); };
+    const onPd = (e) => {
+      const ae = document.activeElement;
+      if (ae && ae.isContentEditable && !ae.contains(e.target)) ae.blur();
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPd, true);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPd, true);
+    };
+  }, [api]);
+
+  return (
+    <DCCtx.Provider value={api}>
+      <DCViewport minScale={minScale} maxScale={maxScale} style={style}>{ready && children}</DCViewport>
+      {state.focus && registry[state.focus] && (
+        <DCFocusOverlay entry={registry[state.focus]} sectionMeta={sectionMeta} sectionOrder={sectionOrder} />
+      )}
+    </DCCtx.Provider>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// DCViewport — transform-based pan/zoom (internal)
+//
+// Input mapping (Figma-style):
+//   • trackpad pinch  → zoom   (ctrlKey wheel; Safari gesture* events)
+//   • trackpad scroll → pan    (two-finger)
+//   • mouse wheel     → zoom   (notched; distinguished from trackpad scroll)
+//   • middle-drag / primary-drag-on-bg → pan
+//
+// Transform state lives in a ref and is written straight to the DOM
+// (translate3d + will-change) so wheel ticks don't go through React —
+// keeps pans at 60fps on dense canvases.
+// ─────────────────────────────────────────────────────────────
+function DCViewport({ children, minScale = 0.1, maxScale = 8, style = {} }) {
+  const vpRef = React.useRef(null);
+  const worldRef = React.useRef(null);
+  const tf = React.useRef({ x: 0, y: 0, scale: 1 });
+
+  const apply = React.useCallback(() => {
+    const { x, y, scale } = tf.current;
+    const el = worldRef.current;
+    if (el) el.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+  }, []);
+
+  React.useEffect(() => {
+    const vp = vpRef.current;
+    if (!vp) return;
+
+    const zoomAt = (cx, cy, factor) => {
+      const r = vp.getBoundingClientRect();
+      const px = cx - r.left, py = cy - r.top;
+      const t = tf.current;
+      const next = Math.min(maxScale, Math.max(minScale, t.scale * factor));
+      const k = next / t.scale;
+      // keep the world point under the cursor fixed
+      t.x = px - (px - t.x) * k;
+      t.y = py - (py - t.y) * k;
+      t.scale = next;
+      apply();
+    };
+
+    // Mouse-wheel vs trackpad-scroll heuristic. A physical wheel sends
+    // line-mode deltas (Firefox) or large integer pixel deltas with no X
+    // component (Chrome/Safari, typically multiples of 100/120). Trackpad
+    // two-finger scroll sends small/fractional pixel deltas, often with
+    // non-zero deltaX. ctrlKey is set by the browser for trackpad pinch.
+    const isMouseWheel = (e) =>
+      e.deltaMode !== 0 ||
+      (e.deltaX === 0 && Number.isInteger(e.deltaY) && Math.abs(e.deltaY) >= 40);
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      if (isGesturing) return; // Safari: gesture* owns the pinch — discard concurrent wheels
+      if (e.ctrlKey) {
+        // trackpad pinch (or explicit ctrl+wheel)
+        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+      } else if (isMouseWheel(e)) {
+        // notched mouse wheel — fixed-ratio step per click
+        zoomAt(e.clientX, e.clientY, Math.exp(-Math.sign(e.deltaY) * 0.18));
+      } else {
+        // trackpad two-finger scroll — pan
+        tf.current.x -= e.deltaX;
+        tf.current.y -= e.deltaY;
+        apply();
+      }
+    };
+
+    // Safari sends native gesture* events for trackpad pinch with a smooth
+    // e.scale; preferring these over the ctrl+wheel fallback gives a much
+    // better feel there. No-ops on other browsers. Safari also fires
+    // ctrlKey wheel events during the same pinch — isGesturing makes
+    // onWheel drop those entirely so they neither zoom nor pan.
+    let gsBase = 1;
+    let isGesturing = false;
+    const onGestureStart = (e) => { e.preventDefault(); isGesturing = true; gsBase = tf.current.scale; };
+    const onGestureChange = (e) => {
+      e.preventDefault();
+      zoomAt(e.clientX, e.clientY, (gsBase * e.scale) / tf.current.scale);
+    };
+    const onGestureEnd = (e) => { e.preventDefault(); isGesturing = false; };
+
+    // Drag-pan: middle button anywhere, or primary button on canvas
+    // background (anything that isn't an artboard or an inline editor).
+    let drag = null;
+    const onPointerDown = (e) => {
+      const onBg = !e.target.closest('[data-dc-slot], .dc-editable');
+      if (!(e.button === 1 || (e.button === 0 && onBg))) return;
+      e.preventDefault();
+      vp.setPointerCapture(e.pointerId);
+      drag = { id: e.pointerId, lx: e.clientX, ly: e.clientY };
+      vp.style.cursor = 'grabbing';
+    };
+    const onPointerMove = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      tf.current.x += e.clientX - drag.lx;
+      tf.current.y += e.clientY - drag.ly;
+      drag.lx = e.clientX; drag.ly = e.clientY;
+      apply();
+    };
+    const onPointerUp = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      vp.releasePointerCapture(e.pointerId);
+      drag = null;
+      vp.style.cursor = '';
+    };
+
+    vp.addEventListener('wheel', onWheel, { passive: false });
+    vp.addEventListener('gesturestart', onGestureStart, { passive: false });
+    vp.addEventListener('gesturechange', onGestureChange, { passive: false });
+    vp.addEventListener('gestureend', onGestureEnd, { passive: false });
+    vp.addEventListener('pointerdown', onPointerDown);
+    vp.addEventListener('pointermove', onPointerMove);
+    vp.addEventListener('pointerup', onPointerUp);
+    vp.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      vp.removeEventListener('wheel', onWheel);
+      vp.removeEventListener('gesturestart', onGestureStart);
+      vp.removeEventListener('gesturechange', onGestureChange);
+      vp.removeEventListener('gestureend', onGestureEnd);
+      vp.removeEventListener('pointerdown', onPointerDown);
+      vp.removeEventListener('pointermove', onPointerMove);
+      vp.removeEventListener('pointerup', onPointerUp);
+      vp.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [apply, minScale, maxScale]);
+
+  const gridSvg = `url("data:image/svg+xml,%3Csvg width='120' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M120 0H0v120' fill='none' stroke='${encodeURIComponent(DC.grid)}' stroke-width='1'/%3E%3C/svg%3E")`;
+  return (
+    <div
+      ref={vpRef}
+      className="design-canvas"
+      style={{
+        height: '100vh', width: '100vw',
+        background: DC.bg,
+        overflow: 'hidden',
+        overscrollBehavior: 'none',
+        touchAction: 'none',
+        position: 'relative',
+        fontFamily: DC.font,
+        boxSizing: 'border-box',
+        ...style,
+      }}
+    >
+      <div
+        ref={worldRef}
+        style={{
+          position: 'absolute', top: 0, left: 0,
+          transformOrigin: '0 0',
+          willChange: 'transform',
+          width: 'max-content', minWidth: '100%',
+          minHeight: '100%',
+          padding: '60px 0 80px',
+        }}
+      >
+        <div style={{ position: 'absolute', inset: -6000, backgroundImage: gridSvg, backgroundSize: '120px 120px', pointerEvents: 'none', zIndex: -1 }} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// DCSection — editable title + h-row of artboards in persisted order
+// ─────────────────────────────────────────────────────────────
+function DCSection({ id, title, subtitle, children, gap = 48 }) {
+  const ctx = React.useContext(DCCtx);
+  const sid = id ?? title;
+  const all = React.Children.toArray(children);
+  const artboards = all.filter((c) => c && c.type === DCArtboard);
+  const rest = all.filter((c) => !(c && c.type === DCArtboard));
+  const srcOrder = artboards.map((a) => a.props.id ?? a.props.label);
+  const sec = (ctx && sid && ctx.section(sid)) || {};
+
+  const order = React.useMemo(() => {
+    const kept = (sec.order || []).filter((k) => srcOrder.includes(k));
+    return [...kept, ...srcOrder.filter((k) => !kept.includes(k))];
+  }, [sec.order, srcOrder.join('|')]);
+
+  const byId = Object.fromEntries(artboards.map((a) => [a.props.id ?? a.props.label, a]));
+
+  return (
+    <div data-dc-section={sid} style={{ marginBottom: 80, position: 'relative' }}>
+      <div style={{ padding: '0 60px 56px' }}>
+        <DCEditable tag="div" value={sec.title ?? title}
+          onChange={(v) => ctx && sid && ctx.patchSection(sid, { title: v })}
+          style={{ fontSize: 28, fontWeight: 600, color: DC.title, letterSpacing: -0.4, marginBottom: 6, display: 'inline-block' }} />
+        {subtitle && <div style={{ fontSize: 16, color: DC.subtitle }}>{subtitle}</div>}
+      </div>
+      <div style={{ display: 'flex', gap, padding: '0 60px', alignItems: 'flex-start', width: 'max-content' }}>
+        {order.map((k) => (
+          <DCArtboardFrame key={k} sectionId={sid} artboard={byId[k]} order={order}
+            label={(sec.labels || {})[k] ?? byId[k].props.label}
+            onRename={(v) => ctx && ctx.patchSection(sid, (x) => ({ labels: { ...x.labels, [k]: v } }))}
+            onReorder={(next) => ctx && ctx.patchSection(sid, { order: next })}
+            onFocus={() => ctx && ctx.setFocus(`${sid}/${k}`)} />
+        ))}
+      </div>
+      {rest}
+    </div>
+  );
+}
+
+// DCArtboard — marker; rendered by DCArtboardFrame via DCSection.
+function DCArtboard() { return null; }
+
+function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorder, onFocus }) {
+  const { id: rawId, label: rawLabel, width = 260, height = 480, children, style = {} } = artboard.props;
+  const id = rawId ?? rawLabel;
+  const ref = React.useRef(null);
+
+  // Live drag-reorder: dragged card sticks to cursor; siblings slide into
+  // their would-be slots in real time via transforms. DOM order only
+  // changes on drop.
+  const onGripDown = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const me = ref.current;
+    // translateX is applied in local (pre-scale) space but pointer deltas and
+    // getBoundingClientRect().left are screen-space — divide by the viewport's
+    // current scale so the dragged card tracks the cursor at any zoom level.
+    const scale = me.getBoundingClientRect().width / me.offsetWidth || 1;
+    const peers = Array.from(document.querySelectorAll(`[data-dc-section="${sectionId}"] [data-dc-slot]`));
+    const homes = peers.map((el) => ({ el, id: el.dataset.dcSlot, x: el.getBoundingClientRect().left }));
+    const slotXs = homes.map((h) => h.x);
+    const startIdx = order.indexOf(id);
+    const startX = e.clientX;
+    let liveOrder = order.slice();
+    me.classList.add('dc-dragging');
+
+    const layout = () => {
+      for (const h of homes) {
+        if (h.id === id) continue;
+        const slot = liveOrder.indexOf(h.id);
+        h.el.style.transform = `translateX(${(slotXs[slot] - h.x) / scale}px)`;
+      }
+    };
+
+    const move = (ev) => {
+      const dx = ev.clientX - startX;
+      me.style.transform = `translateX(${dx / scale}px)`;
+      const cur = homes[startIdx].x + dx;
+      let nearest = 0, best = Infinity;
+      for (let i = 0; i < slotXs.length; i++) {
+        const d = Math.abs(slotXs[i] - cur);
+        if (d < best) { best = d; nearest = i; }
+      }
+      if (liveOrder.indexOf(id) !== nearest) {
+        liveOrder = order.filter((k) => k !== id);
+        liveOrder.splice(nearest, 0, id);
+        layout();
+      }
+    };
+
+    const up = () => {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      const finalSlot = liveOrder.indexOf(id);
+      me.classList.remove('dc-dragging');
+      me.style.transform = `translateX(${(slotXs[finalSlot] - homes[startIdx].x) / scale}px)`;
+      // After the settle transition, kill transitions + clear transforms +
+      // commit the reorder in the same frame so there's no visual snap-back.
+      setTimeout(() => {
+        for (const h of homes) { h.el.style.transition = 'none'; h.el.style.transform = ''; }
+        if (liveOrder.join('|') !== order.join('|')) onReorder(liveOrder);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          for (const h of homes) h.el.style.transition = '';
+        }));
+      }, 180);
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  };
+
+  return (
+    <div ref={ref} data-dc-slot={id} style={{ position: 'relative', flexShrink: 0 }}>
+      <div className="dc-labelrow" style={{ position: 'absolute', bottom: '100%', left: -4, marginBottom: 4, color: DC.label }}>
+        <div className="dc-grip" onPointerDown={onGripDown} title="Drag to reorder">
+          <svg width="9" height="13" viewBox="0 0 9 13" fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="7" cy="2" r="1.1"/><circle cx="2" cy="6.5" r="1.1"/><circle cx="7" cy="6.5" r="1.1"/><circle cx="2" cy="11" r="1.1"/><circle cx="7" cy="11" r="1.1"/></svg>
+        </div>
+        <div className="dc-labeltext" onClick={onFocus} title="Click to focus">
+          <DCEditable value={label} onChange={onRename} onClick={(e) => e.stopPropagation()}
+            style={{ fontSize: 15, fontWeight: 500, color: DC.label, lineHeight: 1 }} />
+        </div>
+      </div>
+      <button className="dc-expand" onClick={onFocus} onPointerDown={(e) => e.stopPropagation()} title="Focus">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M7 1h4v4M5 11H1V7M11 1L7.5 4.5M1 11l3.5-3.5"/></svg>
+      </button>
+      <div className="dc-card"
+        style={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)', overflow: 'hidden', width, height, background: '#fff', ...style }}>
+        {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>}
+      </div>
+    </div>
+  );
+}
+
+// Inline rename — commits on blur or Enter.
+function DCEditable({ value, onChange, style, tag = 'span', onClick }) {
+  const T = tag;
+  return (
+    <T className="dc-editable" contentEditable suppressContentEditableWarning
+      onClick={onClick}
+      onPointerDown={(e) => e.stopPropagation()}
+      onBlur={(e) => onChange && onChange(e.currentTarget.textContent)}
+      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
+      style={style}>{value}</T>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Focus mode — overlay one artboard; ←/→ within section, ↑/↓ across
+// sections, Esc or backdrop click to exit.
+// ─────────────────────────────────────────────────────────────
+function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
+  const ctx = React.useContext(DCCtx);
+  const { sectionId, artboard } = entry;
+  const sec = ctx.section(sectionId);
+  const meta = sectionMeta[sectionId];
+  const peers = meta.slotIds;
+  const aid = artboard.props.id ?? artboard.props.label;
+  const idx = peers.indexOf(aid);
+  const secIdx = sectionOrder.indexOf(sectionId);
+
+  const go = (d) => { const n = peers[(idx + d + peers.length) % peers.length]; if (n) ctx.setFocus(`${sectionId}/${n}`); };
+  const goSection = (d) => {
+    const ns = sectionOrder[(secIdx + d + sectionOrder.length) % sectionOrder.length];
+    const first = sectionMeta[ns] && sectionMeta[ns].slotIds[0];
+    if (first) ctx.setFocus(`${ns}/${first}`);
+  };
+
+  React.useEffect(() => {
+    const k = (e) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); goSection(-1); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); goSection(1); }
+    };
+    document.addEventListener('keydown', k);
+    return () => document.removeEventListener('keydown', k);
+  });
+
+  const { width = 260, height = 480, children } = artboard.props;
+  const [vp, setVp] = React.useState({ w: window.innerWidth, h: window.innerHeight });
+  React.useEffect(() => { const r = () => setVp({ w: window.innerWidth, h: window.innerHeight }); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
+  const scale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 2));
+
+  const [ddOpen, setDd] = React.useState(false);
+  const Arrow = ({ dir, onClick }) => (
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{ position: 'absolute', top: '50%', [dir]: 28, transform: 'translateY(-50%)',
+        border: 'none', background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.9)',
+        width: 44, height: 44, borderRadius: 22, fontSize: 18, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s' }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.18)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.08)')}>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d={dir === 'left' ? 'M11 3L5 9l6 6' : 'M7 3l6 6-6 6'} /></svg>
+    </button>
+  );
+
+  // Portal to body so position:fixed is the real viewport regardless of any
+  // transform on DesignCanvas's ancestors (including the canvas zoom itself).
+  return ReactDOM.createPortal(
+    <div onClick={() => ctx.setFocus(null)}
+      onWheel={(e) => e.preventDefault()}
+      style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(24,20,16,.6)', backdropFilter: 'blur(14px)',
+        fontFamily: DC.font, color: '#fff' }}>
+
+      {/* top bar: section dropdown (left) · close (right) */}
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 72, display: 'flex', alignItems: 'flex-start', padding: '16px 20px 0', gap: 16 }}>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setDd((o) => !o)}
+            style={{ border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer', padding: '6px 8px',
+              borderRadius: 6, textAlign: 'left', fontFamily: 'inherit' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: -0.3 }}>{meta.title}</span>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" style={{ opacity: .7 }}><path d="M2 4l3.5 3.5L9 4"/></svg>
+            </span>
+            {meta.subtitle && <span style={{ display: 'block', fontSize: 13, opacity: .6, fontWeight: 400, marginTop: 2 }}>{meta.subtitle}</span>}
+          </button>
+          {ddOpen && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#2a251f', borderRadius: 8,
+              boxShadow: '0 8px 32px rgba(0,0,0,.4)', padding: 4, minWidth: 200, zIndex: 10 }}>
+              {sectionOrder.map((sid) => (
+                <button key={sid} onClick={() => { setDd(false); const f = sectionMeta[sid].slotIds[0]; if (f) ctx.setFocus(`${sid}/${f}`); }}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer',
+                    background: sid === sectionId ? 'rgba(255,255,255,.1)' : 'transparent', color: '#fff',
+                    padding: '8px 12px', borderRadius: 5, fontSize: 14, fontWeight: sid === sectionId ? 600 : 400, fontFamily: 'inherit' }}>
+                  {sectionMeta[sid].title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ flex: 1 }} />
+        <button onClick={() => ctx.setFocus(null)}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,.12)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          style={{ border: 'none', background: 'transparent', color: 'rgba(255,255,255,.7)', width: 32, height: 32,
+            borderRadius: 16, fontSize: 20, cursor: 'pointer', lineHeight: 1, transition: 'background .12s' }}>×</button>
+      </div>
+
+      {/* card centered, label + index below — only the card itself stops
+          propagation so any backdrop click (including the margins around
+          the card) exits focus */}
+      <div
+        style={{ position: 'absolute', top: 64, bottom: 56, left: 100, right: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ width: width * scale, height: height * scale, position: 'relative' }}>
+          <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left', background: '#fff', borderRadius: 2, overflow: 'hidden',
+            boxShadow: '0 20px 80px rgba(0,0,0,.4)' }}>
+            {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>{aid}</div>}
+          </div>
+        </div>
+        <div onClick={(e) => e.stopPropagation()} style={{ fontSize: 14, fontWeight: 500, opacity: .85, textAlign: 'center' }}>
+          {(sec.labels || {})[aid] ?? artboard.props.label}
+          <span style={{ opacity: .5, marginLeft: 10, fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {peers.length}</span>
+        </div>
+      </div>
+
+      <Arrow dir="left" onClick={() => go(-1)} />
+      <Arrow dir="right" onClick={() => go(1)} />
+
+      {/* dots */}
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
+        {peers.map((p, i) => (
+          <button key={p} onClick={() => ctx.setFocus(`${sectionId}/${p}`)}
+            style={{ border: 'none', padding: 0, cursor: 'pointer', width: 6, height: 6, borderRadius: 3,
+              background: i === idx ? '#fff' : 'rgba(255,255,255,.3)' }} />
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Post-it — absolute-positioned sticky note
+// ─────────────────────────────────────────────────────────────
+function DCPostIt({ children, top, left, right, bottom, rotate = -2, width = 180 }) {
+  return (
+    <div style={{
+      position: 'absolute', top, left, right, bottom, width,
+      background: DC.postitBg, padding: '14px 16px',
+      fontFamily: '"Comic Sans MS", "Marker Felt", "Segoe Print", cursive',
+      fontSize: 14, lineHeight: 1.4, color: DC.postitText,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+      transform: `rotate(${rotate}deg)`,
+      zIndex: 5,
+    }}>{children}</div>
+  );
+}
+
+Object.assign(window, { DesignCanvas, DCSection, DCArtboard, DCPostIt });
+
+
+</script>
+<script type="text/babel">
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-noncommentable=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+function TweakColor({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <input type="color" className="twk-swatch" value={value}
+             onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+</script>
+<script type="text/babel">
+// Napoleonic factions data — 6 powers, drawn from historical 1803-1815 conflicts.
+// Heraldry rendered as inline SVG so it scales crisply at any size.
+
+const FACTIONS = {
+  france: {
+    id: 'france',
+    name: '法兰西帝国',
+    nameEn: 'Empire Français',
+    motto: 'Liberté · Égalité · Fraternité',
+    primary: '#1e3a6f',     // bleu de France
+    accent: '#c8102e',       // rouge
+    gold: '#d4a55c',
+    canvas: '#e8d8b8',
+    leader: '拿破仑·波拿巴',
+    leaderTitle: 'Empereur',
+    crest: (size = 60) => `
+      <svg viewBox="0 0 60 60" width="${size}" height="${size}">
+        <defs>
+          <radialGradient id="fr-gold" cx="0.3" cy="0.3">
+            <stop offset="0" stop-color="#f5d889"/>
+            <stop offset="1" stop-color="#b8862e"/>
+          </radialGradient>
+        </defs>
+        <circle cx="30" cy="30" r="28" fill="#1e3a6f" stroke="url(#fr-gold)" stroke-width="1.5"/>
+        <!-- imperial eagle silhouette -->
+        <g fill="url(#fr-gold)" transform="translate(30,32)">
+          <path d="M0,-14 C-3,-12 -5,-9 -5,-5 L-12,-3 L-14,2 L-9,1 L-12,5 L-7,5 L-10,9 L-3,7 L-2,11 L0,8 L2,11 L3,7 L10,9 L7,5 L12,5 L9,1 L14,2 L12,-3 L5,-5 C5,-9 3,-12 0,-14 Z"/>
+          <circle cx="0" cy="-9" r="1.5" fill="#1e3a6f"/>
+        </g>
+        <text x="30" y="55" text-anchor="middle" font-size="6" fill="url(#fr-gold)" font-family="serif" letter-spacing="1">N</text>
+      </svg>`,
+    flag: (w = 60, h = 40) => `
+      <svg viewBox="0 0 60 40" width="${w}" height="${h}">
+        <rect x="0" y="0" width="20" height="40" fill="#1e3a6f"/>
+        <rect x="20" y="0" width="20" height="40" fill="#f4f1e8"/>
+        <rect x="40" y="0" width="20" height="40" fill="#c8102e"/>
+      </svg>`,
+  },
+
+  britain: {
+    id: 'britain',
+    name: '大不列颠',
+    nameEn: 'United Kingdom',
+    motto: 'Dieu et mon droit',
+    primary: '#8b1a1a',
+    accent: '#d4a55c',
+    gold: '#d4a55c',
+    canvas: '#e8dcc4',
+    leader: '威灵顿公爵',
+    leaderTitle: 'Field Marshal',
+    crest: (size = 60) => `
+      <svg viewBox="0 0 60 60" width="${size}" height="${size}">
+        <defs>
+          <radialGradient id="br-gold" cx="0.3" cy="0.3">
+            <stop offset="0" stop-color="#f5d889"/>
+            <stop offset="1" stop-color="#b8862e"/>
+          </radialGradient>
+        </defs>
+        <circle cx="30" cy="30" r="28" fill="#8b1a1a" stroke="url(#br-gold)" stroke-width="1.5"/>
+        <!-- crown + lion -->
+        <g fill="url(#br-gold)" transform="translate(30,32)">
+          <path d="M-10,-8 L-7,-12 L-3,-9 L0,-13 L3,-9 L7,-12 L10,-8 L10,-5 L-10,-5 Z"/>
+          <circle cx="-7" cy="-12" r="1"/><circle cx="0" cy="-13" r="1"/><circle cx="7" cy="-12" r="1"/>
+          <path d="M-9,-3 L9,-3 L7,8 L4,11 L-4,11 L-7,8 Z" stroke="#8b1a1a" stroke-width="0.4"/>
+          <text x="0" y="6" text-anchor="middle" font-size="7" fill="#8b1a1a" font-family="serif" font-weight="bold">G</text>
+        </g>
+      </svg>`,
+    flag: (w = 60, h = 40) => `
+      <svg viewBox="0 0 60 40" width="${w}" height="${h}">
+        <rect width="60" height="40" fill="#012169"/>
+        <path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" stroke-width="6"/>
+        <path d="M0,0 L60,40 M60,0 L0,40" stroke="#c8102e" stroke-width="3"/>
+        <path d="M30,0 V40 M0,20 H60" stroke="#fff" stroke-width="10"/>
+        <path d="M30,0 V40 M0,20 H60" stroke="#c8102e" stroke-width="6"/>
+      </svg>`,
+  },
+
+  prussia: {
+    id: 'prussia',
+    name: '普鲁士王国',
+    nameEn: 'Königreich Preußen',
+    motto: 'Suum cuique',
+    primary: '#1a1a1a',
+    accent: '#c0c0c0',
+    gold: '#b8a06e',
+    canvas: '#dcd6c8',
+    leader: '布吕歇尔元帅',
+    leaderTitle: 'Generalfeldmarschall',
+    crest: (size = 60) => `
+      <svg viewBox="0 0 60 60" width="${size}" height="${size}">
+        <defs>
+          <radialGradient id="pr-silver" cx="0.3" cy="0.3">
+            <stop offset="0" stop-color="#e8e8e8"/>
+            <stop offset="1" stop-color="#888"/>
+          </radialGradient>
+        </defs>
+        <circle cx="30" cy="30" r="28" fill="#1a1a1a" stroke="url(#pr-silver)" stroke-width="1.5"/>
+        <!-- iron cross -->
+        <g fill="url(#pr-silver)" transform="translate(30,30)">
+          <path d="M-3,-14 L3,-14 L3,-3 L14,-3 L14,3 L3,3 L3,14 L-3,14 L-3,3 L-14,3 L-14,-3 L-3,-3 Z" stroke="#000" stroke-width="0.5"/>
+        </g>
+      </svg>`,
+    flag: (w = 60, h = 40) => `
+      <svg viewBox="0 0 60 40" width="${w}" height="${h}">
+        <rect width="60" height="40" fill="#f4f1e8"/>
+        <g transform="translate(30,20)">
+          <path d="M-12,-2 L-3,-2 L-3,-11 L3,-11 L3,-2 L12,-2 L12,2 L3,2 L3,11 L-3,11 L-3,2 L-12,2 Z" fill="#1a1a1a"/>
+        </g>
+      </svg>`,
+  },
+
+  russia: {
+    id: 'russia',
+    name: '俄罗斯帝国',
+    nameEn: 'Российская Империя',
+    motto: 'С нами Бог',
+    primary: '#1c4a2e',
+    accent: '#d4a55c',
+    gold: '#d4a55c',
+    canvas: '#dccfb4',
+    leader: '库图佐夫元帅',
+    leaderTitle: 'Генерал-фельдмаршал',
+    crest: (size = 60) => `
+      <svg viewBox="0 0 60 60" width="${size}" height="${size}">
+        <defs>
+          <radialGradient id="ru-gold" cx="0.3" cy="0.3">
+            <stop offset="0" stop-color="#f5d889"/>
+            <stop offset="1" stop-color="#b8862e"/>
+          </radialGradient>
+        </defs>
+        <circle cx="30" cy="30" r="28" fill="#1c4a2e" stroke="url(#ru-gold)" stroke-width="1.5"/>
+        <!-- double-headed eagle (simplified) -->
+        <g fill="url(#ru-gold)" transform="translate(30,32)">
+          <ellipse cx="0" cy="2" rx="9" ry="11"/>
+          <path d="M-4,-8 C-6,-12 -8,-12 -8,-8 L-7,-5 L-4,-6 Z"/>
+          <path d="M4,-8 C6,-12 8,-12 8,-8 L7,-5 L4,-6 Z"/>
+          <path d="M-13,3 L-9,0 L-7,5 Z M13,3 L9,0 L7,5 Z"/>
+          <circle cx="-6" cy="-7" r="1" fill="#1c4a2e"/><circle cx="6" cy="-7" r="1" fill="#1c4a2e"/>
+        </g>
+      </svg>`,
+    flag: (w = 60, h = 40) => `
+      <svg viewBox="0 0 60 40" width="${w}" height="${h}">
+        <rect y="0" width="60" height="13.3" fill="#f4f1e8"/>
+        <rect y="13.3" width="60" height="13.3" fill="#0033a0"/>
+        <rect y="26.6" width="60" height="13.4" fill="#c8102e"/>
+      </svg>`,
+  },
+
+  austria: {
+    id: 'austria',
+    name: '奥地利帝国',
+    nameEn: 'Kaisertum Österreich',
+    motto: 'A.E.I.O.U.',
+    primary: '#5a1a1a',
+    accent: '#d4a55c',
+    gold: '#d4a55c',
+    canvas: '#e0d2b4',
+    leader: '卡尔大公',
+    leaderTitle: 'Erzherzog',
+    crest: (size = 60) => `
+      <svg viewBox="0 0 60 60" width="${size}" height="${size}">
+        <defs>
+          <radialGradient id="au-gold" cx="0.3" cy="0.3">
+            <stop offset="0" stop-color="#f5d889"/>
+            <stop offset="1" stop-color="#b8862e"/>
+          </radialGradient>
+        </defs>
+        <circle cx="30" cy="30" r="28" fill="#5a1a1a" stroke="url(#au-gold)" stroke-width="1.5"/>
+        <!-- shield with bend -->
+        <g transform="translate(30,30)">
+          <path d="M-11,-12 L11,-12 L11,4 C11,9 6,13 0,14 C-6,13 -11,9 -11,4 Z" fill="#f4f1e8"/>
+          <rect x="-11" y="-3" width="22" height="6" fill="#c8102e"/>
+          <path d="M-11,-12 L11,-12 L11,4 C11,9 6,13 0,14 C-6,13 -11,9 -11,4 Z" fill="none" stroke="url(#au-gold)" stroke-width="1.2"/>
+        </g>
+      </svg>`,
+    flag: (w = 60, h = 40) => `
+      <svg viewBox="0 0 60 40" width="${w}" height="${h}">
+        <rect y="0" width="60" height="13.3" fill="#c8102e"/>
+        <rect y="13.3" width="60" height="13.3" fill="#f4f1e8"/>
+        <rect y="26.6" width="60" height="13.4" fill="#c8102e"/>
+      </svg>`,
+  },
+
+  spain: {
+    id: 'spain',
+    name: '西班牙王国',
+    nameEn: 'Reino de España',
+    motto: 'Plus Ultra',
+    primary: '#a8200d',
+    accent: '#d4a55c',
+    gold: '#d4a55c',
+    canvas: '#e6d4b4',
+    leader: '卡斯塔尼奥斯',
+    leaderTitle: 'General',
+    crest: (size = 60) => `
+      <svg viewBox="0 0 60 60" width="${size}" height="${size}">
+        <defs>
+          <radialGradient id="sp-gold" cx="0.3" cy="0.3">
+            <stop offset="0" stop-color="#f5d889"/>
+            <stop offset="1" stop-color="#b8862e"/>
+          </radialGradient>
+        </defs>
+        <circle cx="30" cy="30" r="28" fill="#a8200d" stroke="url(#sp-gold)" stroke-width="1.5"/>
+        <!-- castle + lion quartered shield -->
+        <g transform="translate(30,30)">
+          <path d="M-12,-12 L12,-12 L12,4 C12,10 6,14 0,15 C-6,14 -12,10 -12,4 Z" fill="#f4f1e8" stroke="url(#sp-gold)" stroke-width="1"/>
+          <line x1="0" y1="-12" x2="0" y2="15" stroke="url(#sp-gold)" stroke-width="0.6"/>
+          <line x1="-12" y1="0" x2="12" y2="0" stroke="url(#sp-gold)" stroke-width="0.6"/>
+          <!-- castle -->
+          <g fill="#a8200d" transform="translate(-6,-6)">
+            <rect x="-3" y="-3" width="6" height="6"/>
+            <rect x="-4" y="-4" width="2" height="1.5"/><rect x="-1" y="-4" width="2" height="1.5"/><rect x="2" y="-4" width="2" height="1.5"/>
+          </g>
+          <!-- lion -->
+          <g fill="#5a1a1a" transform="translate(6,-6)">
+            <path d="M-3,2 L-3,-2 L-2,-3 L2,-3 L3,-1 L3,2 Z"/>
+            <circle cx="-2" cy="-2" r="0.8"/>
+          </g>
+        </g>
+      </svg>`,
+    flag: (w = 60, h = 40) => `
+      <svg viewBox="0 0 60 40" width="${w}" height="${h}">
+        <rect y="0" width="60" height="10" fill="#a8200d"/>
+        <rect y="10" width="60" height="20" fill="#f1bf00"/>
+        <rect y="30" width="60" height="10" fill="#a8200d"/>
+      </svg>`,
+  },
+};
+
+// Card archetypes — historically grounded
+const UNIT_TYPES = {
+  infantry:   { id: 'infantry',   name: '战列步兵',  icon: '⚔', tint: '#8fb0c5' },
+  skirmisher: { id: 'skirmisher', name: '散兵',     icon: '✦', tint: '#8daf64' },
+  cavalry:    { id: 'cavalry',    name: '骑兵',     icon: '⚞', tint: '#c06a5b' },
+  artillery:  { id: 'artillery',  name: '炮兵',     icon: '◉', tint: '#b79a4a' },
+  guard:      { id: 'guard',      name: '近卫',     icon: '★', tint: '#9f75bd' },
+  command:    { id: 'command',    name: '军令',     icon: '⌘', tint: '#d4a55c' },
+};
+
+// Sample units per faction — names drawn from real Napoleonic regiments/figures
+const FACTION_DECKS = {
+  france: [
+    { name: '老近卫军', type: 'guard',      cost: 7, atk: 6, hp: 7, kw: '冲锋·先攻' },
+    { name: '胸甲骑兵', type: 'cavalry',    cost: 5, atk: 5, hp: 4, kw: '冲锋' },
+    { name: '战列步兵', type: 'infantry',   cost: 3, atk: 3, hp: 4, kw: '方阵' },
+    { name: '猎兵',     type: 'skirmisher', cost: 2, atk: 2, hp: 2, kw: '散兵线' },
+    { name: '12磅炮',   type: 'artillery',  cost: 4, atk: 5, hp: 2, kw: '远程' },
+    { name: '内伊元帅', type: 'guard',      cost: 6, atk: 5, hp: 6, kw: '激励' },
+  ],
+  britain: [
+    { name: '苏格兰灰骑兵', type: 'cavalry',  cost: 5, atk: 4, hp: 5, kw: '冲锋' },
+    { name: '红衫军',       type: 'infantry', cost: 3, atk: 4, hp: 3, kw: '齐射' },
+    { name: '步枪团',       type: 'skirmisher', cost: 3, atk: 3, hp: 2, kw: '远程' },
+    { name: '皇家炮兵',     type: 'artillery', cost: 4, atk: 4, hp: 3, kw: '远程' },
+    { name: '威灵顿',       type: 'guard',    cost: 7, atk: 5, hp: 8, kw: '指挥' },
+    { name: '掷弹兵卫队',   type: 'guard',    cost: 6, atk: 5, hp: 6, kw: '坚毅' },
+  ],
+  prussia: [
+    { name: '黑骠骑兵',   type: 'cavalry',    cost: 4, atk: 5, hp: 3, kw: '冲锋' },
+    { name: '火枪兵',     type: 'infantry',   cost: 3, atk: 3, hp: 4, kw: '齐射' },
+    { name: '猎兵营',     type: 'skirmisher', cost: 2, atk: 3, hp: 2, kw: '散兵' },
+    { name: '榴弹炮',     type: 'artillery',  cost: 4, atk: 4, hp: 3, kw: '远程' },
+    { name: '布吕歇尔',   type: 'guard',      cost: 6, atk: 4, hp: 7, kw: '激励' },
+    { name: '后备军团',   type: 'infantry',   cost: 2, atk: 2, hp: 3, kw: '——' },
+  ],
+  russia: [
+    { name: '哥萨克',     type: 'cavalry',    cost: 3, atk: 3, hp: 2, kw: '游击' },
+    { name: '禁卫掷弹兵', type: 'guard',      cost: 5, atk: 4, hp: 6, kw: '坚毅' },
+    { name: '战列线',     type: 'infantry',   cost: 3, atk: 3, hp: 4, kw: '方阵' },
+    { name: '巴什基尔骑兵', type: 'cavalry',  cost: 2, atk: 3, hp: 2, kw: '远程' },
+    { name: '炮兵旅',     type: 'artillery',  cost: 5, atk: 6, hp: 2, kw: '远程' },
+    { name: '库图佐夫',   type: 'guard',      cost: 7, atk: 4, hp: 9, kw: '焦土' },
+  ],
+  austria: [
+    { name: '掷弹兵',     type: 'infantry',   cost: 4, atk: 4, hp: 4, kw: '坚毅' },
+    { name: '骠骑兵',     type: 'cavalry',    cost: 4, atk: 4, hp: 3, kw: '冲锋' },
+    { name: '边境步兵',   type: 'skirmisher', cost: 2, atk: 2, hp: 3, kw: '散兵' },
+    { name: '炮兵连',     type: 'artillery',  cost: 4, atk: 4, hp: 3, kw: '远程' },
+    { name: '卡尔大公',   type: 'guard',      cost: 6, atk: 5, hp: 7, kw: '指挥' },
+    { name: '胸甲骑兵',   type: 'cavalry',    cost: 5, atk: 5, hp: 4, kw: '冲锋' },
+  ],
+  spain: [
+    { name: '游击队',     type: 'skirmisher', cost: 1, atk: 2, hp: 1, kw: '游击' },
+    { name: '步兵团',     type: 'infantry',   cost: 3, atk: 3, hp: 4, kw: '——' },
+    { name: '皇家卫队',   type: 'guard',      cost: 5, atk: 4, hp: 5, kw: '坚毅' },
+    { name: '龙骑兵',     type: 'cavalry',    cost: 4, atk: 4, hp: 3, kw: '冲锋' },
+    { name: '炮兵',       type: 'artillery',  cost: 4, atk: 4, hp: 3, kw: '远程' },
+    { name: '埃斯波斯',   type: 'guard',      cost: 6, atk: 5, hp: 6, kw: '游击王' },
+  ],
+};
+
+window.FACTIONS = FACTIONS;
+window.UNIT_TYPES = UNIT_TYPES;
+window.FACTION_DECKS = FACTION_DECKS;
+
+</script>
+<script type="text/babel">
+// Card components — three styles (oil-portrait, heraldry, minimal)
+// All accept the same Unit shape: { name, type, cost, atk, hp, kw, faction }
+
+const TYPE_LABEL = {
+  infantry: '战列步兵', skirmisher: '散兵', cavalry: '骑兵',
+  artillery: '炮兵', guard: '近卫', command: '军令',
+};
+
+// ── Style 1: Oil portrait (厚涂笔触, time-period feel) ──────────
+function CardOilPortrait({ unit, faction, dead, damaged, scale = 1, onCard = false }) {
+  const f = window.FACTIONS[faction];
+  const tint = window.UNIT_TYPES[unit.type].tint;
+  return (
+    <div className="card-oil" style={{
+      width: 110 * scale, height: 154 * scale,
+      background: `linear-gradient(165deg, #f4ead0 0%, #d8c499 50%, #b89e6f 100%)`,
+      border: `2px solid ${f.primary}`,
+      borderRadius: 4 * scale,
+      padding: 5 * scale,
+      display: 'flex', flexDirection: 'column',
+      boxShadow: onCard ? `0 ${4*scale}px ${10*scale}px rgba(0,0,0,0.5), inset 0 0 ${20*scale}px rgba(120,80,40,0.35)` : 'none',
+      position: 'relative',
+      filter: dead ? 'grayscale(0.85) brightness(0.6)' : 'none',
+      fontFamily: '"Trajan Pro", "Cinzel", Georgia, serif',
+      color: '#2a1f15',
+      overflow: 'hidden',
+    }}>
+      {/* aged paper texture */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: `radial-gradient(circle at 30% 20%, transparent 40%, rgba(60,30,10,0.15) 100%),
+                     repeating-linear-gradient(45deg, transparent 0, transparent ${3*scale}px, rgba(80,40,20,0.04) ${3*scale}px, rgba(80,40,20,0.04) ${4*scale}px)`,
+      }} />
+      {/* cost gem */}
+      <div style={{
+        position: 'absolute', top: -6*scale, left: -6*scale,
+        width: 26*scale, height: 26*scale,
+        background: `radial-gradient(circle at 35% 30%, #f5d889, #b8862e 70%, #5a3a14)`,
+        border: `2px solid #2a1f15`,
+        borderRadius: '50%',
+        textAlign: 'center', lineHeight: `${22*scale}px`,
+        fontWeight: 'bold', fontSize: 14*scale, color: '#2a1f15',
+        boxShadow: `0 ${2*scale}px ${4*scale}px rgba(0,0,0,0.6)`,
+        zIndex: 2,
+      }}>{unit.cost}</div>
+      {/* portrait area (placeholder: painted bust silhouette) */}
+      <div style={{
+        height: 70*scale, position: 'relative', overflow: 'hidden',
+        border: `1px solid ${f.primary}`,
+        background: `radial-gradient(ellipse at 50% 30%, ${tint} 0%, ${f.primary}88 60%, #1a1410 100%)`,
+        marginBottom: 3*scale,
+      }}>
+        {/* painted silhouette */}
+        <svg viewBox="0 0 100 70" preserveAspectRatio="xMidYMid slice" style={{position: 'absolute', inset: 0, width: '100%', height: '100%'}}>
+          <defs>
+            <radialGradient id={`p-${unit.name}-${faction}`} cx="0.5" cy="0.4">
+              <stop offset="0" stopColor="#f4ead0" stopOpacity="0.4"/>
+              <stop offset="1" stopColor="#1a0a04" stopOpacity="0.7"/>
+            </radialGradient>
+          </defs>
+          {/* atmospheric backdrop */}
+          <rect width="100" height="70" fill={`url(#p-${unit.name}-${faction})`}/>
+          {/* distant cannon smoke */}
+          <ellipse cx="20" cy="55" rx="25" ry="6" fill="rgba(80,60,40,0.4)"/>
+          <ellipse cx="80" cy="58" rx="20" ry="5" fill="rgba(60,40,20,0.5)"/>
+          {/* figure silhouette varies by type */}
+          {unit.type === 'cavalry' && (
+            <g transform="translate(50,42)" fill="#1a0a04">
+              <ellipse cx="0" cy="8" rx="22" ry="6"/>
+              <path d="M-15,-2 Q-10,-12 -2,-10 L8,-8 Q18,-6 18,4 L18,8 L-15,8 Z"/>
+              <circle cx="-8" cy="-14" r="5"/>
+              <path d="M-5,-19 L-3,-22 L-1,-19 Z" fill={f.accent}/>
+            </g>
+          )}
+          {unit.type === 'infantry' && (
+            <g transform="translate(50,38)" fill="#1a0a04">
+              <path d="M-5,-15 Q-5,-22 0,-22 Q5,-22 5,-15 L5,-10 L-5,-10 Z"/>
+              <rect x="-9" y="-10" width="18" height="22" rx="2"/>
+              <path d="M-12,-8 L-9,-8 L-9,12 L-12,12 Z M9,-8 L12,-8 L12,12 L9,12 Z"/>
+              {/* shako plume */}
+              <path d="M-2,-22 L0,-28 L2,-22 Z" fill={f.accent}/>
+              {/* musket */}
+              <line x1="10" y1="-8" x2="14" y2="-22" stroke="#3a2818" strokeWidth="1.2"/>
+            </g>
+          )}
+          {unit.type === 'artillery' && (
+            <g transform="translate(50,46)" fill="#1a0a04">
+              <rect x="-22" y="-2" width="40" height="6" rx="1"/>
+              <circle cx="-14" cy="6" r="6" fill="#2a1f15"/>
+              <circle cx="14" cy="6" r="6" fill="#2a1f15"/>
+              <rect x="-4" y="-10" width="22" height="6" transform="rotate(-8)"/>
+              {/* muzzle flash */}
+              <circle cx="20" cy="-8" r="3" fill="#f5d889" opacity="0.8"/>
+            </g>
+          )}
+          {unit.type === 'skirmisher' && (
+            <g transform="translate(50,40)" fill="#1a0a04">
+              <circle cx="0" cy="-15" r="4"/>
+              <path d="M-4,-11 L4,-11 L6,8 L-6,8 Z"/>
+              <line x1="6" y1="-5" x2="14" y2="-12" stroke="#3a2818" strokeWidth="1.2"/>
+              <line x1="-12" y1="0" x2="-6" y2="-3" stroke="#3a2818" strokeWidth="0.8"/>
+            </g>
+          )}
+          {unit.type === 'guard' && (
+            <g transform="translate(50,36)" fill="#1a0a04">
+              <path d="M-7,-20 Q-7,-26 0,-26 Q7,-26 7,-20 L7,-12 L-7,-12 Z"/>
+              <rect x="-10" y="-12" width="20" height="24" rx="2"/>
+              {/* bearskin hat */}
+              <ellipse cx="0" cy="-26" rx="9" ry="8" fill="#1a0a04"/>
+              <ellipse cx="0" cy="-30" rx="7" ry="3" fill="#1a0a04"/>
+              {/* gold trim */}
+              <rect x="-10" y="-8" width="20" height="2" fill={f.gold}/>
+              <line x1="0" y1="-12" x2="0" y2="12" stroke={f.gold} strokeWidth="0.8"/>
+            </g>
+          )}
+        </svg>
+        {/* heavy painterly vignette */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `radial-gradient(ellipse at 50% 40%, transparent 30%, rgba(20,10,4,0.7) 100%)`,
+        }}/>
+      </div>
+      {/* name plate */}
+      <div style={{
+        fontSize: 11*scale, fontWeight: 'bold', textAlign: 'center',
+        letterSpacing: scale > 0.7 ? '0.5px' : '0',
+        lineHeight: 1.15, height: 26*scale, overflow: 'hidden',
+        background: `linear-gradient(to right, transparent, rgba(212,165,92,0.3), transparent)`,
+        borderTop: `1px solid ${f.gold}`,
+        borderBottom: `1px solid ${f.gold}`,
+        padding: `${3*scale}px 0`,
+        color: '#1a1006',
+        textShadow: '0 1px 0 rgba(255,240,200,0.3)',
+      }}>{unit.name}</div>
+      {/* keywords */}
+      <div style={{
+        flex: 1, fontSize: 9*scale, textAlign: 'center',
+        color: f.primary, fontStyle: 'italic',
+        padding: `${3*scale}px 0`, fontFamily: 'Georgia, serif',
+      }}>{unit.kw}</div>
+      {/* stats */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', padding: `${2*scale}px ${4*scale}px`,
+      }}>
+        <div style={{
+          width: 22*scale, height: 22*scale,
+          background: `radial-gradient(circle at 30% 30%, #d6755a, #8b3a1f 70%, #4a1505)`,
+          border: '1.5px solid #2a1f15', borderRadius: '50%',
+          color: '#fff', fontWeight: 'bold', fontSize: 13*scale,
+          textAlign: 'center', lineHeight: `${19*scale}px`,
+          boxShadow: `inset 0 -${1*scale}px ${2*scale}px rgba(0,0,0,0.4)`,
+        }}>{unit.atk}</div>
+        <div style={{fontSize: 9*scale, color: '#5a4530', letterSpacing: '1px'}}>
+          {window.UNIT_TYPES[unit.type].icon}
+        </div>
+        <div style={{
+          width: 22*scale, height: 22*scale,
+          background: `radial-gradient(circle at 30% 30%, ${damaged ? '#e88860' : '#7fa56f'}, ${damaged ? '#a83014' : '#2d5a3d'} 70%, #1a3020)`,
+          border: '1.5px solid #2a1f15', borderRadius: '50%',
+          color: '#fff', fontWeight: 'bold', fontSize: 13*scale,
+          textAlign: 'center', lineHeight: `${19*scale}px`,
+          boxShadow: `inset 0 -${1*scale}px ${2*scale}px rgba(0,0,0,0.4)`,
+        }}>{unit.hp}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Style 2: Heraldry (纹章风, 装饰性) ───────────────────────
+function CardHeraldry({ unit, faction, dead, damaged, scale = 1, onCard = false }) {
+  const f = window.FACTIONS[faction];
+  const t = window.UNIT_TYPES[unit.type];
+  return (
+    <div style={{
+      width: 110*scale, height: 154*scale,
+      background: `linear-gradient(180deg, ${f.primary} 0%, #1a1410 100%)`,
+      border: `${2*scale}px solid ${f.gold}`,
+      borderRadius: 4*scale,
+      position: 'relative',
+      boxShadow: onCard ? `0 ${4*scale}px ${10*scale}px rgba(0,0,0,0.5)` : 'none',
+      filter: dead ? 'grayscale(0.85) brightness(0.6)' : 'none',
+      fontFamily: 'Georgia, serif',
+      overflow: 'hidden',
+    }}>
+      {/* damask pattern */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: `radial-gradient(circle at 50% 50%, ${f.gold}22 1px, transparent 2px)`,
+        backgroundSize: `${10*scale}px ${10*scale}px`,
+      }}/>
+      {/* corner flourishes */}
+      <svg viewBox="0 0 110 154" style={{position: 'absolute', inset: 0, width: '100%', height: '100%'}}>
+        <g fill="none" stroke={f.gold} strokeWidth="0.6">
+          <path d="M3,3 L20,3 M3,3 L3,20 M3,15 Q10,15 15,3"/>
+          <path d="M107,3 L90,3 M107,3 L107,20 M107,15 Q100,15 95,3"/>
+          <path d="M3,151 L20,151 M3,151 L3,134 M3,139 Q10,139 15,151"/>
+          <path d="M107,151 L90,151 M107,151 L107,134 M107,139 Q100,139 95,151"/>
+        </g>
+      </svg>
+      {/* cost */}
+      <div style={{
+        position: 'absolute', top: -6*scale, left: -6*scale,
+        width: 26*scale, height: 26*scale,
+        background: `radial-gradient(circle at 35% 30%, ${f.gold}, ${f.accent})`,
+        border: `${2*scale}px solid ${f.primary}`,
+        borderRadius: '50%',
+        textAlign: 'center', lineHeight: `${22*scale}px`,
+        fontWeight: 'bold', fontSize: 14*scale, color: f.primary,
+        zIndex: 2,
+      }}>{unit.cost}</div>
+      {/* central crest area */}
+      <div style={{position: 'absolute', top: 14*scale, left: 0, right: 0, textAlign: 'center'}}>
+        <div dangerouslySetInnerHTML={{__html: f.crest(70*scale)}}/>
+      </div>
+      {/* type icon over crest */}
+      <div style={{
+        position: 'absolute', top: 50*scale, left: 0, right: 0,
+        textAlign: 'center', fontSize: 24*scale, color: f.gold,
+        textShadow: `0 ${2*scale}px ${4*scale}px rgba(0,0,0,0.8)`,
+      }}>{t.icon}</div>
+      {/* name banner */}
+      <div style={{
+        position: 'absolute', top: 92*scale, left: 4*scale, right: 4*scale,
+        background: `linear-gradient(to right, transparent, ${f.gold}cc, transparent)`,
+        textAlign: 'center', fontSize: 10*scale, fontWeight: 'bold',
+        color: f.primary, padding: `${3*scale}px ${4*scale}px`,
+        lineHeight: 1.1,
+        textShadow: `0 ${1*scale}px 0 ${f.gold}66`,
+      }}>{unit.name}</div>
+      {/* type label */}
+      <div style={{
+        position: 'absolute', top: 116*scale, left: 0, right: 0,
+        textAlign: 'center', fontSize: 9*scale,
+        color: f.gold, fontStyle: 'italic',
+        letterSpacing: scale > 0.7 ? '1px' : 0,
+      }}>{t.name}</div>
+      {/* stats */}
+      <div style={{
+        position: 'absolute', bottom: 4*scale, left: 6*scale, right: 6*scale,
+        display: 'flex', justifyContent: 'space-between',
+      }}>
+        <div style={{
+          width: 24*scale, height: 24*scale,
+          background: `linear-gradient(135deg, #d6755a, #8b3a1f)`,
+          border: `${1.5*scale}px solid ${f.gold}`,
+          borderRadius: 3*scale,
+          color: '#fff', fontWeight: 'bold', fontSize: 13*scale,
+          textAlign: 'center', lineHeight: `${21*scale}px`,
+        }}>{unit.atk}</div>
+        <div style={{
+          width: 24*scale, height: 24*scale,
+          background: `linear-gradient(135deg, ${damaged ? '#e88860' : '#7fa56f'}, ${damaged ? '#a83014' : '#2d5a3d'})`,
+          border: `${1.5*scale}px solid ${f.gold}`,
+          borderRadius: 3*scale,
+          color: '#fff', fontWeight: 'bold', fontSize: 13*scale,
+          textAlign: 'center', lineHeight: `${21*scale}px`,
+        }}>{unit.hp}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Style 3: Minimal (现代极简) ──────────────────────────────
+function CardMinimal({ unit, faction, dead, damaged, scale = 1, onCard = false }) {
+  const f = window.FACTIONS[faction];
+  const t = window.UNIT_TYPES[unit.type];
+  return (
+    <div style={{
+      width: 110*scale, height: 154*scale,
+      background: '#f4f0e8',
+      border: `${1.5*scale}px solid #1a1410`,
+      borderTop: `${10*scale}px solid ${f.primary}`,
+      borderRadius: 2*scale,
+      position: 'relative',
+      boxShadow: onCard ? `${3*scale}px ${4*scale}px 0 #1a1410` : 'none',
+      filter: dead ? 'grayscale(0.85) brightness(0.7)' : 'none',
+      fontFamily: '"Helvetica Neue", Arial, sans-serif',
+      color: '#1a1410',
+      padding: 6*scale,
+      display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+        <div style={{
+          fontSize: 18*scale, fontWeight: 900, lineHeight: 1,
+          color: f.primary,
+        }}>{unit.cost}</div>
+        <div style={{fontSize: 16*scale, color: f.primary}}>{t.icon}</div>
+      </div>
+      <div style={{flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', padding: `${4*scale}px 0`}}>
+        <div style={{fontSize: 11*scale, fontWeight: 800, lineHeight: 1.15, marginBottom: 4*scale}}>{unit.name}</div>
+        <div style={{
+          fontSize: 8*scale, textTransform: 'uppercase',
+          letterSpacing: scale > 0.7 ? '2px' : '0.5px',
+          color: '#8b6f47',
+        }}>{t.name}</div>
+      </div>
+      <div style={{
+        fontSize: 8*scale, textAlign: 'center',
+        color: f.primary, fontWeight: 600,
+        borderTop: `1px solid ${f.primary}33`,
+        paddingTop: 3*scale, marginBottom: 3*scale,
+      }}>{unit.kw}</div>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between',
+        fontSize: 16*scale, fontWeight: 900,
+      }}>
+        <span style={{color: '#8b3a1f'}}>{unit.atk}</span>
+        <span style={{color: damaged ? '#c2552c' : '#2d5a3d'}}>{unit.hp}</span>
+      </div>
+    </div>
+  );
+}
+
+// dispatcher
+function Card({ style, ...props }) {
+  if (style === 'heraldry') return <CardHeraldry {...props}/>;
+  if (style === 'minimal') return <CardMinimal {...props}/>;
+  return <CardOilPortrait {...props}/>;
+}
+
+window.Card = Card;
+window.TYPE_LABEL = TYPE_LABEL;
+
+</script>
+<script type="text/babel">
+// Battlefield component — drag to deploy, attack animations, particles, screen shake
+// Layout: P2 rear (top) → P2 front → shared skirmish (middle) → P1 front → P1 rear (bottom)
+// All interactions live here. Visual variants come from the `theme` prop.
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─────────── Background renderers ───────────
+// Painted battlefield scene with torn flags, broken sabers, fallen soldiers,
+// muddy puddles, scattered cannonballs, firing artillery, distant beacons.
+function BattlefieldBg({ kind, mood }) {
+  const moodPalette = {
+    warm:   { sky1: '#5a3520', sky2: '#3a2010', sky3: '#1a0e08', sun: '#f5b568', smoke: '#6a4a30', mud: '#3a2818', accent: '#d4a55c' },
+    cold:   { sky1: '#2a3a5a', sky2: '#1a2438', sky3: '#080d18', sun: '#a8c0e0', smoke: '#4a5870', mud: '#1a2030', accent: '#7fa5d4' },
+    dusk:   { sky1: '#7a3818', sky2: '#3a1810', sky3: '#0a0604', sun: '#f5803c', smoke: '#5a3020', mud: '#2a1610', accent: '#e8a050' },
+    night:  { sky1: '#1a2030', sky2: '#0a1020', sky3: '#000408', sun: '#c0d0e8', smoke: '#3a4050', mud: '#0a1018', accent: '#a0b8d4' },
+  }[mood] || { sky1: '#2a3a5a', sky2: '#1a2438', sky3: '#080d18', sun: '#a8c0e0', smoke: '#4a5870', mud: '#1a2030', accent: '#7fa5d4' };
+
+  if (kind === 'sandtable') {
+    return <SandtableBg/>;
+  }
+  if (kind === 'map') {
+    return <MapBg/>;
+  }
+  // Default: painted battlefield
+  return <PaintedBattlefield p={moodPalette}/>;
+}
+
+// ─────────── Painted battlefield (the main one) ───────────
+function PaintedBattlefield({ p }) {
+  return (
+    <div style={{position: 'absolute', inset: 0, borderRadius: 6, overflow: 'hidden'}}>
+      <svg viewBox="0 0 1280 780" preserveAspectRatio="xMidYMid slice"
+           style={{position: 'absolute', inset: 0, width: '100%', height: '100%'}}>
+        <defs>
+          {/* sky / atmospheric gradient */}
+          <linearGradient id="bf-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={p.sky1}/>
+            <stop offset="0.35" stopColor={p.sky2}/>
+            <stop offset="0.55" stopColor={p.sky3}/>
+            <stop offset="1" stopColor={p.mud}/>
+          </linearGradient>
+          {/* dying sun / beacon */}
+          <radialGradient id="bf-sun" cx="0.78" cy="0.22" r="0.4">
+            <stop offset="0" stopColor={p.sun} stopOpacity="0.95"/>
+            <stop offset="0.15" stopColor={p.sun} stopOpacity="0.55"/>
+            <stop offset="0.5" stopColor={p.accent} stopOpacity="0.15"/>
+            <stop offset="1" stopColor="transparent"/>
+          </radialGradient>
+          {/* smoke billows */}
+          <radialGradient id="bf-smoke" cx="0.5" cy="0.5">
+            <stop offset="0" stopColor={p.smoke} stopOpacity="0.8"/>
+            <stop offset="1" stopColor={p.smoke} stopOpacity="0"/>
+          </radialGradient>
+          {/* muzzle flash */}
+          <radialGradient id="bf-flash">
+            <stop offset="0" stopColor="#fff5c0" stopOpacity="1"/>
+            <stop offset="0.4" stopColor="#f5b040" stopOpacity="0.7"/>
+            <stop offset="1" stopColor="transparent"/>
+          </radialGradient>
+          {/* mud puddle */}
+          <radialGradient id="bf-puddle">
+            <stop offset="0" stopColor={p.sky2} stopOpacity="0.6"/>
+            <stop offset="1" stopColor={p.mud} stopOpacity="1"/>
+          </radialGradient>
+          {/* darkening vignette over center where game is played */}
+          <radialGradient id="bf-vignette" cx="0.5" cy="0.5" r="0.7">
+            <stop offset="0" stopColor="#000" stopOpacity="0.55"/>
+            <stop offset="0.6" stopColor="#000" stopOpacity="0.7"/>
+            <stop offset="1" stopColor="#000" stopOpacity="0.85"/>
+          </radialGradient>
+        </defs>
+
+        {/* SKY */}
+        <rect width="1280" height="780" fill="url(#bf-sky)"/>
+        <rect width="1280" height="780" fill="url(#bf-sun)"/>
+
+        {/* distant beacons / fires on the horizon */}
+        <g opacity="0.85">
+          <ellipse cx="180" cy="290" rx="35" ry="6" fill="#f58030" opacity="0.35"/>
+          <ellipse cx="180" cy="285" rx="14" ry="20" fill="#f5a040" opacity="0.45"/>
+          <ellipse cx="180" cy="278" rx="8" ry="14" fill="#fff0a0" opacity="0.6"/>
+          <ellipse cx="450" cy="295" rx="40" ry="8" fill="#e08020" opacity="0.3"/>
+          <ellipse cx="450" cy="288" rx="18" ry="22" fill="#f08030" opacity="0.4"/>
+          <ellipse cx="900" cy="280" rx="50" ry="8" fill="#d06020" opacity="0.35"/>
+          <ellipse cx="900" cy="272" rx="20" ry="25" fill="#f08030" opacity="0.45"/>
+          <ellipse cx="900" cy="264" rx="10" ry="16" fill="#fff080" opacity="0.6"/>
+          {/* black smoke columns rising */}
+          <ellipse cx="180" cy="200" rx="40" ry="60" fill={p.sky3} opacity="0.5"/>
+          <ellipse cx="450" cy="180" rx="55" ry="80" fill={p.sky3} opacity="0.45"/>
+          <ellipse cx="900" cy="160" rx="65" ry="90" fill={p.sky3} opacity="0.55"/>
+          <ellipse cx="1100" cy="220" rx="45" ry="70" fill={p.sky3} opacity="0.4"/>
+        </g>
+
+        {/* distant ridgeline w/ tiny silhouettes */}
+        <path d="M0,330 Q160,310 280,325 Q420,340 560,318 Q720,305 880,322 Q1050,335 1280,315 L1280,360 L0,360 Z"
+              fill={p.sky3} opacity="0.7"/>
+        {/* small marching column silhouettes */}
+        <g fill="#000" opacity="0.55">
+          {Array.from({length: 14}).map((_, i) => (
+            <rect key={i} x={140 + i*18} y={325 - (i%2)} width="1.2" height="5"/>
+          ))}
+          {Array.from({length: 10}).map((_, i) => (
+            <rect key={'b'+i} x={620 + i*16} y={320 - (i%2)} width="1.2" height="5"/>
+          ))}
+        </g>
+
+        {/* mid-ground smoke billows */}
+        <g>
+          <ellipse cx="300" cy="380" rx="160" ry="40" fill="url(#bf-smoke)" opacity="0.7"/>
+          <ellipse cx="640" cy="370" rx="220" ry="55" fill="url(#bf-smoke)" opacity="0.65"/>
+          <ellipse cx="1000" cy="385" rx="180" ry="45" fill="url(#bf-smoke)" opacity="0.7"/>
+        </g>
+
+        {/* mid-ground hills */}
+        <path d="M0,400 Q200,380 400,398 Q600,415 800,395 Q1000,378 1280,402 L1280,440 L0,440 Z"
+              fill={p.mud} opacity="0.9"/>
+
+        {/* cannons firing on the right side, distant */}
+        <g transform="translate(1080, 425)">
+          {/* cannon body */}
+          <rect x="-30" y="-4" width="50" height="8" fill="#1a1410"/>
+          <rect x="-32" y="-6" width="6" height="12" fill="#3a2818"/>
+          {/* wheels */}
+          <circle cx="-20" cy="6" r="9" fill="#1a0e08"/>
+          <circle cx="-20" cy="6" r="9" fill="none" stroke="#3a2818" strokeWidth="0.6"/>
+          <circle cx="0" cy="6" r="9" fill="#1a0e08"/>
+          {/* muzzle flash */}
+          <ellipse cx="28" cy="0" rx="22" ry="10" fill="url(#bf-flash)" opacity="0.95"/>
+          <circle cx="20" cy="0" r="6" fill="#fff5c0"/>
+        </g>
+        <g transform="translate(140, 430)" transform-origin="center">
+          <rect x="-2" y="-4" width="50" height="8" fill="#1a1410"/>
+          <rect x="44" y="-6" width="6" height="12" fill="#3a2818"/>
+          <circle cx="35" cy="6" r="9" fill="#1a0e08"/>
+          <circle cx="15" cy="6" r="9" fill="#1a0e08"/>
+          <ellipse cx="-10" cy="0" rx="20" ry="9" fill="url(#bf-flash)" opacity="0.85"/>
+        </g>
+
+        {/* FOREGROUND EARTH — dark mud */}
+        <path d="M0,440 L1280,440 L1280,780 L0,780 Z" fill={p.mud}/>
+        {/* irregular dirt mounds */}
+        <path d="M0,440 Q60,448 130,442 Q200,436 280,448 Q360,460 440,442 Q520,438 600,452 Q680,460 760,444 Q850,438 930,452 Q1010,460 1100,442 Q1180,438 1280,448 L1280,470 L0,470 Z"
+              fill="#000" opacity="0.4"/>
+
+        {/* mud puddles scattered */}
+        <ellipse cx="220" cy="540" rx="55" ry="10" fill="url(#bf-puddle)" opacity="0.7"/>
+        <ellipse cx="700" cy="600" rx="80" ry="14" fill="url(#bf-puddle)" opacity="0.6"/>
+        <ellipse cx="1050" cy="560" rx="50" ry="9" fill="url(#bf-puddle)" opacity="0.7"/>
+        <ellipse cx="380" cy="680" rx="70" ry="12" fill="url(#bf-puddle)" opacity="0.65"/>
+        <ellipse cx="980" cy="710" rx="60" ry="10" fill="url(#bf-puddle)" opacity="0.6"/>
+
+        {/* scattered cannonballs */}
+        <g fill="#0a0604">
+          <circle cx="160" cy="620" r="6"/><circle cx="175" cy="625" r="5"/>
+          <circle cx="540" cy="700" r="7"/><circle cx="555" cy="708" r="6"/><circle cx="525" cy="710" r="5"/>
+          <circle cx="820" cy="640" r="6"/>
+          <circle cx="1140" cy="690" r="7"/><circle cx="1155" cy="697" r="5"/>
+          <circle cx="60" cy="710" r="6"/>
+          {/* highlights */}
+          <circle cx="158" cy="618" r="1.5" fill={p.accent} opacity="0.4"/>
+          <circle cx="538" cy="697" r="1.8" fill={p.accent} opacity="0.4"/>
+          <circle cx="818" cy="638" r="1.5" fill={p.accent} opacity="0.4"/>
+          <circle cx="1138" cy="687" r="1.8" fill={p.accent} opacity="0.4"/>
+        </g>
+
+        {/* broken artillery wheel — left foreground */}
+        <g transform="translate(80,640) rotate(-20)">
+          <circle cx="0" cy="0" r="34" fill="none" stroke="#2a1610" strokeWidth="4"/>
+          <circle cx="0" cy="0" r="6" fill="#2a1610"/>
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((a, i) => (
+            <line key={i} x1="0" y1="0" x2={Math.cos(a*Math.PI/180)*32} y2={Math.sin(a*Math.PI/180)*32}
+                  stroke="#2a1610" strokeWidth="3"/>
+          ))}
+          {/* broken spoke */}
+          <line x1="0" y1="0" x2="14" y2="-8" stroke="#2a1610" strokeWidth="3"/>
+        </g>
+
+        {/* broken sabre — right foreground */}
+        <g transform="translate(1100, 700) rotate(35)">
+          <rect x="-2" y="-50" width="4" height="50" fill="#5a5550" opacity="0.85"/>
+          <rect x="-3" y="-60" width="6" height="12" fill="#3a2818"/>
+          <path d="M-5,-58 Q-12,-50 -5,-46" fill="none" stroke="#8b6f1e" strokeWidth="2"/>
+          {/* broken tip lying nearby */}
+          <g transform="translate(20,-5) rotate(-50)">
+            <rect x="-1.5" y="-22" width="3" height="22" fill="#5a5550" opacity="0.85"/>
+          </g>
+        </g>
+
+        {/* torn regimental flag — left mid */}
+        <g transform="translate(280, 580)">
+          {/* flagpole, broken */}
+          <line x1="0" y1="20" x2="-8" y2="-90" stroke="#3a2818" strokeWidth="3"/>
+          {/* gold finial (eagle) */}
+          <g transform="translate(-9,-92)">
+            <path d="M-4,0 L0,-8 L4,0 L2,2 L-2,2 Z" fill={p.accent}/>
+            <circle cx="0" cy="-3" r="1.5" fill={p.accent}/>
+          </g>
+          {/* tattered cloth */}
+          <path d="M-7,-85 L48,-78 L52,-65 L42,-48 L48,-32 L36,-20 L20,-30 L8,-20 L-5,-25 L-7,-85 Z"
+                fill="#8b1a1a" opacity="0.85"/>
+          <path d="M-7,-85 L48,-78 L52,-65 L42,-48 L48,-32 L36,-20 L20,-30 L8,-20 L-5,-25 L-7,-85 Z"
+                fill="none" stroke="#3a0808" strokeWidth="0.8" opacity="0.6"/>
+          {/* embroidered N or eagle */}
+          <text x="22" y="-50" fontSize="14" fill={p.accent} fontFamily="serif" fontWeight="bold" opacity="0.7">N</text>
+          {/* tear edges */}
+          <path d="M48,-32 L54,-28 L50,-24 L48,-32 M36,-20 L32,-14 L28,-18" fill="#3a0808" opacity="0.7"/>
+        </g>
+
+        {/* second torn flag — right mid */}
+        <g transform="translate(940, 600) scale(-1, 1)">
+          <line x1="0" y1="20" x2="-6" y2="-80" stroke="#3a2818" strokeWidth="3"/>
+          <path d="M-6,-78 L40,-72 L44,-58 L36,-44 L42,-30 L28,-22 L14,-30 L0,-22 L-4,-26 L-6,-78 Z"
+                fill="#1e3a6f" opacity="0.85"/>
+          <path d="M-6,-78 L40,-72 L44,-58 L36,-44 L42,-30 L28,-22 L14,-30 L0,-22 L-4,-26 L-6,-78 Z"
+                fill="none" stroke="#0a1428" strokeWidth="0.8" opacity="0.6"/>
+        </g>
+
+        {/* fallen soldier — right foreground */}
+        <g transform="translate(820, 700)">
+          {/* body lying */}
+          <ellipse cx="0" cy="0" rx="35" ry="9" fill="#1a0e08"/>
+          <ellipse cx="-25" cy="-2" rx="10" ry="8" fill="#1a0e08"/>
+          {/* shako fallen off */}
+          <ellipse cx="-40" cy="2" rx="8" ry="5" fill="#0a0604"/>
+          <rect x="-44" y="0" width="8" height="3" fill={p.accent} opacity="0.4"/>
+          {/* musket beside */}
+          <line x1="10" y1="-2" x2="40" y2="-12" stroke="#3a2818" strokeWidth="2.5"/>
+          <line x1="10" y1="-2" x2="40" y2="-12" stroke="#5a4530" strokeWidth="0.8"/>
+        </g>
+
+        {/* second fallen soldier — left foreground */}
+        <g transform="translate(420, 730) rotate(8)">
+          <ellipse cx="0" cy="0" rx="32" ry="8" fill="#1a0e08"/>
+          <ellipse cx="22" cy="-2" rx="9" ry="7" fill="#1a0e08"/>
+          {/* arm out */}
+          <ellipse cx="-15" cy="6" rx="14" ry="4" fill="#1a0e08"/>
+          {/* hat */}
+          <ellipse cx="35" cy="-4" rx="8" ry="6" fill="#0a0604"/>
+        </g>
+
+        {/* third fallen soldier — center mid */}
+        <g transform="translate(640, 660) rotate(-15)">
+          <ellipse cx="0" cy="0" rx="28" ry="7" fill="#1a0e08"/>
+          <ellipse cx="-22" cy="-1" rx="8" ry="6" fill="#1a0e08"/>
+          {/* sabre out */}
+          <line x1="20" y1="0" x2="48" y2="-8" stroke="#5a5550" strokeWidth="2"/>
+        </g>
+
+        {/* drum, broken — far right */}
+        <g transform="translate(1180, 720) rotate(20)">
+          <ellipse cx="0" cy="6" rx="22" ry="5" fill="#1a0e08" opacity="0.5"/>
+          <rect x="-22" y="-12" width="44" height="22" rx="3" fill="#8b3a1f"/>
+          <rect x="-22" y="-12" width="44" height="3" fill="#3a1808"/>
+          <rect x="-22" y="7" width="44" height="3" fill="#3a1808"/>
+          {/* zigzag pattern */}
+          <path d="M-20,-2 L-12,-8 L-4,-2 L4,-8 L12,-2 L20,-8" fill="none" stroke={p.accent} strokeWidth="0.8" opacity="0.6"/>
+          {/* hole punched through */}
+          <ellipse cx="3" cy="-1" rx="7" ry="5" fill="#0a0604"/>
+        </g>
+
+        {/* abandoned bayonet stuck in mud */}
+        <g transform="translate(560, 620) rotate(-25)">
+          <line x1="0" y1="0" x2="0" y2="-32" stroke="#7a7570" strokeWidth="2"/>
+          <line x1="0" y1="0" x2="0" y2="-32" stroke="#bcb6a8" strokeWidth="0.6"/>
+          <rect x="-1" y="-2" width="2" height="6" fill="#3a2818"/>
+        </g>
+
+        {/* low-lying battle smoke drifting across the play area */}
+        <g opacity="0.35">
+          <ellipse cx="200" cy="500" rx="120" ry="20" fill={p.smoke}/>
+          <ellipse cx="500" cy="490" rx="180" ry="25" fill={p.smoke}/>
+          <ellipse cx="900" cy="510" rx="160" ry="22" fill={p.smoke}/>
+        </g>
+
+        {/* large vignette to keep card area readable */}
+        <rect width="1280" height="780" fill="url(#bf-vignette)" opacity="0.55"/>
+      </svg>
+    </div>
+  );
+}
+
+// ─────────── Sandtable bg ───────────
+function SandtableBg() {
+  return (
+    <div style={{position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 6}}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: `repeating-linear-gradient(90deg, #3a2010 0, #4a2818 8px, #3a2010 16px)`,
+      }}/>
+      <div style={{
+        position: 'absolute', inset: 14,
+        background: `radial-gradient(ellipse at 50% 50%, #c9a973 0%, #8a6a3a 70%, #5a3a1c 100%)`,
+        boxShadow: 'inset 0 0 80px rgba(0,0,0,0.6)',
+      }}>
+        <svg viewBox="0 0 1280 780" preserveAspectRatio="xMidYMid slice" style={{position: 'absolute', inset: 0, width: '100%', height: '100%'}}>
+          {/* contour ridges */}
+          <g fill="none" stroke="#5a3a1c" strokeWidth="1.5" opacity="0.4">
+            <path d="M0,200 Q300,180 600,210 T1280,200"/>
+            <path d="M0,400 Q400,370 700,420 T1280,400"/>
+            <path d="M0,580 Q280,560 540,600 T1280,580"/>
+          </g>
+          {/* river */}
+          <path d="M-50,280 Q280,320 540,300 Q800,280 1280,340" fill="none" stroke="#5a8aa8" strokeWidth="6" opacity="0.45"/>
+          {/* miniature trees */}
+          {Array.from({length: 24}).map((_, i) => (
+            <g key={i} transform={`translate(${100 + (i*47)%1100},${150 + ((i*13)%500)})`}>
+              <circle cx="0" cy="0" r="6" fill="#3a5028"/>
+              <rect x="-1" y="0" width="2" height="6" fill="#3a2818"/>
+            </g>
+          ))}
+          {/* miniature buildings */}
+          <g fill="#7a5530" stroke="#3a2010" strokeWidth="0.8">
+            <rect x="200" y="350" width="22" height="16"/><polygon points="200,350 211,344 222,350" fill="#3a2010"/>
+            <rect x="900" y="220" width="22" height="16"/><polygon points="900,220 911,214 922,220" fill="#3a2010"/>
+            <rect x="600" y="500" width="28" height="20"/><polygon points="600,500 614,492 628,500" fill="#3a2010"/>
+          </g>
+          {/* tin soldiers — rows of red & blue dots */}
+          <g>
+            {Array.from({length: 16}).map((_, i) => <circle key={'r'+i} cx={300 + i*30} cy="180" r="3" fill="#8b1a1a"/>)}
+            {Array.from({length: 16}).map((_, i) => <circle key={'b'+i} cx={300 + i*30} cy="600" r="3" fill="#1e3a6f"/>)}
+          </g>
+          {/* compass and flags */}
+          <g transform="translate(1180, 80)">
+            <circle r="20" fill="#f4e4c1" stroke="#5a3a1c" strokeWidth="1"/>
+            <path d="M0,-15 L3,0 L0,15 L-3,0 Z" fill="#8b1a1a"/>
+            <text y="-22" textAnchor="middle" fontSize="10" fill="#3a2010" fontFamily="serif">N</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─────────── Map bg ───────────
+function MapBg() {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, borderRadius: 6, overflow: 'hidden',
+      background: `linear-gradient(180deg, #d8c499 0%, #b89a6a 100%)`,
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: `radial-gradient(ellipse at 30% 20%, transparent 30%, rgba(60,30,10,0.25) 100%),
+                     radial-gradient(ellipse at 70% 80%, transparent 30%, rgba(60,30,10,0.3) 100%)`,
+      }}/>
+      <svg viewBox="0 0 1280 780" preserveAspectRatio="xMidYMid slice" style={{position: 'absolute', inset: 0, width: '100%', height: '100%'}}>
+        {/* country outlines (Europe simplified) */}
+        <g fill="none" stroke="#5a3a1c" strokeWidth="2" opacity="0.55">
+          <path d="M60,300 Q180,220 300,260 Q420,310 360,440 Q280,560 380,640 L240,680 Q60,580 60,300 Z"/>
+          <path d="M420,120 Q600,80 780,160 Q840,320 720,440 L540,440 Q420,310 420,120 Z"/>
+          <path d="M780,80 Q1020,120 1080,320 Q1100,520 960,640 L780,600 Q720,440 780,80 Z"/>
+        </g>
+        {/* city dots */}
+        <g fill="#8b1a1a">
+          <circle cx="240" cy="400" r="4"/><text x="248" y="404" fontSize="11" fill="#3a1808" fontFamily="serif">Madrid</text>
+          <circle cx="600" cy="280" r="4"/><text x="608" y="284" fontSize="11" fill="#3a1808" fontFamily="serif">Paris</text>
+          <circle cx="850" cy="260" r="4"/><text x="858" y="264" fontSize="11" fill="#3a1808" fontFamily="serif">Wien</text>
+          <circle cx="780" cy="180" r="4"/><text x="788" y="184" fontSize="11" fill="#3a1808" fontFamily="serif">Berlin</text>
+          <circle cx="980" cy="140" r="4"/><text x="988" y="144" fontSize="11" fill="#3a1808" fontFamily="serif">Москва</text>
+        </g>
+        {/* battle markers (crossed swords) */}
+        <g stroke="#8b1a1a" strokeWidth="2.5" opacity="0.85">
+          <path d="M280,420 L300,440 M300,420 L280,440"/>
+          <path d="M620,300 L640,320 M640,300 L620,320"/>
+          <path d="M860,280 L880,300 M880,280 L860,300"/>
+        </g>
+        {/* compass rose */}
+        <g transform="translate(1140,100)" fill="#5a3a1c" opacity="0.6">
+          <circle r="30" fill="none" stroke="#5a3a1c" strokeWidth="1.5"/>
+          <path d="M0,-25 L4,0 L0,25 L-4,0 Z"/>
+          <path d="M-25,0 L0,4 L25,0 L0,-4 Z"/>
+          <text y="-32" textAnchor="middle" fontSize="14" fontFamily="serif">N</text>
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+// ─────────── Particle system ───────────
+function spawnParticle(layer, x, y, kind = 'smoke', extra) {
+  if (!layer) return;
+  const p = document.createElement('div');
+  p.style.cssText = `position:absolute;pointer-events:none;left:${x}px;top:${y}px;`;
+  if (kind === 'smoke') {
+    const size = 20 + Math.random() * 30;
+    p.style.cssText += `
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:radial-gradient(circle,rgba(220,200,180,0.7),transparent 70%);
+      transform:translate(-50%,-50%);
+      animation:smoke-rise ${1.2 + Math.random()*0.8}s ease-out forwards;`;
+  } else if (kind === 'spark') {
+    const size = 3 + Math.random() * 4;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 30 + Math.random() * 60;
+    p.style.cssText += `
+      width:${size}px;height:${size}px;border-radius:50%;
+      background:#f5d889;box-shadow:0 0 ${size*2}px #f5d889;
+      transform:translate(-50%,-50%);
+      --dx:${Math.cos(angle)*dist}px;--dy:${Math.sin(angle)*dist}px;
+      animation:spark-fly 0.6s ease-out forwards;`;
+  } else if (kind === 'flash') {
+    p.style.cssText += `
+      width:80px;height:80px;border-radius:50%;
+      background:radial-gradient(circle,rgba(255,240,200,1),rgba(255,200,100,0.3) 30%,transparent 70%);
+      transform:translate(-50%,-50%);
+      animation:flash-burst 0.4s ease-out forwards;`;
+  } else if (kind === 'damage') {
+    p.textContent = extra || '-1';
+    p.style.cssText += `
+      color:#ff5040;font-weight:900;font-size:32px;
+      text-shadow:0 0 8px rgba(0,0,0,0.9),0 2px 0 #1a0a04;
+      font-family:Georgia,serif;
+      transform:translate(-50%,-50%);
+      animation:damage-pop 1s ease-out forwards;`;
+  }
+  layer.appendChild(p);
+  setTimeout(() => p.remove(), 1500);
+}
+
+// ─────────── Battlefield ───────────
+function Battlefield({ theme, onSpeed }) {
+  const speed = onSpeed || 1;
+  const cardStyle = theme.cardStyle || 'oil';
+  const bgKind = theme.bgKind || 'painting';
+  const mood = theme.mood || 'cold';
+  const p1Faction = theme.p1 || 'france';
+  const p2Faction = theme.p2 || 'britain';
+
+  const [turn, setTurn] = useState(1);
+  const [activePlayer, setActivePlayer] = useState(1);
+  const [p1HP, setP1HP] = useState(20);
+  const [p2HP, setP2HP] = useState(20);
+  const [p1Morale, setP1Morale] = useState(3);
+  const [p2Morale, setP2Morale] = useState(3);
+  const [hand, setHand] = useState([]);
+  const [p1Deck, setP1Deck] = useState(() => {
+    const d = window.FACTION_DECKS[p1Faction] || [];
+    // build a 24-card deck and shuffle
+    const arr = [];
+    for (let i = 0; i < 24; i++) arr.push(d[i % d.length]);
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    return arr;
+  });
+  const [p1Discard, setP1Discard] = useState([]);
+  const [p2Hand, setP2Hand] = useState([1, 1, 1, 1]);
+  const [p2Deck, setP2Deck] = useState(() => {
+    const d = window.FACTION_DECKS[p2Faction] || [];
+    const arr = [];
+    for (let i = 0; i < 24; i++) arr.push(d[i % d.length]);
+    for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    return arr;
+  });
+  const [p2Discard, setP2Discard] = useState([]);
+  const [showDiscard, setShowDiscard] = useState(null); // 'p1' | 'p2' | null
+  const [hoverIdx, setHoverIdx] = useState(-1);
+  const handRef = useRef(null);
+  // Board layout:
+  //   p2.rear  (P2's rear, top row)
+  //   p2.front (P2's front, second row — touches skirmish)
+  //   skirmish.shared (one shared row, holds both p1 and p2 units mixed)
+  //   p1.front (third row)
+  //   p1.rear  (bottom row)
+  const [board, setBoard] = useState({
+    p2rear:   [null, null, null, null],
+    p2front:  [null, null, null, null],
+    skirmish: [null, null, null, null],
+    p1front:  [null, null, null, null],
+    p1rear:   [null, null, null, null],
+  });
+  const [draggingCard, setDraggingCard] = useState(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [hoveredSlot, setHoveredSlot] = useState(null);
+  const [hoveredHand, setHoveredHand] = useState(null);
+  const [shake, setShake] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const [turnBanner, setTurnBanner] = useState(null);
+  const [endScreen, setEndScreen] = useState(null);
+  const [attacking, setAttacking] = useState(null);
+
+  const fxLayer = useRef(null);
+  const stage = useRef(null);
+  const unitIdRef = useRef(1);
+
+  useEffect(() => {
+    drawCards(4);
+    setTurnBanner({ turn: 1, player: 1 });
+    setTimeout(() => setTurnBanner(null), 2200 / speed);
+  }, []);
+
+  function drawCards(n) {
+    setP1Deck(deck => {
+      const taken = deck.slice(0, n);
+      const remain = deck.slice(n);
+      const newCards = taken.map(t => ({ ...t, id: 'c' + (unitIdRef.current++), faction: p1Faction, drawing: true }));
+      setHand(h => [...h, ...newCards]);
+      setTimeout(() => setHand(h => h.map(c => ({ ...c, drawing: false }))), 600 / speed);
+      return remain;
+    });
+  }
+
+  // Which lines can P1 deploy to? Own front, own rear, and the shared skirmish.
+  function canP1Deploy(lineKey) {
+    return lineKey === 'p1front' || lineKey === 'p1rear' || lineKey === 'skirmish';
+  }
+  // For skirmish line, does this slot belong to player? (left 2 = p1, right 2 = p2 by convention — but let's allow any empty)
+
+  function onCardMouseDown(e, card) {
+    if (card.cost > p1Morale || activePlayer !== 1) return;
+    e.preventDefault();
+    setDraggingCard(card);
+    const rect = stage.current.getBoundingClientRect();
+    setDragPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }
+
+  useEffect(() => {
+    if (!draggingCard) return;
+    function onMove(e) {
+      const rect = stage.current.getBoundingClientRect();
+      setDragPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const slot = el?.closest('[data-slot]');
+      if (slot) {
+        setHoveredSlot({
+          line: slot.dataset.line,
+          idx: parseInt(slot.dataset.idx),
+        });
+      } else {
+        setHoveredSlot(null);
+      }
+    }
+    function onUp() {
+      if (hoveredSlot && draggingCard && canP1Deploy(hoveredSlot.line)) {
+        const slotData = board[hoveredSlot.line][hoveredSlot.idx];
+        if (!slotData) deployCard(draggingCard, hoveredSlot.line, hoveredSlot.idx);
+      }
+      setDraggingCard(null);
+      setHoveredSlot(null);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [draggingCard, hoveredSlot, board]);
+
+  function deployCard(card, line, idx) {
+    setBoard(b => {
+      if (b[line][idx]) return b;
+      const nextLine = [...b[line]];
+      nextLine[idx] = { ...card, owner: 'p1', deployedTurn: turn, justDeployed: true };
+      return { ...b, [line]: nextLine };
+    });
+    setHand(h => h.filter(c => c.id !== card.id));
+    setP1Morale(m => m - card.cost);
+
+    setTimeout(() => {
+      const slotEl = document.querySelector(`[data-slot][data-line="${line}"][data-idx="${idx}"]`);
+      if (slotEl) {
+        const r = slotEl.getBoundingClientRect();
+        const sr = stage.current.getBoundingClientRect();
+        const cx = r.left + r.width/2 - sr.left;
+        const cy = r.top + r.height/2 - sr.top;
+        spawnParticle(fxLayer.current, cx, cy, 'flash');
+        for (let i = 0; i < 8; i++) spawnParticle(fxLayer.current, cx, cy, 'spark');
+        for (let i = 0; i < 5; i++) {
+          setTimeout(() => spawnParticle(fxLayer.current, cx + (Math.random()-0.5)*40, cy + (Math.random()-0.5)*40, 'smoke'), i*60);
+        }
+      }
+    }, 50);
+
+    setTimeout(() => {
+      setBoard(b => {
+        const ln = b[line].map(u => u?.id === card.id ? { ...u, justDeployed: false } : u);
+        return { ...b, [line]: ln };
+      });
+    }, 700 / speed);
+  }
+
+  // Attack: find target along line direction (toward enemy)
+  function attackUnit(line, idx) {
+    const unit = board[line][idx];
+    if (!unit || unit.justDeployed || unit.owner !== 'p1') return;
+    // Determine target line — p1 attacks "upward" (toward p2)
+    const targetOrder = ['p1rear', 'p1front', 'skirmish', 'p2front', 'p2rear'];
+    const myLineIdx = targetOrder.indexOf(line);
+    let targetLine = null, targetIdx = null;
+    for (let i = myLineIdx + 1; i < targetOrder.length; i++) {
+      const ln = targetOrder[i];
+      const t = board[ln][idx];
+      if (t && t.owner === 'p2') { targetLine = ln; targetIdx = idx; break; }
+    }
+    const slotEl = document.querySelector(`[data-slot][data-line="${line}"][data-idx="${idx}"]`);
+    const targetEl = targetLine
+      ? document.querySelector(`[data-slot][data-line="${targetLine}"][data-idx="${targetIdx}"]`)
+      : document.querySelector('[data-hq="p2"]');
+    if (!slotEl || !targetEl) return;
+    const sr = stage.current.getBoundingClientRect();
+    const a = slotEl.getBoundingClientRect();
+    const t = targetEl.getBoundingClientRect();
+    const dx = t.left - a.left;
+    const dy = t.top - a.top;
+    setAttacking({ line, idx, dx: dx*0.55, dy: dy*0.55 });
+
+    setTimeout(() => {
+      const impactX = a.left + a.width/2 + dx*0.55 - sr.left;
+      const impactY = a.top + a.height/2 + dy*0.55 - sr.top;
+      spawnParticle(fxLayer.current, impactX, impactY, 'flash');
+      for (let i = 0; i < 12; i++) spawnParticle(fxLayer.current, impactX, impactY, 'spark');
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => spawnParticle(fxLayer.current, impactX + (Math.random()-0.5)*30, impactY + (Math.random()-0.5)*30, 'smoke'), i*50);
+      }
+      const dmg = unit.atk;
+      spawnParticle(fxLayer.current, impactX, impactY, 'damage', '-' + dmg);
+      setShake(true); setFlash(true);
+      setTimeout(() => { setShake(false); setFlash(false); }, 250);
+
+      if (targetLine) {
+        setBoard(b => {
+          const ln = [...b[targetLine]];
+          const tgt = ln[targetIdx];
+          if (!tgt) return b;
+          const newHp = tgt.hp - dmg;
+          if (newHp <= 0) {
+            ln[targetIdx] = { ...tgt, hp: 0, dead: true };
+            // add to enemy discard
+            if (tgt.owner === 'p2') setP2Discard(d => [...d, tgt]);
+            else setP1Discard(d => [...d, tgt]);
+            setTimeout(() => setBoard(bb => {
+              const l2 = [...bb[targetLine]]; l2[targetIdx] = null;
+              return { ...bb, [targetLine]: l2 };
+            }), 800/speed);
+            // counter
+            const counter = tgt.atk;
+            setTimeout(() => setBoard(b2 => {
+              const myLn = [...b2[line]];
+              if (myLn[idx]) {
+                myLn[idx] = { ...myLn[idx], hp: myLn[idx].hp - counter };
+                if (myLn[idx].hp <= 0) {
+                  const dyingUnit = myLn[idx];
+                  if (dyingUnit.owner === 'p1') setP1Discard(d => [...d, dyingUnit]);
+                  else setP2Discard(d => [...d, dyingUnit]);
+                  setTimeout(() => setBoard(bb => {
+                    const l3 = [...bb[line]]; l3[idx] = null;
+                    return { ...bb, [line]: l3 };
+                  }), 800/speed);
+                }
+              }
+              return { ...b2, [line]: myLn };
+            }), 100);
+          } else {
+            ln[targetIdx] = { ...tgt, hp: newHp };
+          }
+          return { ...b, [targetLine]: ln };
+        });
+      } else {
+        setP2HP(h => Math.max(0, h - dmg));
+      }
+    }, 280 / speed);
+
+    setTimeout(() => setAttacking(null), 600 / speed);
+  }
+
+  function endTurn() {
+    setActivePlayer(2);
+    setTurnBanner({ turn, player: 2 });
+    // simulated AI deploy
+    setTimeout(() => {
+      const deck = window.FACTION_DECKS[p2Faction];
+      const u = deck[Math.floor(Math.random() * deck.length)];
+      if (u.cost <= p2Morale) {
+        const candidates = ['p2front', 'p2rear', 'skirmish'];
+        for (const ln of candidates) {
+          const idx = board[ln].findIndex(s => !s);
+          if (idx >= 0) {
+            setBoard(b => {
+              const next = [...b[ln]];
+              next[idx] = { ...u, id: 'e' + (unitIdRef.current++), faction: p2Faction, owner: 'p2', justDeployed: true };
+              return { ...b, [ln]: next };
+            });
+            setP2Morale(m => m - u.cost);
+            const slotEl = document.querySelector(`[data-slot][data-line="${ln}"][data-idx="${idx}"]`);
+            if (slotEl) {
+              const r = slotEl.getBoundingClientRect();
+              const sr = stage.current.getBoundingClientRect();
+              spawnParticle(fxLayer.current, r.left+r.width/2-sr.left, r.top+r.height/2-sr.top, 'flash');
+            }
+            break;
+          }
+        }
+      }
+    }, 1500/speed);
+
+    setTimeout(() => {
+      setTurnBanner(null);
+      setActivePlayer(1);
+      setTurn(t => t + 1);
+      setP1Morale(m => Math.min(10, m + (turn + 1)));
+      setP2Morale(m => Math.min(10, m + (turn + 1)));
+      setTurnBanner({ turn: turn + 1, player: 1 });
+      drawCards(1);
+      setTimeout(() => setTurnBanner(null), 1800/speed);
+    }, 3000 / speed);
+  }
+
+  useEffect(() => {
+    if (p1HP <= 0 && !endScreen) setEndScreen('defeat');
+    else if (p2HP <= 0 && !endScreen) setEndScreen('victory');
+  }, [p1HP, p2HP]);
+
+  const f1 = window.FACTIONS[p1Faction];
+  const f2 = window.FACTIONS[p2Faction];
+
+  // Line definitions (top to bottom)
+  const lineDefs = [
+    { key: 'p2rear',   label: '后方 · ARRIÈRE',         owner: 'p2', kind: 'rear' },
+    { key: 'p2front',  label: '前线 · LIGNE DE FRONT',   owner: 'p2', kind: 'front' },
+    { key: 'skirmish', label: '散兵线 · TIRAILLEURS',    owner: 'shared', kind: 'skirmish' },
+    { key: 'p1front',  label: '前线 · LIGNE DE FRONT',   owner: 'p1', kind: 'front' },
+    { key: 'p1rear',   label: '后方 · ARRIÈRE',         owner: 'p1', kind: 'rear' },
+  ];
+
+  return (
+    <div ref={stage} className={'battlefield-stage' + (shake ? ' shake' : '')} style={{
+      position: 'relative', width: '100%', height: '100%',
+      borderRadius: 6, overflow: 'hidden',
+      transform: shake ? `translate(${(Math.random()-0.5)*8}px,${(Math.random()-0.5)*8}px)` : 'none',
+      transition: shake ? 'none' : 'transform 0.1s',
+    }}>
+      <BattlefieldBg kind={bgKind} mood={mood}/>
+
+      {/* HQ bars top + bottom */}
+      <HQBar side="p2" faction={f2} hp={p2HP} morale={p2Morale} active={activePlayer===2}/>
+      <HQBar side="p1" faction={f1} hp={p1HP} morale={p1Morale} active={activePlayer===1}/>
+
+      {/* Five lines */}
+      <div style={{
+        position: 'absolute',
+        top: 92, bottom: 210,
+        left: 12, right: 78,
+        display: 'flex', flexDirection: 'column', gap: 6,
+      }}>
+        {lineDefs.map(def => (
+          <Line key={def.key} def={def} board={board} hovered={hoveredSlot}
+            f1={f1} f2={f2} cardStyle={cardStyle}
+            attacking={attacking} onAttack={attackUnit} speed={speed}
+            canHover={!!draggingCard && canP1Deploy(def.key)}
+          />
+        ))}
+      </div>
+
+      {/* enemy hand (top) */}
+      <div style={{position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', display: 'flex', height: 46, zIndex: 6}}>
+        {p2Hand.map((_, i) => (
+          <div key={i} style={{
+            width: 34, height: 46, marginLeft: i ? -12 : 0,
+            background: `linear-gradient(135deg, ${f2.primary}, #1a1410)`,
+            border: `1.5px solid ${f2.gold}`, borderRadius: 3,
+            transform: `rotate(${(i-1.5)*5}deg) translateY(${Math.abs(i-1.5)*2}px)`,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div dangerouslySetInnerHTML={{__html: f2.crest(22)}}/>
+          </div>
+        ))}
+      </div>
+
+      {/* player hand */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: 158,
+        display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+        pointerEvents: 'none', zIndex: 7,
+      }}>
+        {hand.map((card, i) => {
+          const N = hand.length;
+          const angle = (i - (N-1)/2) * 6;
+          const offY = Math.abs(i - (N-1)/2) * 6;
+          const isHovered = hoveredHand === card.id;
+          const isDragging = draggingCard?.id === card.id;
+          if (isDragging) return null;
+          return (
+            <div key={card.id} style={{
+              position: 'relative',
+              transform: `translateY(${card.drawing ? 200 : (isHovered ? -90 : offY)}px) rotate(${isHovered ? 0 : angle}deg) scale(${isHovered ? 1.4 : 1})`,
+              transformOrigin: 'bottom center',
+              transition: `transform ${0.4/speed}s cubic-bezier(.2,.8,.3,1)`,
+              marginLeft: i ? -28 : 0,
+              zIndex: isHovered ? 100 : i,
+              pointerEvents: 'auto',
+              cursor: card.cost <= p1Morale && activePlayer===1 ? 'grab' : 'not-allowed',
+              opacity: card.cost > p1Morale ? 0.65 : 1,
+              filter: isHovered ? 'drop-shadow(0 12px 24px rgba(0,0,0,0.8)) drop-shadow(0 0 20px rgba(212,165,92,0.4))' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))',
+            }}
+            onMouseEnter={() => setHoveredHand(card.id)}
+            onMouseLeave={() => setHoveredHand(null)}
+            onMouseDown={(e) => onCardMouseDown(e, card)}
+            >
+              <window.Card style={cardStyle} unit={card} faction={card.faction} scale={0.95} onCard/>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* dragging ghost */}
+      {draggingCard && (
+        <div style={{
+          position: 'absolute', left: dragPos.x, top: dragPos.y,
+          transform: 'translate(-50%, -50%) rotate(-2deg) scale(1.1)',
+          pointerEvents: 'none', zIndex: 999,
+          filter: 'drop-shadow(0 16px 30px rgba(0,0,0,0.7))',
+        }}>
+          <window.Card style={cardStyle} unit={draggingCard} faction={draggingCard.faction} onCard/>
+        </div>
+      )}
+
+      {/* End turn */}
+      <button onClick={endTurn} disabled={activePlayer !== 1} style={{
+        position: 'absolute', right: 16, top: '45%',
+        background: activePlayer === 1
+          ? `linear-gradient(180deg, #c8504c, #8b1a1a)`
+          : `linear-gradient(180deg, #5a4530, #3a2818)`,
+        color: '#f4ead0',
+        border: `2px solid ${f1.gold}`,
+        padding: '12px 8px',
+        borderRadius: 4, cursor: activePlayer === 1 ? 'pointer' : 'default',
+        fontFamily: 'Georgia, serif', fontWeight: 'bold',
+        writingMode: 'vertical-rl',
+        letterSpacing: 4, fontSize: 13,
+        boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+        zIndex: 10,
+      }}>
+        {activePlayer === 1 ? '结 束 回 合' : '敌 方 回 合'}
+      </button>
+
+      {flash && <div style={{position: 'absolute', inset: 0, background: 'rgba(255,240,200,0.4)', pointerEvents: 'none', zIndex: 50, animation: 'flash-fade 0.25s ease-out'}}/>}
+
+      <div ref={fxLayer} style={{position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 60}}/>
+
+      {turnBanner && <TurnBanner turn={turnBanner.turn} player={turnBanner.player} faction={turnBanner.player===1 ? f1 : f2} speed={speed}/>}
+      {endScreen && <EndScreen kind={endScreen} faction={f1}/>}
+    </div>
+  );
+}
+
+// ─────────── HQ Bar ───────────
+function HQBar({ side, faction, hp, morale, active }) {
+  const top = side === 'p2';
+  return (
+    <div data-hq={side} style={{
+      position: 'absolute',
+      [top ? 'top' : 'bottom']: top ? 52 : 164,
+      left: 12, right: 78,
+      height: 36, padding: '4px 12px',
+      background: `linear-gradient(90deg, ${faction.primary}cc 0%, rgba(0,0,0,0.6) 100%)`,
+      border: `1px solid ${faction.gold}`,
+      borderLeft: `4px solid ${faction.gold}`,
+      borderRadius: 3,
+      display: 'flex', alignItems: 'center', gap: 14,
+      color: '#f4ead0', fontFamily: 'Georgia, serif',
+      boxShadow: active ? `0 0 16px ${faction.gold}88, inset 0 0 12px rgba(0,0,0,0.4)` : 'inset 0 0 12px rgba(0,0,0,0.4)',
+      zIndex: 5,
+    }}>
+      <div dangerouslySetInnerHTML={{__html: faction.crest(28)}}/>
+      <div style={{flex: 1}}>
+        <div style={{fontSize: 13, fontWeight: 'bold'}}>{faction.name}</div>
+        <div style={{fontSize: 9, color: faction.gold, fontStyle: 'italic'}}>{faction.leader} · {faction.leaderTitle}</div>
+      </div>
+      <div style={{display: 'flex', gap: 18, fontSize: 11}}>
+        <div>
+          <div style={{color: faction.gold, fontSize: 9, letterSpacing: 1}}>HQ</div>
+          <div style={{fontSize: 18, fontWeight: 900, color: hp < 8 ? '#ff5040' : '#f4ead0'}}>{hp}</div>
+        </div>
+        <div>
+          <div style={{color: faction.gold, fontSize: 9, letterSpacing: 1}}>军令</div>
+          <div style={{fontSize: 18, fontWeight: 900}}>{morale}/10</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────── Line ───────────
+function Line({ def, board, hovered, f1, f2, cardStyle, attacking, onAttack, speed, canHover }) {
+  const { key, label, owner, kind } = def;
+  const slots = board[key];
+  // Visual treatment per line kind
+  const lineBg = kind === 'skirmish'
+    ? `linear-gradient(to bottom, rgba(180,120,60,0.10), rgba(120,80,40,0.10))`
+    : kind === 'front'
+      ? `linear-gradient(to bottom, ${owner==='p1' ? 'rgba(74,111,165,0.10)' : 'rgba(139,26,26,0.10)'}, rgba(0,0,0,0.18))`
+      : `rgba(0,0,0,0.18)`;
+  const borderColor = owner === 'p1' ? `${f1.gold}66` : owner === 'p2' ? `${f2.gold}66` : `${f1.gold}33`;
+  return (
+    <div style={{
+      flex: 1, display: 'flex', alignItems: 'stretch', gap: 6,
+      background: lineBg,
+      border: `1px ${kind === 'skirmish' ? 'dashed' : 'solid'} ${borderColor}`,
+      borderRadius: 3,
+      padding: '4px 8px',
+      position: 'relative',
+    }}>
+      {/* line label */}
+      <div style={{
+        writingMode: 'vertical-rl', textOrientation: 'mixed',
+        width: 22,
+        color: owner === 'p1' ? f1.gold : owner === 'p2' ? f2.gold : '#a08560',
+        fontSize: 9, letterSpacing: 2,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        textShadow: '0 1px 2px #000', flexShrink: 0,
+      }}>{label}</div>
+      {/* 4 slots */}
+      <div style={{flex: 1, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, justifyItems: 'center', alignItems: 'center'}}>
+        {slots.map((u, i) => (
+          <Slot key={i} line={key} idx={i} unit={u}
+            f1={f1} f2={f2}
+            ownerLine={owner}
+            hovered={hovered?.line===key && hovered?.idx===i}
+            cardStyle={cardStyle}
+            attacking={attacking?.line===key && attacking?.idx===i ? attacking : null}
+            onAttack={() => onAttack(key, i)}
+            speed={speed}
+            canHover={canHover}
+            kind={kind}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────── Slot ───────────
+function Slot({ line, idx, unit, f1, f2, ownerLine, hovered, cardStyle, attacking, onAttack, speed, canHover, kind }) {
+  const isP2Unit = unit?.owner === 'p2';
+  const transform = attacking
+    ? `translate(${attacking.dx}px, ${attacking.dy}px) scale(1.05)`
+    : 'none';
+  return (
+    <div data-slot data-line={line} data-idx={idx} style={{
+      width: 88, height: 110,
+      border: hovered && canHover
+        ? `2px solid ${f1.gold}`
+        : `1px dashed ${kind === 'skirmish' ? 'rgba(212,165,92,0.4)' : (ownerLine === 'p1' ? `${f1.gold}55` : `${f2.gold}55`)}`,
+      borderRadius: 3,
+      background: hovered && canHover ? `${f1.gold}30` : 'rgba(0,0,0,0.25)',
+      boxShadow: hovered && canHover ? `0 0 16px ${f1.gold}88` : 'inset 0 0 12px rgba(0,0,0,0.35)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s',
+      position: 'relative',
+    }}>
+      {unit && (
+        <div
+          onClick={!isP2Unit ? onAttack : undefined}
+          style={{
+            transform: `${isP2Unit ? 'rotate(180deg) ' : ''}${transform}`,
+            transition: attacking ? `transform ${0.28/speed}s cubic-bezier(.5,-0.4,.5,1.4)` : `transform ${0.4/speed}s ease-out`,
+            cursor: !isP2Unit && !unit.justDeployed ? 'pointer' : 'default',
+            animation: unit.justDeployed ? `card-deploy ${0.6/speed}s ease-out` : 'none',
+            filter: unit.dead ? 'opacity(0.5) grayscale(1)' : (unit.justDeployed ? `drop-shadow(0 0 12px ${f1.gold})` : 'none'),
+          }}>
+          <window.Card style={cardStyle} unit={unit} faction={unit.faction}
+            damaged={unit.hp < (window.FACTION_DECKS[unit.faction]?.find(c => c.name === unit.name)?.hp || unit.hp)}
+            dead={unit.dead}
+            scale={0.74} onCard/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────── Turn Banner ───────────
+function TurnBanner({ turn, player, faction, speed }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      pointerEvents: 'none', zIndex: 90,
+      animation: `banner-sweep ${2/speed}s ease-out forwards`,
+    }}>
+      <div style={{
+        background: `linear-gradient(90deg, transparent 0%, ${faction.primary}f0 20%, ${faction.primary}f0 80%, transparent 100%)`,
+        borderTop: `2px solid ${faction.gold}`,
+        borderBottom: `2px solid ${faction.gold}`,
+        padding: '14px 80px', textAlign: 'center',
+        color: '#f4ead0', fontFamily: 'Georgia, serif',
+        boxShadow: `0 0 30px ${faction.gold}aa`,
+        minWidth: '70%',
+      }}>
+        <div style={{fontSize: 14, color: faction.gold, letterSpacing: 6, marginBottom: 4}}>
+          ── 第 {turn} 回合 · TURN {turn} ──
+        </div>
+        <div style={{fontSize: 26, fontWeight: 900, letterSpacing: 4, textShadow: '0 2px 4px rgba(0,0,0,0.8)'}}>
+          {player === 1 ? '我方行动' : '敌方行动'}
+        </div>
+        <div style={{fontSize: 11, color: faction.gold, marginTop: 4, fontStyle: 'italic'}}>{faction.motto}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────── End Screen ───────────
+function EndScreen({ kind, faction }) {
+  const isWin = kind === 'victory';
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: `radial-gradient(ellipse at center, ${isWin ? 'rgba(20,40,20,0.85)' : 'rgba(40,10,10,0.9)'}, rgba(0,0,0,0.95))`,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      zIndex: 200, color: '#f4ead0',
+      animation: 'end-fade 0.8s ease-out',
+    }}>
+      <div style={{fontSize: 80, marginBottom: 12, color: isWin ? faction.gold : '#8b6f47'}}>
+        {isWin ? (
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <defs>
+              <radialGradient id="medal-grad" cx="0.3" cy="0.3"><stop offset="0" stopColor="#f5d889"/><stop offset="1" stopColor="#8b6f1e"/></radialGradient>
+            </defs>
+            <path d="M50,15 L60,35 L60,55 L50,65 L40,55 L40,35 Z" fill="#8b1a1a"/>
+            <circle cx="50" cy="65" r="22" fill="url(#medal-grad)" stroke="#3a2818" strokeWidth="2"/>
+            <path d="M50,52 L53,62 L63,62 L55,68 L58,78 L50,72 L42,78 L45,68 L37,62 L47,62 Z" fill="#3a2818"/>
+          </svg>
+        ) : (
+          <svg width="100" height="100" viewBox="0 0 100 100">
+            <path d="M30,30 Q30,15 50,15 Q70,15 70,30 L70,55 Q70,60 65,60 L60,60 L60,70 L40,70 L40,60 L35,60 Q30,60 30,55 Z" fill="#8b6f47"/>
+            <circle cx="40" cy="38" r="4" fill="#1a0a04"/><circle cx="60" cy="38" r="4" fill="#1a0a04"/>
+            <path d="M45,50 Q50,53 55,50" fill="none" stroke="#1a0a04" strokeWidth="2"/>
+          </svg>
+        )}
+      </div>
+      <div style={{fontSize: 48, fontWeight: 900, letterSpacing: 12, color: isWin ? faction.gold : '#c2552c', textShadow: '0 4px 8px rgba(0,0,0,0.8)', fontFamily: 'Georgia, serif'}}>
+        {isWin ? '胜  利' : '败  北'}
+      </div>
+      <div style={{fontSize: 14, color: '#a08560', marginTop: 8, letterSpacing: 4, fontStyle: 'italic'}}>
+        {isWin ? 'VICTOIRE · ' + faction.motto : 'DÉFAITE'}
+      </div>
+    </div>
+  );
+}
+
+window.Battlefield = Battlefield;
+
+</script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// 4 variations — different combinations of bg/card/mood/factions
+const VARIATIONS = [
+  {
+    id: 'v1', label: 'A · 滑铁卢黄昏', subtitle: '油画 + 战画 + 黄昏',
+    bgKind: 'painting', cardStyle: 'oil', mood: 'dusk',
+    p1: 'france', p2: 'britain',
+  },
+  {
+    id: 'v2', label: 'B · 博罗季诺夜战', subtitle: '油画 + 战画 + 夜战',
+    bgKind: 'painting', cardStyle: 'oil', mood: 'night',
+    p1: 'france', p2: 'russia',
+  },
+  {
+    id: 'v3', label: 'C · 总参谋部沙盘', subtitle: '纹章 + 沙盘 + 暖棕',
+    bgKind: 'sandtable', cardStyle: 'heraldry', mood: 'warm',
+    p1: 'prussia', p2: 'austria',
+  },
+  {
+    id: 'v4', label: 'D · 战略地图厅', subtitle: '极简 + 地图 + 冷蓝',
+    bgKind: 'map', cardStyle: 'minimal', mood: 'cold',
+    p1: 'spain', p2: 'france',
+  },
+];
+
+function App() {
+  if (!window.useTweaks || !window.DesignCanvas || !window.Battlefield) {
+    return <div style={{padding:40,color:'#f4ead0',fontFamily:'monospace'}}>Loading... missing: {[
+      !window.useTweaks && 'useTweaks',
+      !window.DesignCanvas && 'DesignCanvas',
+      !window.Battlefield && 'Battlefield',
+      !window.Card && 'Card',
+      !window.FACTIONS && 'FACTIONS',
+    ].filter(Boolean).join(', ')}</div>;
+  }
+  const [tweaks, setTweak] = window.useTweaks(window.TWEAK_DEFAULTS);
+  const [focusedVariation, setFocusedVariation] = useState(null);
+
+  return (
+    <window.DesignCanvas>
+      <window.DCSection id="napoleon" title="拿破仑战争 · 卡牌对战" subtitle="4 个视觉方向 — 拖拽手牌部署单位 · 点击单位攻击 · 右侧结束回合">
+
+        {VARIATIONS.map(v => (
+          <window.DCArtboard
+            key={v.id} id={v.id} label={v.label}
+            width={1280} height={1080}
+          >
+            <div style={{width: '100%', height: '100%', background: '#0e0a06', position: 'relative'}}>
+              <window.Battlefield
+                theme={{
+                  bgKind: tweaks.bgKind === 'default' ? v.bgKind : tweaks.bgKind,
+                  cardStyle: tweaks.cardStyle === 'default' ? v.cardStyle : tweaks.cardStyle,
+                  mood: tweaks.mood === 'default' ? v.mood : tweaks.mood,
+                  p1: v.p1, p2: v.p2,
+                }}
+                onSpeed={tweaks.speed}
+              />
+            </div>
+            {/* corner subtitle plate */}
+            <div style={{
+              position: 'absolute', bottom: 8, left: 12,
+              background: 'rgba(0,0,0,0.6)', color: '#d4a55c',
+              padding: '4px 10px', borderRadius: 3, fontSize: 11,
+              border: '1px solid rgba(212,165,92,0.4)',
+              fontFamily: 'Georgia, serif', letterSpacing: 1,
+              pointerEvents: 'none',
+            }}>{v.subtitle}</div>
+          </window.DCArtboard>
+        ))}
+
+      </window.DCSection>
+
+      <window.TweaksPanel title="Tweaks">
+        <window.TweakSection title="战场背景">
+          <window.TweakRadio
+            label="背景类型"
+            value={tweaks.bgKind}
+            options={[
+              {value: 'default', label: '按变体'},
+              {value: 'painting', label: '战画'},
+              {value: 'sandtable', label: '沙盘'},
+              {value: 'map', label: '地图'},
+            ]}
+            onChange={v => setTweak('bgKind', v)}
+          />
+          <window.TweakSelect
+            label="色调"
+            value={tweaks.mood}
+            options={[
+              {value: 'default', label: '按变体默认'},
+              {value: 'warm', label: '暖棕 · 黎明'},
+              {value: 'cold', label: '冷蓝 · 清晨'},
+              {value: 'dusk', label: '黄昏 · 滑铁卢'},
+              {value: 'night', label: '夜战 · 博罗季诺'},
+            ]}
+            onChange={v => setTweak('mood', v)}
+          />
+        </window.TweakSection>
+
+        <window.TweakSection title="卡牌样式">
+          <window.TweakRadio
+            label="卡面"
+            value={tweaks.cardStyle}
+            options={[
+              {value: 'default', label: '按变体'},
+              {value: 'oil', label: '油画'},
+              {value: 'heraldry', label: '纹章'},
+              {value: 'minimal', label: '极简'},
+            ]}
+            onChange={v => setTweak('cardStyle', v)}
+          />
+        </window.TweakSection>
+
+        <window.TweakSection title="动画">
+          <window.TweakSlider
+            label="动画速度"
+            value={tweaks.speed}
+            min={0.3} max={3} step={0.1}
+            onChange={v => setTweak('speed', v)}
+            format={v => v.toFixed(1) + 'x'}
+          />
+        </window.TweakSection>
+      </window.TweaksPanel>
+    </window.DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+
+</body>
+</html>

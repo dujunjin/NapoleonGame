@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>拿破仑战争 · 卡牌对战视觉原型</title>
+<link rel="icon" href="data:,">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Hiragino Sans", "Microsoft YaHei", Georgia, serif;
+  background: #0e0a06;
+  color: #e8d8b8;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+@keyframes smoke-rise {
+  0%   { opacity: 0.7; transform: translate(-50%,-50%) scale(0.6); }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% - 50px)) scale(1.6); }
+}
+@keyframes spark-fly {
+  0%   { opacity: 1; transform: translate(-50%,-50%) translate(0,0); }
+  100% { opacity: 0; transform: translate(-50%,-50%) translate(var(--dx), var(--dy)); }
+}
+@keyframes flash-burst {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.3); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.8); }
+}
+@keyframes damage-pop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.5); }
+  20%  { opacity: 1; transform: translate(-50%,-50%) scale(1.3); }
+  60%  { opacity: 1; transform: translate(-50%, calc(-50% - 30px)) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% - 60px)) scale(0.8); }
+}
+@keyframes flash-fade { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes card-deploy {
+  0%   { transform: scale(1.5) rotateY(80deg); opacity: 0; filter: brightness(2); }
+  60%  { transform: scale(1.1) rotateY(0); opacity: 1; filter: brightness(1.5); }
+  100% { transform: scale(1) rotateY(0); opacity: 1; filter: brightness(1); }
+}
+@keyframes banner-sweep {
+  0%   { opacity: 0; transform: translateX(-100%) skewX(-15deg); }
+  20%  { opacity: 1; transform: translateX(0) skewX(0); }
+  80%  { opacity: 1; transform: translateX(0) skewX(0); }
+  100% { opacity: 0; transform: translateX(100%) skewX(15deg); }
+}
+@keyframes end-fade {
+  0%   { opacity: 0; backdrop-filter: blur(0); }
+  100% { opacity: 1; backdrop-filter: blur(8px); }
+}
+
+#root { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+window.TWEAK_DEFAULTS = {
+  bgKind: "painting",
+  cardStyle: "oil",
+  mood: "cold",
+  speed: 1
+};
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="./design-canvas.jsx?v=20260505-2"></script>
+<script type="text/babel" src="./tweaks-panel.jsx?v=20260505-2"></script>
+<script type="text/babel" src="./factions.jsx?v=20260505-2"></script>
+<script type="text/babel" src="./cards.jsx?v=20260505-2"></script>
+<script type="text/babel" src="./battlefield.jsx?v=20260505-2"></script>
+<script type="text/babel" src="./app.jsx?v=20260505-2"></script>
+</body>
+</html>
