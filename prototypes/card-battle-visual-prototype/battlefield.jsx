@@ -898,8 +898,8 @@ function Battlefield({ theme, onSpeed }) {
       // Stage 3: recoil (170+L ms)
       setTimeout(() => { setAttacking(null); }, (170 + L) / speed);
 
-      // Stage 4: counter (390+L ms)
-      if (targetLine) {
+      // Stage 4: counter (390+L ms) — artillery does not receive counter-attacks
+      if (targetLine && unit.type !== 'artillery') {
         setTimeout(() => {
           setBoard(b2 => {
             const tgt = b2[targetLine]?.[targetIdx];
