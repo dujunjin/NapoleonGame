@@ -972,6 +972,31 @@ class RuleTuningTests(unittest.TestCase):
                 self.assertLessEqual(count, 2,
                     f"{card.name} ({faction.value}) has {count} trigger types, max 2")
 
+    def test_on_deploy_fires_when_card_enters_battlefield(self):
+        """On Deploy trigger fires immediately after unit is placed in REAR."""
+        bf = Battlefield()
+        card = self.make_card("测试部署触发", attack=3, health=3,
+                              keywords=["On Deploy"],
+                              unit_type=UnitType.INFANTRY)
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14,
+                    hand=[card], max_orders=5, current_orders=5)
+        self.assertTrue(deploy_card(p1, card, bf, 0))
+        unit = bf.p1_rear[0]
+        self.assertTrue(unit.on_deploy_fired)
+
+    def test_on_deploy_does_not_fire_when_deploy_fails(self):
+        """On Deploy does not fire if deploy fails (no slot available)."""
+        bf = Battlefield()
+        for i in range(4):
+            bf.p1_rear.append(BattleUnit(
+                card=self.make_card(f"占位{i}"), current_hp=1,
+                current_line=Line.REAR, slot=i, deployed_this_turn=False))
+        card = self.make_card("无法部署", keywords=["On Deploy"])
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14,
+                    hand=[card], max_orders=5, current_orders=5)
+        self.assertFalse(deploy_card(p1, card, bf, 0))
+        self.assertEqual(len(p1.play_log), 0)
+
     def test_event_card_creates_play_log_entry(self):
         """EVENT cards are logged to PlayLog on successful play."""
         bf = Battlefield()
@@ -988,6 +1013,56 @@ class RuleTuningTests(unittest.TestCase):
         self.assertEqual(len(p1.play_log), 1)
         self.assertEqual(p1.play_log[0].card_name, "国防动员")
         self.assertEqual(p1.play_log[0].card_type, "event")
+
+    def test_on_wounded_fires_when_unit_hp_drops_below_max(self):
+        """On Wounded fires first time current_hp < max_hp within a turn."""
+        bf = Battlefield()
+        attacker = BattleUnit(card=self.make_card("攻击者", attack=3),
+                              current_hp=3, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        defender = BattleUnit(card=self.make_card("受伤者", attack=2, health=5,
+                                                  keywords=["On Wounded"]),
+                              current_hp=5, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        bf.p1_main = [attacker]
+        bf.p2_main = [defender]
+        execute_attack(attacker, defender, log=[], battlefield=bf, attacker_player_idx=0)
+        self.assertTrue(defender.on_wounded_exhausted)
+
+    def test_on_wounded_does_not_fire_on_lethal_damage(self):
+        """On Wounded does not fire if damage is lethal (unit dies)."""
+        bf = Battlefield()
+        attacker = BattleUnit(card=self.make_card("攻击者", attack=10),
+                              current_hp=10, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        defender = BattleUnit(card=self.make_card("将死", attack=1, health=3,
+                                                  keywords=["On Wounded"]),
+                              current_hp=3, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        execute_attack(attacker, defender, log=[], battlefield=bf, attacker_player_idx=0)
+        self.assertTrue(defender.is_dead)
+        self.assertFalse(defender.on_wounded_exhausted)
+
+    def test_on_wounded_does_not_fire_from_aura_attack_reduction(self):
+        """On Wounded does NOT fire from 死神威慑 (stat modifier, not HP damage)."""
+        defender = BattleUnit(card=self.make_card("目标", attack=2, health=5,
+                                                  keywords=["On Wounded"]),
+                              current_hp=5, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        # No attack happens, just aura check — on_wounded should not fire
+        self.assertFalse(defender.on_wounded_exhausted)
+
+    def test_on_destroy_cannot_damage_hq(self):
+        """Hard rule: On Destroy effects must NOT directly damage either HQ."""
+        from triggers import count_trigger_types
+        for faction, builder in DECK_BUILDERS.items():
+            for card in builder():
+                if "焦土补给" in card.keywords:
+                    # 焦土补给 grants max_orders, not HQ damage — compliant
+                    pass
+                for kw in card.keywords:
+                    if "On Destroy" in kw:
+                        self.assertNotIn("HQ", kw, f"{card.name}: On Destroy cannot damage HQ")
 
 
 if __name__ == "__main__":

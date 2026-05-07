@@ -225,6 +225,7 @@ def execute_attack(
     log: list = None,
     battlefield: Optional[Battlefield] = None,
     attacker_player_idx: Optional[int] = None,
+    attack_bonus: int = 0,
 ) -> dict:
     """执行一次攻击，返回结算结果。
 
@@ -232,7 +233,7 @@ def execute_attack(
     （军团联动 / 死神威慑）到双方的有效攻击力。
     """
     if battlefield is not None and attacker_player_idx is not None:
-        attacker_atk = effective_attack(attacker, battlefield, attacker_player_idx)
+        attacker_atk = effective_attack(attacker, battlefield, attacker_player_idx) + attack_bonus
         defender_atk = effective_attack(defender, battlefield, 1 - attacker_player_idx)
         dmg_def, dmg_atk = calculate_damage(
             attacker, defender,
@@ -245,7 +246,12 @@ def execute_attack(
     defender.current_hp -= dmg_def
     attacker.current_hp -= dmg_atk
     attacker.has_acted_this_turn = True
-    
+
+    # v0.3B: On Wounded trigger — fires when current_hp drops below base_max_hp
+    if dmg_def > 0 and defender.current_hp > 0 and not defender.on_wounded_exhausted:
+        if defender.current_hp < defender.base_max_hp:
+            defender.on_wounded_exhausted = True
+
     result = {
         "attacker": attacker.card.name,
         "defender": defender.card.name,
@@ -254,6 +260,10 @@ def execute_attack(
         "defender_killed": defender.current_hp <= 0,
         "attacker_killed": attacker.current_hp <= 0,
         "smash_overflow": 0,
+        "attacker_pos": {"line": attacker.current_line.value, "slot": attacker.slot},
+        "defender_pos": {"line": defender.current_line.value, "slot": defender.slot},
+        "defender_hp_after": max(0, defender.current_hp),
+        "attacker_hp_after": max(0, attacker.current_hp),
     }
     
     # 突破：杀死目标后溢出伤害打 HQ
