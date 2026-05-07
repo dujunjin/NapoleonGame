@@ -275,6 +275,7 @@ class RuleTuningTests(unittest.TestCase):
         ])
         self.assertEqual(prussia_events, [
             "国防动员", "国防动员", "沙恩霍斯特改革", "布吕歇尔的追击令", "莱比锡泥泞",
+            "沙恩霍斯特参谋长",
         ])
         self.assertEqual(russia_events, [
             "库图佐夫的战略后撤", "焦土政策", "冬将军",
@@ -1139,6 +1140,20 @@ class RuleTuningTests(unittest.TestCase):
         self.assertEqual(cards_by_name["老近卫先遣营"].subfaction, SubFaction.IMPERIAL_GUARD)
         self.assertEqual(cards_by_name["老近卫掷弹兵"].subfaction, SubFaction.IMPERIAL_GUARD)
         self.assertEqual(cards_by_name["帝国传令官"].card_type, CardType.EVENT)
+
+    def test_prussia_v03b_cards_exist(self):
+        """Prussia v0.3B cards are in the deck."""
+        from cards import SubFaction
+        deck = DECK_BUILDERS[Faction.PRUSSIA]()
+        names = [c.name for c in deck]
+        self.assertIn("勃兰登堡后备营", names)
+        self.assertIn("反冲击突击队", names)
+        self.assertIn("西里西亚国民军线列", names)
+        self.assertIn("沙恩霍斯特参谋长", names)
+        cards_by_name = {c.name: c for c in deck}
+        self.assertEqual(cards_by_name["勃兰登堡后备营"].subfaction, SubFaction.LANDWEHR)
+        self.assertIn("On Wounded", cards_by_name["勃兰登堡后备营"].keywords)
+        self.assertIn("死神威慑", cards_by_name["反冲击突击队"].keywords)
 
     def test_imperial_guard_bonus_caps_at_plus_3(self):
         """Imperial Guard tag bonus caps at +3 attack."""

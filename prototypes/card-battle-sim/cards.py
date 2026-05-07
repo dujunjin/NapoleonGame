@@ -215,8 +215,8 @@ def build_france_deck() -> List[Card]:
 def build_prussia_deck() -> List[Card]:
     deck = []
 
-    # 散兵 ×3：普鲁士军事改革核心
-    for _ in range(3):
+    # 散兵 ×2：普鲁士军事改革核心（v0.3B: 3→2 为新卡腾位）
+    for _ in range(2):
         deck.append(Card("耶格猎兵", 1, 2, 2, UnitType.SKIRMISHER, Faction.PRUSSIA,
                          Line.SKIRMISH, ["闪避", "齐射"]))
 
@@ -245,24 +245,18 @@ def build_prussia_deck() -> List[Card]:
         deck.append(Card("普鲁士龙骑", 4, 4, 3, UnitType.CAVALRY, Faction.PRUSSIA,
                          Line.MAIN, ["冲锋"]))
 
-    # 步兵炮 ×1（从 3 张减到 1 张，腾出 2 张事件卡空间）
-    deck.append(Card("步兵炮组", 3, 2, 3, UnitType.ARTILLERY, Faction.PRUSSIA,
-                     Line.REAR, ["远程"]))
-
     # 重炮 ×2
     for _ in range(2):
         deck.append(Card("普鲁士重炮", 5, 5, 3, UnitType.ARTILLERY, Faction.PRUSSIA,
                          Line.REAR, ["远程"]))
 
-    # 黑色布伦瑞克军 ×2：精锐 + 死神威慑
-    for _ in range(2):
-        deck.append(Card("黑色布伦瑞克", 5, 5, 4, UnitType.INFANTRY, Faction.PRUSSIA,
-                         Line.MAIN, ["结阵", "突破", "死神威慑"]))
+    # 黑色布伦瑞克军 ×1：精锐 + 死神威慑（v0.3B: 2→1 为新卡腾位）
+    deck.append(Card("黑色布伦瑞克", 5, 5, 4, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.MAIN, ["结阵", "突破", "死神威慑"]))
 
-    # 元帅近卫 ×2：高数值
-    for _ in range(2):
-        deck.append(Card("布吕歇尔的近卫", 6, 6, 6, UnitType.GUARD, Faction.PRUSSIA,
-                         Line.MAIN, ["结阵", "守卫"]))
+    # 元帅近卫 ×1：高数值（v0.3B: 2→1 为新卡腾位）
+    deck.append(Card("布吕歇尔的近卫", 6, 6, 6, UnitType.GUARD, Faction.PRUSSIA,
+                     Line.MAIN, ["结阵", "守卫"]))
 
     # 国防动员 ×2：事件卡 — 选择一个我方 INFANTRY，永久 +1/+2 并回血 2（cost 3→2 加强普军 tempo）
     for _ in range(2):
@@ -286,6 +280,26 @@ def build_prussia_deck() -> List[Card]:
     # 莱比锡泥泞：全场骑兵永久 -1 攻
     deck.append(Card("莱比锡泥泞", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
                      Line.REAR, [], CardType.EVENT, "weather_mud_cavalry-1"))
+
+    # === v0.3B 新卡 ===
+    # 勃兰登堡后备营：Landwehr anchor, On Wounded identity
+    deck.append(Card("勃兰登堡后备营", 3, 3, 4, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.MAIN, ["结阵", "On Wounded"],
+                     subfaction=SubFaction.LANDWEHR))
+
+    # 反冲击突击队：On Attack with discipline condition (while wounded)
+    deck.append(Card("反冲击突击队", 4, 4, 4, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.MAIN, ["结阵", "齐射", "死神威慑", "On Attack"]))
+
+    # 西里西亚国民军线列：Landwehr + Same-line Threshold
+    deck.append(Card("西里西亚国民军线列", 2, 2, 3, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.MAIN, ["结阵", "Same-line Threshold"],
+                     subfaction=SubFaction.LANDWEHR))
+
+    # 沙恩霍斯特参谋长：EVENT with Sequence (Landwehr → buff)
+    deck.append(Card("沙恩霍斯特参谋长", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.REAR, ["Sequence"],
+                     CardType.EVENT, "buff_landwehr_sequence"))
 
     return deck
 
