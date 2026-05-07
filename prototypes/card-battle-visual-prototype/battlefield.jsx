@@ -526,8 +526,8 @@ function Battlefield({ theme, onSpeed }) {
 
   useEffect(() => {
     drawCards(4);
-    setTurnBanner({ turn: 1, player: 1 });
-    setTimeout(() => setTurnBanner(null), 2200 / speed);
+    setTurnBanner({ turn: 1, player: 1, skip: false });
+    setTimeout(() => setTurnBanner(null), 600 / speed);
   }, []);
 
   function drawCards(n) {
@@ -929,8 +929,14 @@ function Battlefield({ theme, onSpeed }) {
 
   function endTurn() {
     setActivePlayer(2);
-    setTurnBanner({ turn, player: 2 });
-    // simulated AI deploy
+    setTurnBanner({ turn, player: 2, skip: false });
+
+    // Banner auto-dismiss after 600ms
+    const bannerTimer = setTimeout(() => {
+      setTurnBanner(null);
+    }, 600 / speed);
+
+    // AI deploy after 800ms (was 1500ms)
     setTimeout(() => {
       const u = chooseP2PlayableCard();
       setP2Hand(h => h.slice(1));
@@ -961,9 +967,11 @@ function Battlefield({ theme, onSpeed }) {
           }
         }
       }
-    }, 1500/speed);
+    }, 800 / speed);
 
+    // Next turn after 3000/speed
     setTimeout(() => {
+      clearTimeout(bannerTimer);
       const nextMorale = Math.min(MAX_MORALE, turn + 1);
       setTurnBanner(null);
       setActivePlayer(1);
@@ -980,9 +988,9 @@ function Battlefield({ theme, onSpeed }) {
         };
       });
       setP2Hand(h => [...h, 1]);
-      setTurnBanner({ turn: turn + 1, player: 1 });
+      setTurnBanner({ turn: turn + 1, player: 1, skip: false });
       drawCards(1);
-      setTimeout(() => setTurnBanner(null), 1800/speed);
+      setTimeout(() => setTurnBanner(null), 600 / speed);
     }, 3000 / speed);
   }
 
@@ -1023,7 +1031,8 @@ function Battlefield({ theme, onSpeed }) {
       transition: shakeAmp > 0 ? 'none' : 'transform 0.1s',
     }}>
       {/* HQ bars top + bottom */}
-      <HQBar side="p2" faction={f2} hp={p2HP} morale={p2Morale} active={activePlayer===2}/>
+      <HQBar side="p2" faction={f2} hp={p2HP} morale={p2Morale} active={activePlayer===2}
+        spinner={activePlayer===2 && !turnBanner}/>
       <HQBar side="p1" faction={f1} hp={p1HP} morale={p1Morale} active={activePlayer===1}/>
 
       {/* Central battlefield only: background + tactical lines live here. */}
@@ -1191,7 +1200,13 @@ function Battlefield({ theme, onSpeed }) {
         <path d="" fill="none" stroke="#d4a55c" strokeWidth="2.5" strokeDasharray="8,4" markerEnd="url(#arrowhead)" opacity="0.8"/>
       </svg>
 
-      {turnBanner && <TurnBanner turn={turnBanner.turn} player={turnBanner.player} faction={turnBanner.player===1 ? f1 : f2} speed={speed}/>}
+      {turnBanner && <TurnBanner
+        turn={turnBanner.turn}
+        player={turnBanner.player}
+        faction={turnBanner.player===1 ? f1 : f2}
+        speed={speed}
+        onSkip={() => setTurnBanner(null)}
+      />}
       {endScreen && <EndScreen kind={endScreen} faction={f1}/>}
       {showDiscard && (
         <DiscardOverlay
@@ -1332,7 +1347,7 @@ function DiscardOverlay({ title, faction, cards, cardStyle, onClose }) {
 }
 
 // ─────────── HQ Bar ───────────
-function HQBar({ side, faction, hp, morale, active }) {
+function HQBar({ side, faction, hp, morale, active, spinner = false }) {
   const top = side === 'p2';
   return (
     <div data-hq={side} data-morale={morale} style={{
@@ -1353,6 +1368,16 @@ function HQBar({ side, faction, hp, morale, active }) {
       zIndex: 5,
     }}>
       <div dangerouslySetInnerHTML={{__html: faction.crest(28)}}/>
+      {spinner && (
+        <div style={{
+          width: 16, height: 16,
+          border: `2px solid ${faction.gold}44`,
+          borderTopColor: faction.gold,
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          flexShrink: 0,
+        }}/>
+      )}
       <div style={{flex: 1}}>
         <div style={{fontSize: 13, fontWeight: 'bold'}}>{faction.name}</div>
         <div style={{fontSize: 9, color: faction.gold, fontStyle: 'italic'}}>{faction.leader} · {faction.leaderTitle}</div>
@@ -1466,12 +1491,12 @@ function Slot({ line, idx, unit, f1, f2, ownerLine, hovered, cardStyle, attackin
 }
 
 // ─────────── Turn Banner ───────────
-function TurnBanner({ turn, player, faction, speed }) {
+function TurnBanner({ turn, player, faction, speed, onSkip }) {
   return (
-    <div style={{
+    <div onClick={onSkip} style={{
       position: 'absolute', inset: 0, display: 'flex',
       alignItems: 'center', justifyContent: 'center',
-      pointerEvents: 'none', zIndex: 90,
+      pointerEvents: 'auto', zIndex: 90, cursor: 'pointer',
       animation: `banner-sweep ${2/speed}s ease-out forwards`,
     }}>
       <div style={{
