@@ -115,6 +115,17 @@ def deploy_card(player: Player, card: Card, battlefield: Battlefield,
     if log is not None:
         log.append(f"  ▶ {player.name} 部署 {card.name} 到 {target_line.value} 槽位{target_slot + 1}")
     
+    # v0.3B: Landwehr max HP bonus at deployment
+    if card.subfaction and card.subfaction.value == "landwehr":
+        from triggers import LANDWEHR_HP_CAP
+        landwehr_count = sum(
+            1 for u in battlefield.all_units(player_idx)
+            if u.card.subfaction and u.card.subfaction.value == "landwehr"
+        )
+        hp_bonus = min(landwehr_count, LANDWEHR_HP_CAP)
+        unit.card = _apply_aura(unit.card, health_bonus=hp_bonus)
+        unit.current_hp += hp_bonus
+
     # === 部署效果 ===
     for kw in card.keywords:
         # 自残 HQ

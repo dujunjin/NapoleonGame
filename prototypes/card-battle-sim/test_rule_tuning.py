@@ -1104,6 +1104,27 @@ class RuleTuningTests(unittest.TestCase):
         # Prussia — no Landwehr retro-tag (西里西亚国民军 too numerous)
         self.assertIsNone(prussia["西里西亚国民军"].subfaction)
 
+    def test_landwehr_grants_max_hp_at_deployment(self):
+        """Landwehr tag grants +1 max_hp per same-tag alive at deployment, capped +3."""
+        from cards import SubFaction
+        bf = Battlefield()
+        # Existing Landwehr unit on field
+        existing = BattleUnit(card=self.make_card("现有后备军", attack=2, health=3,
+                                                  subfaction=SubFaction.LANDWEHR),
+                              current_hp=3, current_line=Line.REAR, slot=1,
+                              deployed_this_turn=False, on_deploy_fired=True)
+        bf.p1_rear = [existing]
+        # Deploy new Landwehr
+        new_card = self.make_card("新后备军", cost=2, attack=2, health=3,
+                                  subfaction=SubFaction.LANDWEHR)
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=14,
+                    hand=[new_card], max_orders=5, current_orders=5)
+        deploy_card(p1, new_card, bf, 0)
+        new_unit = [u for u in bf.p1_rear if u.card.name == "新后备军"][0]
+        # 2 Landwehr on field → +2 max_hp
+        self.assertEqual(new_unit.card.health, 5)  # 3 base + 2
+        self.assertEqual(new_unit.current_hp, 5)
+
     def test_imperial_guard_bonus_caps_at_plus_3(self):
         """Imperial Guard tag bonus caps at +3 attack."""
         bf = Battlefield()
