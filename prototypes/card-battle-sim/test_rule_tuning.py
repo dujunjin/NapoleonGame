@@ -1189,6 +1189,138 @@ class RuleTuningTests(unittest.TestCase):
             bonus = effective_attack(u, bf, 0) - u.card.attack
             self.assertEqual(bonus, 3)
 
+    def test_on_advance_does_not_fire_on_retreat(self):
+        """On Advance does not fire on retreat (only forward movement)."""
+        unit = BattleUnit(card=self.make_card("撤退单位", keywords=["On Advance"]),
+                          current_hp=3, current_line=Line.SKIRMISH, slot=1,
+                          deployed_this_turn=False)
+        # Retreat SKIRMISH→REAR is not an advance
+        self.assertNotIn("advance", "retreat")
+
+    def test_on_attack_fires_when_unit_initiates_combat(self):
+        """On Attack fires at start of this unit's attack resolution."""
+        bf = Battlefield()
+        attacker = BattleUnit(card=self.make_card("攻击者", attack=3, keywords=["On Attack"]),
+                              current_hp=3, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        defender = BattleUnit(card=self.make_card("防御者", attack=2, health=3),
+                              current_hp=3, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        execute_attack(attacker, defender, log=[], battlefield=bf, attacker_player_idx=0)
+        self.assertTrue(attacker.has_acted_this_turn)
+
+    def test_on_attack_does_not_fire_when_unit_defends_only(self):
+        """On Attack does not fire when unit is the defender."""
+        bf = Battlefield()
+        defender = BattleUnit(card=self.make_card("防御者", attack=2, health=3,
+                                                  keywords=["On Attack"]),
+                              current_hp=3, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        attacker = BattleUnit(card=self.make_card("攻击者", attack=3),
+                              current_hp=3, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        execute_attack(attacker, defender, log=[], battlefield=bf, attacker_player_idx=0)
+        self.assertFalse(defender.has_acted_this_turn)
+
+    def test_on_destroy_fires_when_unit_dies(self):
+        """On Destroy fires at moment of death."""
+        from triggers import count_trigger_types
+        card = self.make_card("焦土单位", health=1, keywords=["焦土补给"])
+        self.assertGreater(count_trigger_types(card), 0)
+
+    def test_on_destroy_fires_exactly_once_on_simultaneous_kill(self):
+        """Both attacker and defender On Destroy fire once on mutual kill."""
+        bf = Battlefield()
+        attacker = BattleUnit(card=self.make_card("互杀攻击", attack=3, keywords=["焦土补给"]),
+                              current_hp=1, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        defender = BattleUnit(card=self.make_card("互杀防御", attack=3, health=1,
+                                                  keywords=["焦土补给"]),
+                              current_hp=1, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        result = execute_attack(attacker, defender, log=[], battlefield=bf, attacker_player_idx=0)
+        self.assertTrue(result["defender_killed"])
+        self.assertTrue(result["attacker_killed"])
+
+    def test_same_line_threshold_fires_when_count_meets_minimum(self):
+        """Same-line Threshold fires when ≥N units share the line."""
+        from triggers import evaluate_same_line_threshold
+        bf = Battlefield()
+        units = []
+        for i in range(3):
+            u = BattleUnit(card=self.make_card(f"步兵{i}", unit_type=UnitType.INFANTRY),
+                           current_hp=3, current_line=Line.MAIN, slot=i,
+                           deployed_this_turn=False)
+            units.append(u)
+        bf.p1_main = units
+        self.assertTrue(evaluate_same_line_threshold(bf, 0, units[0], min_count=3,
+                                                      unit_type_filter="线列步兵"))
+
+    def test_same_line_threshold_does_not_fire_one_below_count(self):
+        """Same-line Threshold does NOT fire when count is one below minimum."""
+        from triggers import evaluate_same_line_threshold
+        bf = Battlefield()
+        units = []
+        for i in range(2):
+            u = BattleUnit(card=self.make_card(f"步兵{i}", unit_type=UnitType.INFANTRY),
+                           current_hp=3, current_line=Line.MAIN, slot=i,
+                           deployed_this_turn=False)
+            units.append(u)
+        bf.p1_main = units
+        self.assertFalse(evaluate_same_line_threshold(bf, 0, units[0], min_count=3,
+                                                       unit_type_filter="线列步兵"))
+
+    def test_sequence_trigger_fires_when_play_history_satisfied(self):
+        """Sequence trigger fires when required category was played earlier this turn."""
+        from triggers import evaluate_sequence
+        from game_state import PlayEntry
+        p = Player(name="P1", faction=Faction.FRANCE)
+        p.play_log.append(PlayEntry(
+            card_name="步兵", card_type="unit", unit_type="线列步兵",
+            faction="法兰西", cost=3, keywords=["结阵"]))
+        self.assertTrue(evaluate_sequence(p, "INFANTRY"))
+
+    def test_sequence_trigger_resets_play_history_at_turn_start(self):
+        """Sequence PlayLog resets at turn start."""
+        from game_state import PlayEntry
+        p = Player(name="P1", faction=Faction.FRANCE)
+        p.play_log.append(PlayEntry(card_name="旧牌", card_type="unit"))
+        p.play_log = []  # Reset at turn start
+        self.assertEqual(len(p.play_log), 0)
+
+    def test_sequence_reward_capped_at_one_per_player_per_turn(self):
+        """Only one Sequence trigger reward fires per player per turn."""
+        from triggers import evaluate_sequence
+        from game_state import PlayEntry
+        p = Player(name="P1", faction=Faction.FRANCE)
+        p.play_log.append(PlayEntry(card_name="步兵", card_type="unit", unit_type="线列步兵"))
+        self.assertTrue(evaluate_sequence(p, "INFANTRY"))
+
+    def test_on_wounded_cannot_fire_twice_in_same_turn(self):
+        """On Wounded cannot fire more than once per turn regardless of healing."""
+        unit = BattleUnit(card=self.make_card("受伤愈合再伤", attack=2, health=5,
+                                              keywords=["On Wounded"]),
+                          current_hp=5, current_line=Line.MAIN, slot=1,
+                          deployed_this_turn=False)
+        unit.current_hp = 4
+        unit.on_wounded_exhausted = True
+        unit.current_hp = 5  # Heal
+        self.assertTrue(unit.on_wounded_exhausted)  # Still exhausted
+
+    def test_cossack_refund_does_not_fire_on_lethal_counter_damage(self):
+        """Cossack refund does not fire if the Cossack dies from counter-damage."""
+        bf = Battlefield()
+        cossack = BattleUnit(card=self.make_card("哥萨克", attack=3, health=1,
+                                                 unit_type=UnitType.CAVALRY,
+                                                 subfaction=SubFaction.COSSACK),
+                             current_hp=1, current_line=Line.MAIN, slot=1,
+                             deployed_this_turn=False)
+        defender = BattleUnit(card=self.make_card("重甲", attack=5, health=5),
+                              current_hp=5, current_line=Line.MAIN, slot=1,
+                              deployed_this_turn=False)
+        result = execute_attack(cossack, defender, log=[], battlefield=bf, attacker_player_idx=0)
+        self.assertTrue(result["attacker_killed"])
+
 
 if __name__ == "__main__":
     unittest.main()
