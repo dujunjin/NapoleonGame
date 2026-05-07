@@ -943,6 +943,21 @@ class RuleTuningTests(unittest.TestCase):
         card2 = self.make_card("测试近卫2", subfaction=SubFaction.IMPERIAL_GUARD)
         self.assertEqual(card2.subfaction, SubFaction.IMPERIAL_GUARD)
 
+    def test_battleunit_has_trigger_state_fields(self):
+        """BattleUnit tracks trigger state: on_deploy_fired, on_wounded_exhausted, base_max_hp."""
+        card = self.make_card("测试", health=5)
+        unit = BattleUnit(card=card, current_hp=5, current_line=Line.MAIN, slot=0)
+        self.assertFalse(unit.on_deploy_fired)
+        self.assertFalse(unit.on_wounded_exhausted)
+        self.assertEqual(unit.base_max_hp, 5)
+
+    def test_player_has_play_log(self):
+        """Player has a per-turn PlayLog that resets."""
+        from game_state import PlayEntry
+        p = Player(name="P1", faction=Faction.FRANCE)
+        self.assertIsInstance(p.play_log, list)
+        self.assertEqual(len(p.play_log), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,6 +25,14 @@ class BattleUnit:
     deployed_this_turn: bool = True
     has_used_evade: bool = False
     damage_reduction_turns: int = 0  # 剩余伤害减免回合数（单次受伤最大1）
+    # v0.3B trigger state
+    on_deploy_fired: bool = False
+    on_wounded_exhausted: bool = False
+    base_max_hp: int = 0  # Set at deploy time, before aura mutations
+
+    def __post_init__(self):
+        if self.base_max_hp == 0:
+            self.base_max_hp = self.card.health
 
     @property
     def is_dead(self) -> bool:
@@ -46,6 +54,20 @@ class BattleUnit:
 
 
 @dataclass
+class PlayEntry:
+    """PlayLog entry for Sequence trigger evaluation."""
+    card_name: str
+    card_type: str  # "unit" or "event"
+    unit_type: Optional[str] = None  # UnitType value or None
+    faction: str = ""
+    subfaction: Optional[str] = None
+    cost: int = 0
+    keywords: List[str] = field(default_factory=list)
+    turn_number: int = 0
+    action_index: int = 0
+
+
+@dataclass
 class Player:
     """玩家状态"""
     name: str
@@ -57,6 +79,19 @@ class Player:
     max_orders: int = 0
     current_orders: int = 0
     hand_limit: int = 7
+    # Command layer fields
+    commander_id: Optional[str] = None
+    commander_name: Optional[str] = None
+    commander_used: bool = False
+    commander_use_turn: int = 0
+    commander_active_line: Optional[Line] = None
+    objective_id: Optional[str] = None
+    objective_name: Optional[str] = None
+    objective_completed: bool = False
+    objective_completed_turn: int = 0
+    objective_reward_pending: Optional[str] = None
+    # v0.3B PlayLog for Sequence triggers
+    play_log: List[PlayEntry] = field(default_factory=list)
 
     def draw(self, n: int = 1) -> List[Card]:
         """抽 n 张牌；手牌满或牌库空了就略过（不烧伤，不洗弃牌堆）。"""
