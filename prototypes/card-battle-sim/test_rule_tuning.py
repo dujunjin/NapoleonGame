@@ -1,16 +1,23 @@
 import unittest
+from unittest.mock import patch
 
-from cards import Card, CardType, Faction, Line, UnitType
+from cards import Card, CardType, Faction, Line, SubFaction, UnitType
 from cards import DECK_BUILDERS
 from combat import execute_attack, find_attack_targets, effective_attack
-from game import deploy_card, play_turn, advance_max_orders, MAX_ORDERS, STARTING_HQ_HP, MAX_TURNS
+from game import (
+    deploy_card, play_turn, play_one_game, advance_max_orders,
+    apply_operational_pressure, use_commander_ability,
+    MAX_ORDERS, STARTING_HQ_HP, MAX_TURNS, OPERATIONAL_PRESSURE_START_TURN,
+)
 from export_match import play_and_export
 from ai import choose_units_to_advance, ai_attack_phase
 from game_state import Battlefield, BattleUnit, Player
+from commanders import COMMANDERS, DEFAULT_COMMANDERS, CommanderId, get_default_commander
+from objectives import ObjectiveId, OBJECTIVES, assign_objectives, complete_objective
 
 
 class RuleTuningTests(unittest.TestCase):
-    def make_card(self, name, cost=1, attack=1, health=1, keywords=None, unit_type=UnitType.INFANTRY, deploy_line=Line.MAIN):
+    def make_card(self, name, cost=1, attack=1, health=1, keywords=None, unit_type=UnitType.INFANTRY, deploy_line=Line.MAIN, subfaction=None):
         return Card(
             name=name,
             cost=cost,
@@ -20,13 +27,14 @@ class RuleTuningTests(unittest.TestCase):
             faction=Faction.FRANCE,
             deploy_line=deploy_line,
             keywords=keywords or [],
+            subfaction=subfaction,
         )
 
-    def test_all_faction_decks_have_thirty_cards(self):
+    def test_all_faction_decks_have_thirty_three_cards_after_expansion(self):
         self.assertEqual({faction: len(builder()) for faction, builder in DECK_BUILDERS.items()}, {
-            Faction.FRANCE: 30,
-            Faction.PRUSSIA: 30,
-            Faction.RUSSIA: 30,
+            Faction.FRANCE: 33,
+            Faction.PRUSSIA: 33,
+            Faction.RUSSIA: 33,
         })
 
     def test_balance_tuning_card_stats(self):
@@ -39,6 +47,8 @@ class RuleTuningTests(unittest.TestCase):
         self.assertIn("死神威慑", prussia["死骑兵"].keywords)
         self.assertEqual(prussia["近卫掷弹兵团"].health, 5)
         self.assertEqual(prussia["布吕歇尔的近卫"].attack, 6)
+        self.assertEqual(sum(1 for card in DECK_BUILDERS[Faction.PRUSSIA]() if card.name == "西里西亚国民军"), 6)
+        self.assertEqual(sum(1 for card in DECK_BUILDERS[Faction.PRUSSIA]() if card.name == "普鲁士线列军"), 4)
         # 普鲁士线列军：3 攻 → 4 攻
         self.assertEqual((prussia["普鲁士线列军"].attack, prussia["普鲁士线列军"].health), (4, 4))
         # 法兰西马炮兵：拥有 军团联动（重炮不机动，不带此关键词）
@@ -64,13 +74,234 @@ class RuleTuningTests(unittest.TestCase):
         self.assertEqual(STARTING_HQ_HP, 14)
         self.assertEqual(MAX_TURNS, 30)
 
-    def test_prussia_has_two_event_cards(self):
-        prussia = DECK_BUILDERS[Faction.PRUSSIA]()
-        events = [c for c in prussia if c.card_type == CardType.EVENT]
-        self.assertEqual(len(events), 2)
-        self.assertEqual(events[0].name, "国防动员")
-        self.assertEqual(events[0].cost, 2)
-        self.assertEqual(events[0].event_effect, "buff_target_INF+1+2")
+    def test_default_commanders_exist_for_all_factions(self):
+        self.assertEqual(DEFAULT_COMMANDERS, {
+            Faction.FRANCE: CommanderId.NAPOLEON,
+            Faction.PRUSSIA: CommanderId.BLUCHER,
+            Faction.RUSSIA: CommanderId.KUTUZOV,
+        })
+        self.assertEqual(get_default_commander(Faction.FRANCE).name, "拿破仑")
+        self.assertEqual(get_default_commander(Faction.PRUSSIA).name, "布吕歇尔")
+        self.assertEqual(get_default_commander(Faction.RUSSIA).name, "库图佐夫")
+        for commander in COMMANDERS.values():
+            self.assertFalse(commander.enters_deck)
+            self.assertEqual(commander.uses_per_match, 1)
+
+    def test_tactical_objectives_are_deterministic_and_distinct(self):
+        p1_obj, p2_obj = assign_objectives(seed=42)
+        p1_obj_again, p2_obj_again = assign_objectives(seed=42)
+        self.assertEqual((p1_obj.id, p2_obj.id), (p1_obj_again.id, p2_obj_again.id))
+        self.assertNotEqual(p1_obj.id, p2_obj.id)
+        self.assertEqual(len(OBJECTIVES), 5)
+        self.assertIn(ObjectiveId.SEIZE_SKIRMISH, OBJECTIVES)
+        self.assertIn(ObjectiveId.FIRST_BLOOD_HQ, OBJECTIVES)
+        self.assertIn(ObjectiveId.HOLD_MAIN, OBJECTIVES)
+        self.assertIn(ObjectiveId.PREPARE_GUNS, OBJECTIVES)
+        self.assertIn(ObjectiveId.SACRIFICE_FOR_TIME, OBJECTIVES)
+
+    def test_new_players_receive_commander_and_objective_state(self):
+        result = play_one_game(Faction.FRANCE, Faction.RUSSIA, seed=42)
+        self.assertIsNotNone(result.p1_commander)
+        self.assertIsNotNone(result.p2_commander)
+        self.assertIsNotNone(result.p1_objective)
+        self.assertIsNotNone(result.p2_objective)
+        self.assertEqual(result.p1_commander, "拿破仑")
+        self.assertEqual(result.p2_commander, "库图佐夫")
+        self.assertNotEqual(result.p1_objective, result.p2_objective)
+
+    def test_napoleon_commander_marks_line_for_hq_bonus_once(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14,
+                    commander_id="napoleon", commander_name="拿破仑")
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        bf = Battlefield()
+        unit = BattleUnit(card=self.make_card("帝国步兵团", attack=4), current_hp=4,
+                          current_line=Line.MAIN, slot=1, deployed_this_turn=False)
+        bf.p1_main = [unit]
+        log = []
+        self.assertTrue(use_commander_ability(p1, p2, bf, 0, turn=5, log=log))
+        self.assertTrue(p1.commander_used)
+        self.assertEqual(p1.commander_active_line, Line.MAIN)
+        self.assertFalse(use_commander_ability(p1, p2, bf, 0, turn=5, log=log))
+
+    def test_blucher_commander_buffs_wounded_units_once(self):
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=14,
+                    commander_id="blucher", commander_name="布吕歇尔")
+        p2 = Player(name="P2", faction=Faction.FRANCE, hq_hp=14)
+        bf = Battlefield()
+        wounded = BattleUnit(card=self.make_card("普鲁士线列军", attack=4, health=4),
+                             current_hp=2, current_line=Line.MAIN, slot=1, deployed_this_turn=False)
+        healthy = BattleUnit(card=self.make_card("西里西亚国民军", attack=2, health=3),
+                             current_hp=3, current_line=Line.MAIN, slot=2, deployed_this_turn=False)
+        bf.p1_main = [wounded, healthy]
+        self.assertTrue(use_commander_ability(p1, p2, bf, 0, turn=5, log=[]))
+        self.assertEqual(wounded.card.attack, 5)
+        self.assertEqual(healthy.card.attack, 2)
+        self.assertFalse(use_commander_ability(p1, p2, bf, 0, turn=5, log=[]))
+
+    def test_kutuzov_commander_retreats_unit_heals_unit_and_hq_once(self):
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=10,
+                    commander_id="kutuzov", commander_name="库图佐夫")
+        p2 = Player(name="P2", faction=Faction.FRANCE, hq_hp=14)
+        bf = Battlefield()
+        unit = BattleUnit(card=self.make_card("俄国线列军", health=5),
+                          current_hp=3, current_line=Line.SKIRMISH, slot=1,
+                          deployed_this_turn=False)
+        bf.p1_skirmish = [unit]
+        self.assertTrue(use_commander_ability(p1, p2, bf, 0, turn=5, log=[]))
+        self.assertEqual(unit.current_line, Line.REAR)
+        self.assertEqual(unit.current_hp, 4)
+        self.assertEqual(p1.hq_hp, 11)
+        self.assertIn(unit, bf.p1_rear)
+        self.assertFalse(use_commander_ability(p1, p2, bf, 0, turn=5, log=[]))
+
+    def test_first_blood_objective_completes_once_and_grants_order(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14,
+                    objective_id="first_blood_hq", objective_name="压迫 HQ",
+                    max_orders=3, current_orders=1)
+        completed = complete_objective(p1, ObjectiveId.FIRST_BLOOD_HQ, turn=2, log=[])
+        self.assertTrue(completed)
+        self.assertTrue(p1.objective_completed)
+        self.assertEqual(p1.current_orders, 2)
+        self.assertFalse(complete_objective(p1, ObjectiveId.FIRST_BLOOD_HQ, turn=2, log=[]))
+
+    def test_seize_skirmish_objective_draws_once(self):
+        draw_card = self.make_card("援军")
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14,
+                    deck=[draw_card], objective_id="seize_skirmish",
+                    objective_name="夺取散兵线")
+        completed = complete_objective(p1, ObjectiveId.SEIZE_SKIRMISH, turn=2, log=[])
+        self.assertTrue(completed)
+        self.assertIn(draw_card, p1.hand)
+        self.assertEqual(len(p1.deck), 0)
+
+    def test_hold_main_objective_heals_hq_once(self):
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=10,
+                    objective_id="hold_main", objective_name="稳住主线")
+        self.assertTrue(complete_objective(p1, ObjectiveId.HOLD_MAIN, turn=2, log=[]))
+        self.assertEqual(p1.hq_hp, 11)
+
+    def test_prepare_guns_sets_pending_artillery_bonus(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14,
+                    objective_id="prepare_guns", objective_name="炮兵准备")
+        self.assertTrue(complete_objective(p1, ObjectiveId.PREPARE_GUNS, turn=2, log=[]))
+        self.assertEqual(p1.objective_reward_pending, "artillery_attack_plus_1")
+
+    def test_sacrifice_for_time_objective_draws_once(self):
+        draw_card = self.make_card("援军")
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=14,
+                    deck=[draw_card], objective_id="sacrifice_for_time",
+                    objective_name="牺牲换时间")
+        self.assertTrue(complete_objective(p1, ObjectiveId.SACRIFICE_FOR_TIME, turn=2, log=[]))
+        self.assertIn(draw_card, p1.hand)
+
+    def test_export_includes_commander_and_objective_metadata(self):
+        data = play_and_export(Faction.FRANCE, Faction.RUSSIA, seed=42)
+        self.assertEqual(data["meta"]["p1_commander"], "拿破仑")
+        self.assertEqual(data["meta"]["p2_commander"], "库图佐夫")
+        self.assertIn("p1_objective", data["meta"])
+        self.assertIn("p2_objective", data["meta"])
+        self.assertIn("commander", data["timeline"][0]["state"]["p1"])
+        self.assertIn("objective", data["timeline"][0]["state"]["p1"])
+
+    def test_operational_pressure_does_not_apply_before_start_turn(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        log = []
+        apply_operational_pressure(p1, p2, p1_dealt_hq_damage=False, p2_dealt_hq_damage=False,
+                                   turn=OPERATIONAL_PRESSURE_START_TURN - 1, log=log)
+        self.assertEqual((p1.hq_hp, p2.hq_hp), (14, 14))
+        self.assertEqual(log, [])
+
+    def test_operational_pressure_penalizes_p2_when_only_p1_dealt_hq_damage(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        log = []
+        apply_operational_pressure(p1, p2, p1_dealt_hq_damage=True, p2_dealt_hq_damage=False,
+                                   turn=OPERATIONAL_PRESSURE_START_TURN, log=log)
+        self.assertEqual((p1.hq_hp, p2.hq_hp), (14, 13))
+        self.assertIn("P2 未造成 HQ 伤害，HQ -1", log[-1])
+
+    def test_operational_pressure_penalizes_p1_when_only_p2_dealt_hq_damage(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        log = []
+        apply_operational_pressure(p1, p2, p1_dealt_hq_damage=False, p2_dealt_hq_damage=True,
+                                   turn=OPERATIONAL_PRESSURE_START_TURN, log=log)
+        self.assertEqual((p1.hq_hp, p2.hq_hp), (13, 14))
+        self.assertIn("P1 未造成 HQ 伤害，HQ -1", log[-1])
+
+    def test_operational_pressure_does_not_apply_when_both_dealt_hq_damage(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        log = []
+        apply_operational_pressure(p1, p2, p1_dealt_hq_damage=True, p2_dealt_hq_damage=True,
+                                   turn=OPERATIONAL_PRESSURE_START_TURN, log=log)
+        self.assertEqual((p1.hq_hp, p2.hq_hp), (14, 14))
+        self.assertEqual(log, [])
+
+    def test_operational_pressure_penalizes_both_when_neither_dealt_hq_damage(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        log = []
+        apply_operational_pressure(p1, p2, p1_dealt_hq_damage=False, p2_dealt_hq_damage=False,
+                                   turn=OPERATIONAL_PRESSURE_START_TURN, log=log)
+        self.assertEqual((p1.hq_hp, p2.hq_hp), (13, 13))
+        self.assertIn("双方均未造成 HQ 伤害，各 HQ -1", log[-1])
+
+    def test_victory_is_checked_after_both_players_take_the_round(self):
+        """P1 cannot win immediately before P2 gets the same round's action."""
+        def scripted_turn(active, opponent, battlefield, active_idx, turn_num, log):
+            if active_idx == 0:
+                opponent.hq_hp = 0
+            else:
+                opponent.hq_hp = -1
+            return {"units_played": 0, "hq_damage_dealt": 0}
+
+        with patch("game.play_turn", side_effect=scripted_turn):
+            result = play_one_game(Faction.FRANCE, Faction.PRUSSIA, seed=1)
+
+        self.assertEqual(result.winner, 1)
+        self.assertEqual(result.end_reason, "P1 HQ 摧毁")
+
+    def test_faction_event_packages_are_present(self):
+        france_events = [c.name for c in DECK_BUILDERS[Faction.FRANCE]() if c.card_type == CardType.EVENT]
+        prussia_events = [c.name for c in DECK_BUILDERS[Faction.PRUSSIA]() if c.card_type == CardType.EVENT]
+        russia_events = [c.name for c in DECK_BUILDERS[Faction.RUSSIA]() if c.card_type == CardType.EVENT]
+
+        self.assertEqual(france_events, [
+            "达武的铁军", "奥斯特里茨晨雾",
+            "拿破仑的预备队", "军团传令",
+        ])
+        self.assertEqual(prussia_events, [
+            "国防动员", "国防动员", "沙恩霍斯特改革", "布吕歇尔的追击令", "莱比锡泥泞",
+        ])
+        self.assertEqual(russia_events, [
+            "库图佐夫的战略后撤", "焦土政策", "冬将军",
+            "巴格拉季昂后卫军", "库图佐夫的撤退令", "焦土伏击",
+        ])
+
+    def test_expansion_event_cards_use_existing_effects(self):
+        expected = {
+            Faction.FRANCE: {
+                "拿破仑的预备队": (4, "fortify_target_INF_GUARD+0+2_guard"),
+                "军团传令": (3, "advance_friendly_one_no_attack"),
+            },
+            Faction.PRUSSIA: {},
+            Faction.RUSSIA: {
+                "巴格拉季昂后卫军": (2, "fortify_target_INF_GUARD+0+2_guard"),
+                "库图佐夫的撤退令": (2, "retreat_friendly_heal2_hq1"),
+                "焦土伏击": (1, "self_hq1_damage_enemy_skirmish1"),
+            },
+        }
+
+        for faction, cards in expected.items():
+            deck = {card.name: card for card in DECK_BUILDERS[faction]()}
+            for name, (cost, effect) in cards.items():
+                with self.subTest(faction=faction, card=name):
+                    self.assertIn(name, deck)
+                    self.assertEqual(deck[name].card_type, CardType.EVENT)
+                    self.assertEqual(deck[name].cost, cost)
+                    self.assertEqual(deck[name].event_effect, effect)
 
     def test_corps_synergy_buffs_friendly_cavalry_in_same_slot(self):
         """军团联动：同槽位友方炮兵在 MAIN/SKIRMISH 时，骑兵 +1 攻"""
@@ -191,15 +422,147 @@ class RuleTuningTests(unittest.TestCase):
         self.assertIn(event, p1.hand)
         self.assertEqual(p1.current_orders, 3)
 
+    def test_berthier_event_advances_a_friendly_unit_without_attack(self):
+        bf = Battlefield()
+        target = BattleUnit(
+            card=self.make_card("帝国步兵团", cost=4, unit_type=UnitType.INFANTRY),
+            current_hp=4, current_line=Line.REAR, slot=1, deployed_this_turn=False,
+        )
+        bf.p1_rear = [target]
+        event = Card("贝尔蒂埃的行军表", 1, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, [], CardType.EVENT, "advance_friendly_one_no_attack")
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=20,
+                    hand=[event], max_orders=1, current_orders=1)
+
+        self.assertTrue(deploy_card(p1, event, bf, 0))
+        self.assertEqual(target.current_line, Line.MAIN)
+        self.assertIn(target, bf.p1_main)
+        self.assertTrue(target.has_acted_this_turn)
+        self.assertEqual(p1.current_orders, 0)
+
+    def test_davout_event_fortifies_infantry_or_guard(self):
+        bf = Battlefield()
+        target = BattleUnit(
+            card=self.make_card("第45线列步兵团", attack=3, health=4, unit_type=UnitType.INFANTRY),
+            current_hp=2, current_line=Line.MAIN, slot=1, deployed_this_turn=False,
+        )
+        bf.p1_main = [target]
+        event = Card("达武的铁军", 2, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, [], CardType.EVENT, "fortify_target_INF_GUARD+0+2_guard")
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=20,
+                    hand=[event], max_orders=2, current_orders=2)
+
+        self.assertTrue(deploy_card(p1, event, bf, 0))
+        self.assertEqual((target.card.attack, target.card.health, target.current_hp), (3, 6, 4))
+        self.assertIn("守卫", target.card.keywords)
+
+    def test_scharnhorst_event_draws_and_drills_infantry(self):
+        bf = Battlefield()
+        target = BattleUnit(
+            card=self.make_card("西里西亚国民军", attack=2, health=3, unit_type=UnitType.INFANTRY),
+            current_hp=2, current_line=Line.MAIN, slot=1, deployed_this_turn=False,
+        )
+        bf.p1_main = [target]
+        reinforcement = self.make_card("援军", cost=1)
+        event = Card("沙恩霍斯特改革", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.REAR, [], CardType.EVENT, "draw1_buff_target_INF+1+1")
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, deck=[reinforcement],
+                    hand=[event], hq_hp=20, max_orders=2, current_orders=2)
+
+        self.assertTrue(deploy_card(p1, event, bf, 0))
+        self.assertIn(reinforcement, p1.hand)
+        self.assertEqual((target.card.attack, target.card.health, target.current_hp), (3, 4, 3))
+
+    def test_blucher_event_buffs_friendly_cavalry_and_guard(self):
+        bf = Battlefield()
+        cav = BattleUnit(card=self.make_card("死骑兵", attack=2, unit_type=UnitType.CAVALRY),
+                         current_hp=2, current_line=Line.MAIN, slot=1, deployed_this_turn=False)
+        guard = BattleUnit(card=self.make_card("布吕歇尔的近卫", attack=6, unit_type=UnitType.GUARD),
+                           current_hp=6, current_line=Line.MAIN, slot=2, deployed_this_turn=False)
+        infantry = BattleUnit(card=self.make_card("普鲁士线列军", attack=4, unit_type=UnitType.INFANTRY),
+                              current_hp=4, current_line=Line.MAIN, slot=3, deployed_this_turn=False)
+        bf.p1_main = [cav, guard, infantry]
+        event = Card("布吕歇尔的追击令", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.REAR, [], CardType.EVENT, "buff_all_friendly_CAV_GUARD+1")
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=20,
+                    hand=[event], max_orders=2, current_orders=2)
+
+        self.assertTrue(deploy_card(p1, event, bf, 0))
+        self.assertEqual((cav.card.attack, guard.card.attack, infantry.card.attack), (3, 7, 4))
+
+    def test_kutuzov_event_retreats_and_heals_with_hq_cost(self):
+        bf = Battlefield()
+        target = BattleUnit(
+            card=self.make_card("俄国线列军", attack=2, health=5, unit_type=UnitType.INFANTRY),
+            current_hp=2, current_line=Line.SKIRMISH, slot=1, deployed_this_turn=False,
+        )
+        bf.p1_skirmish = [target]
+        event = Card("库图佐夫的战略后撤", 1, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "retreat_friendly_heal2_hq1")
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=20,
+                    hand=[event], max_orders=1, current_orders=1)
+
+        self.assertTrue(deploy_card(p1, event, bf, 0))
+        self.assertEqual(target.current_line, Line.REAR)
+        self.assertEqual(target.current_hp, 4)
+        self.assertEqual(p1.hq_hp, 19)
+
+    def test_scorched_earth_event_damages_enemy_skirmish_with_hq_cost(self):
+        bf = Battlefield()
+        enemy = BattleUnit(card=self.make_card("敌散兵", health=2, unit_type=UnitType.SKIRMISHER),
+                           current_hp=2, current_line=Line.SKIRMISH, slot=1, deployed_this_turn=False)
+        bf.p2_skirmish = [enemy]
+        event = Card("焦土政策", 2, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "self_hq1_damage_enemy_skirmish1")
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=20,
+                    hand=[event], max_orders=2, current_orders=2)
+
+        self.assertTrue(deploy_card(p1, event, bf, 0))
+        self.assertEqual(enemy.current_hp, 1)
+        self.assertEqual(p1.hq_hp, 19)
+
+    def test_weather_events_apply_global_battlefield_modifiers(self):
+        bf = Battlefield()
+        friendly_art = BattleUnit(card=self.make_card("友炮", attack=3, unit_type=UnitType.ARTILLERY),
+                                  current_hp=3, current_line=Line.REAR, slot=1, deployed_this_turn=False)
+        enemy_art = BattleUnit(card=self.make_card("敌炮", attack=5, unit_type=UnitType.ARTILLERY),
+                               current_hp=3, current_line=Line.REAR, slot=1, deployed_this_turn=False)
+        friendly_cav = BattleUnit(card=self.make_card("友骑", attack=2, unit_type=UnitType.CAVALRY),
+                                  current_hp=2, current_line=Line.MAIN, slot=2, deployed_this_turn=False)
+        enemy_cav = BattleUnit(card=self.make_card("敌骑", attack=4, unit_type=UnitType.CAVALRY),
+                               current_hp=3, current_line=Line.MAIN, slot=2, deployed_this_turn=False)
+        fragile = BattleUnit(card=self.make_card("伤兵", health=1, unit_type=UnitType.INFANTRY),
+                             current_hp=1, current_line=Line.MAIN, slot=3, deployed_this_turn=False)
+        bf.p1_rear = [friendly_art]
+        bf.p2_rear = [enemy_art]
+        bf.p1_main = [friendly_cav, fragile]
+        bf.p2_main = [enemy_cav]
+
+        fog = Card("奥斯特里茨晨雾", 2, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                   Line.REAR, [], CardType.EVENT, "weather_fog_artillery-1")
+        mud = Card("莱比锡泥泞", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                   Line.REAR, [], CardType.EVENT, "weather_mud_cavalry-1")
+        winter = Card("冬将军", 3, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                      Line.REAR, [], CardType.EVENT, "weather_winter_all_damage1")
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=20,
+                    hand=[fog, mud, winter], max_orders=7, current_orders=7)
+
+        self.assertTrue(deploy_card(p1, fog, bf, 0))
+        self.assertEqual((friendly_art.card.attack, enemy_art.card.attack), (2, 4))
+        self.assertTrue(deploy_card(p1, mud, bf, 0))
+        self.assertEqual((friendly_cav.card.attack, enemy_cav.card.attack), (1, 3))
+        self.assertTrue(deploy_card(p1, winter, bf, 0))
+        self.assertNotIn(fragile, bf.p1_main)
+
     def test_initial_deal_is_four_cards_with_one_extra_for_second_player(self):
         data = play_and_export(Faction.FRANCE, Faction.PRUSSIA, seed=1)
         initial = data["timeline"][0]["state"]
 
         self.assertEqual(initial["p1"]["hand_size"], 4)
-        self.assertEqual(initial["p1"]["deck_size"], 26)
+        self.assertEqual(initial["p1"]["deck_size"], 29)
         self.assertEqual(initial["p1"]["orders"], "1/1")
         self.assertEqual(initial["p2"]["hand_size"], 5)
-        self.assertEqual(initial["p2"]["deck_size"], 25)
+        self.assertEqual(initial["p2"]["deck_size"], 28)
         self.assertEqual(initial["p2"]["orders"], "1/1")
 
     def test_turn_draws_two_cards_up_to_seven_card_hand_limit(self):
@@ -572,6 +935,13 @@ class RuleTuningTests(unittest.TestCase):
         battlefield.p2_skirmish.extend([range_two_target, range_three_target])
 
         self.assertEqual(find_attack_targets(battlefield, attacker, 0), [range_two_target, range_three_target])
+
+    def test_card_has_subfaction_field(self):
+        """Card dataclass supports optional subfaction tag."""
+        card = self.make_card("测试近卫", keywords=["结阵"])
+        self.assertIsNone(card.subfaction)
+        card2 = self.make_card("测试近卫2", subfaction=SubFaction.IMPERIAL_GUARD)
+        self.assertEqual(card2.subfaction, SubFaction.IMPERIAL_GUARD)
 
 
 if __name__ == "__main__":

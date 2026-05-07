@@ -42,6 +42,13 @@ class Faction(Enum):
     RUSSIA = "俄罗斯"
 
 
+class SubFaction(Enum):
+    """子阵营标签"""
+    IMPERIAL_GUARD = "imperial_guard"   # 帝国近卫 (France)
+    LANDWEHR = "landwehr"               # 国土后备军 (Prussia)
+    COSSACK = "cossack"                 # 哥萨克 (Russia)
+
+
 @dataclass
 class Card:
     """卡牌定义。UNIT 卡使用 attack/health/unit_type/deploy_line；EVENT 卡使用 event_effect。"""
@@ -55,6 +62,7 @@ class Card:
     keywords: List[str] = field(default_factory=list)
     card_type: CardType = CardType.UNIT
     event_effect: Optional[str] = None  # 仅 EVENT 卡使用，例如 "buff_target_INF+1+2"
+    subfaction: Optional[SubFaction] = None  # 子阵营标签
 
     def __repr__(self):
         if self.card_type == CardType.EVENT:
@@ -89,7 +97,16 @@ class Card:
 # "焦土补给" - 此单位死亡时，拥有者下一回合 max_orders +1（不超上限）
 #
 # === 事件卡效果 (event_effect) ===
-# "buff_target_INF+1+2" - 选择一个我方 INFANTRY 单位，永久 +1/+2 并立即回血 2
+# "buff_target_INF+1+2"           - 选择一个我方 INFANTRY，永久 +1/+2 并回血 2
+# "advance_friendly_one_no_attack" - 选择一个友军单位前移一格（REAR→MAIN 优先），不触发攻击
+# "fortify_target_INF_GUARD+0+2_guard" - 选择我方 INFANTRY/GUARD，+0/+2 回血 2，获得守卫
+# "draw1_buff_target_INF+1+1"     - 抽 1 张牌，选择我方 INFANTRY +1/+1 回血 1
+# "buff_all_friendly_CAV_GUARD+1" - 全场友军 CAVALRY/GUARD 永久 +1 攻
+# "retreat_friendly_heal2_hq1"    - 选择友军非 REAR 单位撤回 REAR，回血 2，自损 HQ 1
+# "self_hq1_damage_enemy_skirmish1" - 自损 HQ 1，敌方散兵线全体 -1 血
+# "weather_fog_artillery-1"       - 全场炮兵永久 -1 攻（最低 0）
+# "weather_mud_cavalry-1"         - 全场骑兵永久 -1 攻（最低 0）
+# "weather_winter_all_damage1"    - 全场所有单位 -1 血
 
 
 # ============================================================
@@ -119,10 +136,9 @@ def build_france_deck() -> List[Card]:
         deck.append(Card("龙骑兵团", 4, 3, 3, UnitType.CAVALRY, Faction.FRANCE,
                          Line.MAIN, ["冲锋"]))
 
-    # 胸甲骑兵 ×2：高费重骑
-    for _ in range(2):
-        deck.append(Card("胸甲骑兵", 6, 6, 5, UnitType.CAVALRY, Faction.FRANCE,
-                         Line.MAIN, ["冲锋", "突破"]))
+    # 胸甲骑兵 ×1：高费重骑
+    deck.append(Card("胸甲骑兵", 6, 6, 5, UnitType.CAVALRY, Faction.FRANCE,
+                     Line.MAIN, ["冲锋", "突破"]))
 
     # 骑炮 ×2：机动炮兵 + 军团联动
     for _ in range(2):
@@ -153,6 +169,18 @@ def build_france_deck() -> List[Card]:
         deck.append(Card("帝国步兵团", 4, 4, 4, UnitType.INFANTRY, Faction.FRANCE,
                          Line.MAIN, ["结阵", "齐射"]))
 
+    # === 事件卡 ===
+    deck.append(Card("达武的铁军", 2, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, [], CardType.EVENT, "fortify_target_INF_GUARD+0+2_guard"))
+    deck.append(Card("奥斯特里茨晨雾", 2, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, [], CardType.EVENT, "weather_fog_artillery-1"))
+
+    # === 扩展事件 / 将领卡 ===
+    deck.append(Card("拿破仑的预备队", 4, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, [], CardType.EVENT, "fortify_target_INF_GUARD+0+2_guard"))
+    deck.append(Card("军团传令", 3, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, [], CardType.EVENT, "advance_friendly_one_no_attack"))
+
     return deck
 
 
@@ -163,13 +191,13 @@ def build_france_deck() -> List[Card]:
 def build_prussia_deck() -> List[Card]:
     deck = []
 
-    # 散兵 ×4：普鲁士军事改革核心
-    for _ in range(4):
+    # 散兵 ×3：普鲁士军事改革核心
+    for _ in range(3):
         deck.append(Card("耶格猎兵", 1, 2, 2, UnitType.SKIRMISHER, Faction.PRUSSIA,
                          Line.SKIRMISH, ["闪避", "齐射"]))
 
-    # 国民军 ×4：低费铺场步兵
-    for _ in range(4):
+    # 国民军 ×6：低费铺场步兵
+    for _ in range(6):
         deck.append(Card("西里西亚国民军", 2, 2, 3, UnitType.INFANTRY, Faction.PRUSSIA,
                          Line.MAIN, ["结阵"]))
 
@@ -207,8 +235,8 @@ def build_prussia_deck() -> List[Card]:
         deck.append(Card("黑色布伦瑞克", 5, 5, 4, UnitType.INFANTRY, Faction.PRUSSIA,
                          Line.MAIN, ["结阵", "突破", "死神威慑"]))
 
-    # 元帅近卫 ×3：高数值
-    for _ in range(3):
+    # 元帅近卫 ×2：高数值
+    for _ in range(2):
         deck.append(Card("布吕歇尔的近卫", 6, 6, 6, UnitType.GUARD, Faction.PRUSSIA,
                          Line.MAIN, ["结阵", "守卫"]))
 
@@ -224,6 +252,16 @@ def build_prussia_deck() -> List[Card]:
             card_type=CardType.EVENT,
             event_effect="buff_target_INF+1+2",
         ))
+
+    # 沙恩霍斯特改革：抽 1 张牌，选择我方 INFANTRY +1/+1 回血 1
+    deck.append(Card("沙恩霍斯特改革", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.REAR, [], CardType.EVENT, "draw1_buff_target_INF+1+1"))
+    # 布吕歇尔的追击令：全场友军 CAVALRY/GUARD +1 攻
+    deck.append(Card("布吕歇尔的追击令", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.REAR, [], CardType.EVENT, "buff_all_friendly_CAV_GUARD+1"))
+    # 莱比锡泥泞：全场骑兵永久 -1 攻
+    deck.append(Card("莱比锡泥泞", 2, 0, 0, UnitType.INFANTRY, Faction.PRUSSIA,
+                     Line.REAR, [], CardType.EVENT, "weather_mud_cavalry-1"))
 
     return deck
 
@@ -246,8 +284,8 @@ def build_russia_deck() -> List[Card]:
         deck.append(Card("俄军猎兵团", 1, 1, 2, UnitType.SKIRMISHER, Faction.RUSSIA,
                          Line.SKIRMISH, ["闪避"]))
 
-    # 东正教民兵 ×4：超低费铺场 + 焦土补给
-    for _ in range(4):
+    # 东正教民兵 ×3：超低费铺场 + 焦土补给
+    for _ in range(3):
         deck.append(Card("东正教民兵", 2, 2, 3, UnitType.INFANTRY, Faction.RUSSIA,
                          Line.MAIN, ["结阵", "焦土补给"]))
 
@@ -261,13 +299,13 @@ def build_russia_deck() -> List[Card]:
         deck.append(Card("俄军步兵炮", 3, 3, 2, UnitType.ARTILLERY, Faction.RUSSIA,
                          Line.REAR, ["远程"]))
 
-    # 西伯利亚老兵 ×3：自残 1，超模数值（不变）
-    for _ in range(3):
+    # 西伯利亚老兵 ×2：自残 1，超模数值（不变）
+    for _ in range(2):
         deck.append(Card("西伯利亚老兵", 3, 5, 5, UnitType.INFANTRY, Faction.RUSSIA,
                          Line.MAIN, ["结阵", "自残1"]))
 
-    # 普拉托夫的哥萨克 ×3：高数值侧翼骑兵 + 熔岩战术
-    for _ in range(3):
+    # 普拉托夫的哥萨克 ×2：高数值侧翼骑兵 + 熔岩战术
+    for _ in range(2):
         deck.append(Card("普拉托夫的哥萨克", 4, 3, 2, UnitType.CAVALRY, Faction.RUSSIA,
                          Line.MAIN, ["冲锋", "侧翼迂回", "熔岩战术"]))
 
@@ -298,6 +336,22 @@ def build_russia_deck() -> List[Card]:
     # 帝国大军 ×1：自残 1，全场 +1 血
     deck.append(Card("帝国大军", 5, 3, 5, UnitType.INFANTRY, Faction.RUSSIA,
                      Line.MAIN, ["结阵", "自残1", "光环+1血"]))
+
+    # === 事件卡 ===
+    deck.append(Card("库图佐夫的战略后撤", 1, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "retreat_friendly_heal2_hq1"))
+    deck.append(Card("焦土政策", 2, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "self_hq1_damage_enemy_skirmish1"))
+    deck.append(Card("冬将军", 3, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "weather_winter_all_damage1"))
+
+    # === 扩展事件 / 将领卡 ===
+    deck.append(Card("巴格拉季昂后卫军", 2, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "fortify_target_INF_GUARD+0+2_guard"))
+    deck.append(Card("库图佐夫的撤退令", 2, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "retreat_friendly_heal2_hq1"))
+    deck.append(Card("焦土伏击", 1, 0, 0, UnitType.INFANTRY, Faction.RUSSIA,
+                     Line.REAR, [], CardType.EVENT, "self_hq1_damage_enemy_skirmish1"))
 
     return deck
 
