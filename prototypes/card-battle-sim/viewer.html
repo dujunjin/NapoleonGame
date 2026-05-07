@@ -538,6 +538,11 @@ body {
     box-shadow: 0 0 8px rgba(194,85,44,0.7), 0 0 2px var(--red-bright);
     border-color: var(--red-bright);
 }
+.unit-card.is-focus,
+.hq-strip.is-focus {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 2px;
+}
 .unit-card.is-dead {
     opacity: 0.35;
     filter: grayscale(0.8);
@@ -1613,12 +1618,18 @@ function parseAdvanceLog(node) {
 // ======================================================================
 // Attack Arrows
 // ======================================================================
+function focusActionElements(elements) {
+    document.querySelectorAll(".unit-card.is-focus, .hq-strip.is-focus").forEach(el => el.classList.remove("is-focus"));
+    elements.filter(Boolean).forEach(el => el.classList.add("is-focus"));
+}
+
 function drawAttackArrows(attackEvent, activePlayer) {
     const svg = document.getElementById("arrow-overlay");
     if (!svg) return;
     // Clear
     svg.querySelectorAll("line, text").forEach(el => el.remove());
     document.querySelectorAll(".attack-badge").forEach(el => el.remove());
+    document.querySelectorAll(".unit-card.is-focus, .hq-strip.is-focus").forEach(el => el.classList.remove("is-focus"));
     if (!attackEvent) return;
 
     const bf = document.getElementById("battlefield");
@@ -1634,6 +1645,8 @@ function drawAttackArrows(attackEvent, activePlayer) {
     }
 
     if (!atkEl || !defEl) return;
+
+    focusActionElements([atkEl, defEl]);
 
     const atkRect = atkEl.getBoundingClientRect();
     const defRect = defEl.getBoundingClientRect();
