@@ -116,8 +116,8 @@ class Card:
 def build_france_deck() -> List[Card]:
     deck = []
 
-    # 散兵 ×3：低费骚扰
-    for _ in range(3):
+    # 散兵 ×2：低费骚扰（v0.3B: 3→2 为新卡腾位）
+    for _ in range(2):
         deck.append(Card("猎兵连", 1, 1, 2, UnitType.SKIRMISHER, Faction.FRANCE,
                          Line.SKIRMISH, ["闪避"]))
 
@@ -125,6 +125,27 @@ def build_france_deck() -> List[Card]:
     for _ in range(4):
         deck.append(Card("第45线列步兵团", 3, 3, 4, UnitType.INFANTRY, Faction.FRANCE,
                          Line.MAIN, ["结阵", "齐射"]))
+
+    # === v0.3B 新卡 ===
+    # 老近卫先遣营：Imperial Guard anchor, On Deploy synergy
+    deck.append(Card("老近卫先遣营", 4, 3, 5, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.MAIN, ["结阵", "齐射", "On Deploy"],
+                     subfaction=SubFaction.IMPERIAL_GUARD))
+
+    # 侦察骑兵纵队：Sequence discount (INFANTRY → cheaper cavalry)
+    deck.append(Card("侦察骑兵纵队", 3, 3, 3, UnitType.CAVALRY, Faction.FRANCE,
+                     Line.MAIN, ["冲锋", "Sequence"]))
+
+    # 老近卫掷弹兵：Imperial Guard carrier, high stats
+    deck.append(Card("老近卫掷弹兵", 5, 5, 6, UnitType.GUARD, Faction.FRANCE,
+                     Line.MAIN, ["守卫", "结阵"],
+                     subfaction=SubFaction.IMPERIAL_GUARD))
+
+    # 帝国传令官：EVENT with On Deploy + Sequence
+    deck.append(Card("帝国传令官", 2, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, ["On Deploy", "Sequence"],
+                     CardType.EVENT, "buff_imperial_guard_deploy_sequence",
+                     subfaction=SubFaction.IMPERIAL_GUARD))
 
     # 高费精锐线列 ×3：法军核心
     for _ in range(3):
@@ -157,18 +178,18 @@ def build_france_deck() -> List[Card]:
                      Line.MAIN, ["结阵", "齐射", "守卫", "突破"],
                      subfaction=SubFaction.IMPERIAL_GUARD))
 
-    # 轻骑兵 ×3：低费骑兵
-    for _ in range(3):
+    # 轻骑兵 ×2：低费骑兵（v0.3B: 3→2 为新卡腾位）
+    for _ in range(2):
         deck.append(Card("骠骑兵", 2, 2, 2, UnitType.CAVALRY, Faction.FRANCE,
                          Line.MAIN, ["冲锋", "侧翼迂回"]))
 
-    # 步兵纵队 ×3：低费铺场步兵
-    for _ in range(3):
+    # 步兵纵队 ×2：低费铺场步兵（v0.3B: 3→2 为新卡腾位）
+    for _ in range(2):
         deck.append(Card("征召步兵营", 2, 2, 3, UnitType.INFANTRY, Faction.FRANCE,
                          Line.MAIN, ["结阵"]))
 
-    # 大军步兵 ×4：中费铺场
-    for _ in range(4):
+    # 大军步兵 ×3：中费铺场（v0.3B: 4→3 为新卡腾位）
+    for _ in range(3):
         deck.append(Card("帝国步兵团", 4, 4, 4, UnitType.INFANTRY, Faction.FRANCE,
                          Line.MAIN, ["结阵", "齐射"]))
 

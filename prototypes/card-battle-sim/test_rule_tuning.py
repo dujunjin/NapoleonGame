@@ -269,6 +269,7 @@ class RuleTuningTests(unittest.TestCase):
         russia_events = [c.name for c in DECK_BUILDERS[Faction.RUSSIA]() if c.card_type == CardType.EVENT]
 
         self.assertEqual(france_events, [
+            "帝国传令官",
             "达武的铁军", "奥斯特里茨晨雾",
             "拿破仑的预备队", "军团传令",
         ])
@@ -1124,6 +1125,20 @@ class RuleTuningTests(unittest.TestCase):
         # 2 Landwehr on field → +2 max_hp
         self.assertEqual(new_unit.card.health, 5)  # 3 base + 2
         self.assertEqual(new_unit.current_hp, 5)
+
+    def test_france_v03b_cards_exist(self):
+        """France v0.3B cards are in the deck."""
+        from cards import SubFaction
+        deck = DECK_BUILDERS[Faction.FRANCE]()
+        names = [c.name for c in deck]
+        self.assertIn("老近卫先遣营", names)
+        self.assertIn("侦察骑兵纵队", names)
+        self.assertIn("老近卫掷弹兵", names)
+        self.assertIn("帝国传令官", names)
+        cards_by_name = {c.name: c for c in deck}
+        self.assertEqual(cards_by_name["老近卫先遣营"].subfaction, SubFaction.IMPERIAL_GUARD)
+        self.assertEqual(cards_by_name["老近卫掷弹兵"].subfaction, SubFaction.IMPERIAL_GUARD)
+        self.assertEqual(cards_by_name["帝国传令官"].card_type, CardType.EVENT)
 
     def test_imperial_guard_bonus_caps_at_plus_3(self):
         """Imperial Guard tag bonus caps at +3 attack."""
