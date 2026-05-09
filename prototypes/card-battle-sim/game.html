@@ -367,7 +367,7 @@ function clickSl(line,slot){
 function doDeploy(line,slot){
     const c=G.p.hand[selHand];if(!c)return;
     if(c.cardType!=="unit")return;
-    if(line!=="pr")return;
+    if(line!=="rear")return;
     if(G.p.curOrd<c.cost)return;
     if(G.bf.pR.some(u=>u.slot===slot))return;
     const u=mkUnit(c,"rear",slot);G.bf.pR.push(u);
@@ -552,18 +552,18 @@ function renderHQ(){
 
 function renderBF(){
     const lines=[
-        {id:"r-er",units:G.bf.eR,isPl:false,line:"er"},
-        {id:"r-em",units:G.bf.eM,isPl:false,line:"em"},
-        {id:"r-sk",units:[...G.bf.eS,...G.bf.pS],isPl:null,line:"sk"},
-        {id:"r-pm",units:G.bf.pM,isPl:true,line:"pm"},
-        {id:"r-pr",units:G.bf.pR,isPl:true,line:"pr"}
+        {id:"r-er",units:G.bf.eR,isPl:false,line:"rear",side:"e"},
+        {id:"r-em",units:G.bf.eM,isPl:false,line:"main",side:"e"},
+        {id:"r-sk",units:[...G.bf.eS,...G.bf.pS],isPl:null,line:"skirmish",side:"s"},
+        {id:"r-pm",units:G.bf.pM,isPl:true,line:"main",side:"p"},
+        {id:"r-pr",units:G.bf.pR,isPl:true,line:"rear",side:"p"}
     ];
     const tgts=selAtk?findTgt(selAtk):[];
     for(const l of lines){
         const row=document.getElementById(l.id);let h="";
         for(let s=0;s<4;s++){
             const u=l.units.find(x=>x.slot===s);
-            const lk=l.id.replace("r-","").replace("e","e-").replace("p","p-");
+            const lk=l.line;
             if(u){
                 const pl=isP(u);
                 // Determine if this unit can advance (advance phase, player's unit, eligible)
