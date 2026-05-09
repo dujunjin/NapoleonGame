@@ -1668,6 +1668,25 @@ function buildTimeline() {
                     </div>
                     <div class="ev-marker">${marker}</div>
                 </div>`;
+
+        // v0.5: Show situation change event
+        const prevSituation = i > 0 ? (timeline[i-1].state && timeline[i-1].state.battlefield_situation) : null;
+        const currSituation = node.state && node.state.battlefield_situation;
+        if (currSituation && (!prevSituation || prevSituation.id !== currSituation.id)) {
+            html += `<div class="event-card" style="border-left-color:var(--gold);opacity:0.8">
+                <div class="ev-icon" style="background:rgba(201,168,76,0.15);border-color:var(--gold);color:var(--gold)">🌍</div>
+                <div class="ev-body"><div class="ev-desc" style="color:var(--gold)">态势变化：${esc(currSituation.name)}</div></div>
+            </div>`;
+        }
+
+        // v0.5: Show commander reaction in timeline
+        const reactionText = node.commander_reaction;
+        if (reactionText) {
+            html += `<div class="event-card" style="border-left-color:var(--brass-glow)">
+                <div class="ev-icon" style="background:rgba(201,168,76,0.2);border-color:var(--brass-glow);color:var(--brass-glow)">⚜</div>
+                <div class="ev-body"><div class="ev-desc" style="color:var(--brass-glow)">${esc(reactionText)}</div></div>
+            </div>`;
+        }
     }
     if (currentTurn !== -1) html += "</div>";
     container.innerHTML = html;
@@ -2134,6 +2153,22 @@ function renderActionSummary(node) {
         }
     } else {
         if (faction) html += `<strong>${esc(faction)}</strong>`;
+    }
+
+    // v0.5: Show battlefield situation if present
+    const situation = node.battlefield_situation || (node.state && node.state.battlefield_situation);
+    if (situation) {
+        html += ` <span style="color:var(--gold);font-size:11px;background:rgba(201,168,76,0.1);padding:1px 5px;border-radius:3px;border:1px solid rgba(201,168,76,0.2)">🌍 ${esc(situation.name)}</span>`;
+    }
+
+    // v0.5: Show damage modifiers if present
+    const dmgMods = node.damage_modifiers;
+    if (dmgMods && dmgMods.length > 0) {
+        for (const mod of dmgMods) {
+            const sign = mod.delta > 0 ? "+" : "";
+            const color = mod.delta > 0 ? "var(--forest-lt)" : "var(--blood-bright)";
+            html += ` <span style="color:${color};font-size:10px;opacity:0.8">[${esc(mod.id)} ${sign}${mod.delta}]</span>`;
+        }
     }
 
     el.innerHTML = html;

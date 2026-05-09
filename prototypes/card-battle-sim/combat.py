@@ -14,6 +14,44 @@ from game_state import BattleUnit, Battlefield
 from triggers import IMPERIAL_GUARD_ATK_CAP
 
 
+def maybe_mark_shaken(unit: BattleUnit, damage_taken: int, log: list = None) -> bool:
+    """Apply 动摇/Shaken after damage if a surviving unit is at or below half base HP."""
+    if damage_taken < 2 or unit.is_dead:
+        return False
+    if unit.current_hp * 2 > unit.base_max_hp:
+        return False
+    if not unit.mark_shaken():
+        return False
+    if log is not None:
+        log.append(f"  ⚑ {unit.card.name} 动摇")
+    return True
+
+
+def is_under_morale_pressure(player, battlefield, player_idx: int) -> bool:
+    """Return True if player meets Shaken Pressure conditions (HQ <= 7 or 2+ units lost this round)."""
+    if player.hq_hp <= 7:
+        return True
+    lost = battlefield.p1_units_lost_this_round if player_idx == 0 else battlefield.p2_units_lost_this_round
+    return lost >= 2
+
+
+def maybe_mark_shaken_with_pressure(unit: BattleUnit, damage_taken: int,
+                                     under_pressure: bool, log: list = None) -> bool:
+    """Apply Shaken with reduced threshold (1 damage) when under pressure, else use normal 2 threshold."""
+    if unit.is_dead:
+        return False
+    threshold = 1 if under_pressure else 2
+    if damage_taken < threshold:
+        return False
+    if unit.current_hp * 2 > unit.base_max_hp:
+        return False
+    if not unit.mark_shaken():
+        return False
+    if log is not None:
+        log.append(f"  ⚑ {unit.card.name} 动摇")
+    return True
+
+
 def effective_attack(unit: BattleUnit, battlefield: Battlefield, owner_idx: int) -> int:
     """计算单位在战场上下文中的实际攻击力，应用光环类关键词。
 
@@ -46,6 +84,9 @@ def effective_attack(unit: BattleUnit, battlefield: Battlefield, owner_idx: int)
             if u.card.subfaction and u.card.subfaction.value == "imperial_guard"
         )
         atk += min(guard_count, IMPERIAL_GUARD_ATK_CAP)
+
+    if unit.is_shaken:
+        atk = max(0, atk - 1)
 
     return atk
 
@@ -138,6 +179,75 @@ def calculate_damage(
         damage_to_attacker = defender_attack
     
     return (damage_to_defender, damage_to_attacker)
+
+
+def calculate_damage_with_situation(
+    attacker: BattleUnit,
+    defender: BattleUnit,
+    battlefield: Battlefield,
+    attacker_attack_override: Optional[int] = None,
+    defender_attack_override: Optional[int] = None,
+    cannon_smoke_suppresses_qishe: bool = False,
+    synergy_bonus: int = 0,
+) -> Tuple[int, int]:
+    """calculate_damage with battlefield situation modifiers applied.
+
+    Modifier order: base → keyword → situation → synergy → evasion → final.
+    """
+    # Step 1-2: Get base damage with keywords
+    dmg_def, dmg_atk = calculate_damage(
+        attacker, defender,
+        attacker_attack_override=attacker_attack_override,
+        defender_attack_override=defender_attack_override,
+    )
+
+    # If evasion triggered (returned 0,0), don't modify further
+    if dmg_def == 0 and dmg_atk == 0 and "闪避" in defender.card.keywords:
+        return (0, 0)
+
+    # Step 3: Cannon Smoke suppresses 齐射 on first attack this action
+    if cannon_smoke_suppresses_qishe and "齐射" in attacker.card.keywords:
+        # The 齐射 bonus was +1 in calculate_damage for units that haven't acted
+        # Since the caller tracks attacks_this_action separately from has_acted_this_turn,
+        # we check: if attacker hasn't acted yet AND cannon_smoke is active, remove 齐射 bonus
+        if not attacker.has_acted_this_turn:
+            dmg_def = max(0, dmg_def - 1)
+
+    # Step 3 continued: Dense Fog reduces ranged damage
+    if battlefield.current_situation_id == "dense_fog":
+        if "远程" in attacker.card.keywords and dmg_def > 0:
+            dmg_def = max(1, dmg_def - 1)
+
+    # Step 4: Synergy bonuses
+    if synergy_bonus > 0:
+        dmg_def += synergy_bonus
+
+    return (dmg_def, dmg_atk)
+
+
+def is_cannon_smoke_suppressed(battlefield: Battlefield, attacks_this_action: int) -> bool:
+    """Return True if Cannon Smoke should suppress 齐射 for this attack."""
+    return battlefield.current_situation_id == "cannon_smoke" and attacks_this_action == 0
+
+
+def apply_synergy_bonus(
+    attacker: BattleUnit, defender: BattleUnit,
+    battlefield: Battlefield, attacker_player_idx: int,
+) -> int:
+    """Return total synergy damage bonus for this attack. Max 1 synergy bonus per attack."""
+    # Infantry + Artillery: artillery gets +1 vs units if infantry in same slot
+    if attacker.card.unit_type == UnitType.ARTILLERY:
+        for line in (Line.REAR, Line.MAIN):
+            for friendly in battlefield.get_line(attacker_player_idx, line):
+                if (friendly.slot == attacker.slot
+                        and friendly.card.unit_type == UnitType.INFANTRY):
+                    return 1
+
+    # Cavalry vs Shaken: +1 damage
+    if attacker.card.unit_type == UnitType.CAVALRY and defender.is_shaken:
+        return 1
+
+    return 0
 
 
 def find_attack_targets(
@@ -236,20 +346,36 @@ def execute_attack(
     battlefield: Optional[Battlefield] = None,
     attacker_player_idx: Optional[int] = None,
     attack_bonus: int = 0,
+    cannon_smoke_suppresses_qishe: bool = False,
+    enable_unit_synergies: bool = False,
+    under_pressure: bool = False,
 ) -> dict:
     """执行一次攻击，返回结算结果。
 
     若提供 battlefield 与 attacker_player_idx，则会应用光环类关键词
     （军团联动 / 死神威慑）到双方的有效攻击力。
     """
+    synergy_bonus = 0
+    if enable_unit_synergies and battlefield is not None and attacker_player_idx is not None:
+        synergy_bonus = apply_synergy_bonus(attacker, defender, battlefield, attacker_player_idx)
+
     if battlefield is not None and attacker_player_idx is not None:
         attacker_atk = effective_attack(attacker, battlefield, attacker_player_idx) + attack_bonus
         defender_atk = effective_attack(defender, battlefield, 1 - attacker_player_idx)
-        dmg_def, dmg_atk = calculate_damage(
-            attacker, defender,
-            attacker_attack_override=attacker_atk,
-            defender_attack_override=defender_atk,
-        )
+        if battlefield.current_situation_id or synergy_bonus > 0:
+            dmg_def, dmg_atk = calculate_damage_with_situation(
+                attacker, defender, battlefield,
+                attacker_attack_override=attacker_atk,
+                defender_attack_override=defender_atk,
+                cannon_smoke_suppresses_qishe=cannon_smoke_suppresses_qishe,
+                synergy_bonus=synergy_bonus,
+            )
+        else:
+            dmg_def, dmg_atk = calculate_damage(
+                attacker, defender,
+                attacker_attack_override=attacker_atk,
+                defender_attack_override=defender_atk,
+            )
     else:
         dmg_def, dmg_atk = calculate_damage(attacker, defender)
 
@@ -257,10 +383,23 @@ def execute_attack(
     attacker.current_hp -= dmg_atk
     attacker.has_acted_this_turn = True
 
+    if under_pressure:
+        maybe_mark_shaken_with_pressure(defender, dmg_def, under_pressure, log)
+        maybe_mark_shaken_with_pressure(attacker, dmg_atk, under_pressure, log)
+    else:
+        maybe_mark_shaken(defender, dmg_def, log)
+        maybe_mark_shaken(attacker, dmg_atk, log)
+
     # v0.3B: On Wounded trigger — fires when current_hp drops below base_max_hp
     if dmg_def > 0 and defender.current_hp > 0 and not defender.on_wounded_exhausted:
         if defender.current_hp < defender.base_max_hp:
             defender.on_wounded_exhausted = True
+
+    # v0.5: Track damage modifiers for export metadata
+    damage_modifiers = []
+    if synergy_bonus > 0:
+        synergy_id = "infantry_artillery" if attacker.card.unit_type == UnitType.ARTILLERY else "cavalry_pursuit"
+        damage_modifiers.append({"source": "synergy", "id": synergy_id, "delta": synergy_bonus})
 
     result = {
         "attacker": attacker.card.name,
@@ -274,6 +413,7 @@ def execute_attack(
         "defender_pos": {"line": defender.current_line.value, "slot": defender.slot},
         "defender_hp_after": max(0, defender.current_hp),
         "attacker_hp_after": max(0, attacker.current_hp),
+        "damage_modifiers": damage_modifiers,
     }
     
     # 突破：杀死目标后溢出伤害打 HQ

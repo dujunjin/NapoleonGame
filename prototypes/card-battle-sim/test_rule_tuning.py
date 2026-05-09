@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+import game
 from cards import Card, CardType, Faction, Line, SubFaction, UnitType
 from cards import DECK_BUILDERS
 from combat import execute_attack, find_attack_targets, effective_attack
@@ -10,7 +11,7 @@ from game import (
     MAX_ORDERS, STARTING_HQ_HP, MAX_TURNS, OPERATIONAL_PRESSURE_START_TURN,
 )
 from export_match import play_and_export
-from ai import choose_units_to_advance, ai_attack_phase
+from ai import choose_attack_target, choose_units_to_advance, ai_attack_phase
 from game_state import Battlefield, BattleUnit, Player
 from commanders import COMMANDERS, DEFAULT_COMMANDERS, CommanderId, get_default_commander
 from objectives import ObjectiveId, OBJECTIVES, assign_objectives, complete_objective
@@ -341,6 +342,196 @@ class RuleTuningTests(unittest.TestCase):
                          current_hp=4, current_line=Line.SKIRMISH, slot=2, deployed_this_turn=False)
         bf.p1_skirmish = [dh2]
         self.assertEqual(effective_attack(enemy, bf, 1), 2)
+
+    def test_shaken_survivor_at_or_below_half_hp_after_damage(self):
+        attacker = BattleUnit(
+            card=self.make_card("压制火力", attack=2, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        defender = BattleUnit(
+            card=self.make_card("受创步兵", attack=1, health=4),
+            current_hp=4,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+
+        execute_attack(attacker, defender, log=[])
+
+        self.assertEqual(defender.current_hp, 2)
+        self.assertTrue(getattr(defender, "is_shaken", False), "surviving unit at half HP should become Shaken")
+
+    def test_shaken_not_applied_above_half_hp_or_to_dead_units(self):
+        light_attacker = BattleUnit(
+            card=self.make_card("轻压制", attack=1, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        healthy_defender = BattleUnit(
+            card=self.make_card("稳固步兵", attack=0, health=4),
+            current_hp=4,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        execute_attack(light_attacker, healthy_defender, log=[])
+        self.assertFalse(getattr(healthy_defender, "is_shaken", False))
+
+        lethal_attacker = BattleUnit(
+            card=self.make_card("致命齐射", attack=4, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        doomed_defender = BattleUnit(
+            card=self.make_card("崩溃单位", attack=0, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        execute_attack(lethal_attacker, doomed_defender, log=[])
+        self.assertTrue(doomed_defender.is_dead)
+        self.assertFalse(getattr(doomed_defender, "is_shaken", False), "destroyed units should not carry Shaken")
+
+        player = Player(name="HQ", faction=Faction.FRANCE, hq_hp=14)
+        self.assertFalse(hasattr(player, "is_shaken"), "HQ/player state must not use Shaken")
+
+    def test_shaken_does_not_stack_or_create_extra_bookkeeping(self):
+        unit = BattleUnit(
+            card=self.make_card("已动摇步兵", attack=2, health=4),
+            current_hp=2,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        unit.is_shaken = True
+        attrs_before = set(vars(unit).keys())
+
+        attacker = BattleUnit(
+            card=self.make_card("继续压制", attack=1, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        execute_attack(attacker, unit, log=[])
+
+        self.assertTrue(getattr(unit, "is_shaken", False))
+        self.assertEqual(attrs_before, set(vars(unit).keys()), "reapplying Shaken should not add stack/timer fields")
+
+    def test_shaken_reduces_effective_attack_minimum_zero(self):
+        bf = Battlefield()
+        unit = BattleUnit(
+            card=self.make_card("动摇攻击者", attack=3, health=4),
+            current_hp=2,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        unit.is_shaken = True
+        bf.p1_main = [unit]
+        self.assertEqual(effective_attack(unit, bf, 0), 2)
+
+        exhausted = BattleUnit(
+            card=self.make_card("低攻动摇", attack=0, health=2),
+            current_hp=1,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        exhausted.is_shaken = True
+        bf.p1_main = [exhausted]
+        self.assertEqual(effective_attack(exhausted, bf, 0), 0)
+
+    def test_shaken_units_cannot_advance(self):
+        battlefield = Battlefield()
+        player = Player(name="P1", faction=Faction.FRANCE, current_orders=3)
+        shaken_unit = BattleUnit(
+            card=self.make_card("动摇待前压", cost=2),
+            current_hp=1,
+            current_line=Line.MAIN,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        shaken_unit.is_shaken = True
+        battlefield.p1_main.append(shaken_unit)
+
+        self.assertEqual(
+            choose_units_to_advance(player, battlefield, 0, from_line=Line.MAIN, to_line=Line.SKIRMISH),
+            [],
+        )
+
+    def test_ai_modestly_prefers_shaken_enemy_when_other_scores_tie(self):
+        battlefield = Battlefield()
+        attacker = BattleUnit(
+            card=self.make_card("攻击者", attack=1, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        steady = BattleUnit(
+            card=self.make_card("稳固目标", attack=1, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        shaken = BattleUnit(
+            card=self.make_card("动摇目标", attack=1, health=3),
+            current_hp=3,
+            current_line=Line.MAIN,
+            deployed_this_turn=False,
+        )
+        shaken.is_shaken = True
+
+        self.assertIs(choose_attack_target(attacker, [steady, shaken], battlefield, 0), shaken)
+
+    def test_shaken_recovers_only_if_present_at_owner_turn_start(self):
+        recover = getattr(game, "resolve_morale_end_of_turn", None)
+        self.assertIsNotNone(recover, "game.resolve_morale_end_of_turn should clear eligible Shaken markers")
+
+        battlefield = Battlefield()
+        unit = BattleUnit(
+            card=self.make_card("重整步兵", attack=2, health=4),
+            current_hp=2,
+            current_line=Line.MAIN,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        unit.is_shaken = True
+        battlefield.p1_main.append(unit)
+        recover(0, battlefield, {id(unit)}, log=[])
+        self.assertFalse(unit.is_shaken)
+
+    def test_shaken_from_counter_damage_does_not_clear_same_turn(self):
+        recover = getattr(game, "resolve_morale_end_of_turn", None)
+        self.assertIsNotNone(recover, "game.resolve_morale_end_of_turn should preserve newly Shaken markers")
+
+        battlefield = Battlefield()
+        unit = BattleUnit(
+            card=self.make_card("本回合动摇", attack=2, health=4),
+            current_hp=2,
+            current_line=Line.MAIN,
+            slot=1,
+            deployed_this_turn=False,
+        )
+        unit.is_shaken = True
+        battlefield.p1_main.append(unit)
+        recover(0, battlefield, set(), log=[])
+        self.assertTrue(unit.is_shaken)
+
+    def test_shaken_unit_cannot_be_advanced_by_event_card(self):
+        """动摇单位不能被事件卡推进"""
+        bf = Battlefield()
+        shaken = BattleUnit(
+            card=self.make_card("动摇步兵", cost=4, unit_type=UnitType.INFANTRY),
+            current_hp=2, current_line=Line.REAR, slot=1, deployed_this_turn=False,
+        )
+        shaken.is_shaken = True
+        bf.p1_rear = [shaken]
+        event = Card("贝尔蒂埃的行军表", 1, 0, 0, UnitType.INFANTRY, Faction.FRANCE,
+                     Line.REAR, [], CardType.EVENT, "advance_friendly_one_no_attack")
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=20,
+                    hand=[event], max_orders=1, current_orders=1)
+
+        self.assertFalse(deploy_card(p1, event, bf, 0))
+        self.assertEqual(shaken.current_line, Line.REAR)
 
     def test_lava_tactics_returns_attacker_to_rear(self):
         """熔岩战术：攻击后，存活则撤回 REAR"""
@@ -1320,6 +1511,313 @@ class RuleTuningTests(unittest.TestCase):
                               deployed_this_turn=False)
         result = execute_attack(cossack, defender, log=[], battlefield=bf, attacker_player_idx=0)
         self.assertTrue(result["attacker_killed"])
+
+
+class BattlefieldSituationTests(unittest.TestCase):
+    def test_feature_flags_exist_and_enabled(self):
+        self.assertTrue(game.ENABLE_BATTLEFIELD_SITUATIONS)
+        self.assertTrue(game.ENABLE_COMMANDER_REACTIONS)
+        self.assertTrue(game.ENABLE_UNIT_SYNERGIES)
+        self.assertTrue(game.ENABLE_SHAKEN_PRESSURE)
+
+    def test_situation_cycle_is_deterministic_by_seed(self):
+        cycle_a = game.initialize_situation_cycle(42)
+        cycle_b = game.initialize_situation_cycle(42)
+        self.assertEqual(cycle_a, cycle_b)
+        self.assertEqual(len(cycle_a), 4)
+        self.assertEqual(set(cycle_a), {"dense_fog", "mud", "cannon_smoke", "stable_supply"})
+
+    def test_situation_cycle_different_seeds_are_valid(self):
+        cycle = game.initialize_situation_cycle(7)
+        self.assertEqual(len(set(cycle)), 4)
+
+    def test_situation_starts_at_round_3(self):
+        cycle = ["dense_fog", "mud", "cannon_smoke", "stable_supply"]
+        self.assertIsNone(game.get_situation_for_turn(0, cycle))
+        self.assertIsNone(game.get_situation_for_turn(2, cycle))
+        self.assertEqual(game.get_situation_for_turn(3, cycle), "dense_fog")
+
+    def test_situation_advances_every_3_rounds(self):
+        cycle = ["dense_fog", "mud", "cannon_smoke", "stable_supply"]
+        self.assertEqual(game.get_situation_for_turn(3, cycle), "dense_fog")
+        self.assertEqual(game.get_situation_for_turn(5, cycle), "dense_fog")
+        self.assertEqual(game.get_situation_for_turn(6, cycle), "mud")
+        self.assertEqual(game.get_situation_for_turn(9, cycle), "cannon_smoke")
+        self.assertEqual(game.get_situation_for_turn(12, cycle), "stable_supply")
+        self.assertEqual(game.get_situation_for_turn(15, cycle), "dense_fog")  # wraps
+
+    def test_mud_costs_extra_order_for_cavalry(self):
+        bf = Battlefield()
+        cavalry = self.make_cav("测试骑兵")
+        unit = BattleUnit(card=cavalry, current_hp=2, current_line=Line.REAR, slot=1)
+        bf.current_situation_id = "mud"
+        self.assertEqual(game.get_advance_cost(unit, bf), 2)
+
+    def test_mud_does_not_affect_infantry(self):
+        bf = Battlefield()
+        infantry = self.make_card("测试步兵")
+        unit = BattleUnit(card=infantry, current_hp=1, current_line=Line.REAR, slot=1)
+        bf.current_situation_id = "mud"
+        self.assertEqual(game.get_advance_cost(unit, bf), 1)
+
+    def test_normal_advance_cost_without_mud(self):
+        bf = Battlefield()
+        cavalry = self.make_cav("测试骑兵")
+        unit = BattleUnit(card=cavalry, current_hp=2, current_line=Line.REAR, slot=1)
+        self.assertEqual(game.get_advance_cost(unit, bf), 1)
+
+    def test_stable_supply_grants_extra_order(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p1.max_orders = 5
+        p1.current_orders = 5
+        bf = Battlefield()
+        bf.current_situation_id = "stable_supply"
+        game.apply_stable_supply_bonus(p1, bf)
+        self.assertEqual(p1.current_orders, 6)
+
+    def test_stable_supply_caps_at_max_orders(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p1.max_orders = game.MAX_ORDERS
+        p1.current_orders = game.MAX_ORDERS
+        bf = Battlefield()
+        bf.current_situation_id = "stable_supply"
+        game.apply_stable_supply_bonus(p1, bf)
+        self.assertEqual(p1.current_orders, game.MAX_ORDERS)
+
+    def test_no_supply_bonus_without_situation(self):
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p1.max_orders = 5
+        p1.current_orders = 5
+        bf = Battlefield()
+        game.apply_stable_supply_bonus(p1, bf)
+        self.assertEqual(p1.current_orders, 5)
+
+    def test_dense_fog_reduces_ranged_unit_damage(self):
+        bf = Battlefield()
+        bf.current_situation_id = "dense_fog"
+        artillery = Card(name="炮兵", cost=3, attack=3, health=3,
+                         unit_type=UnitType.ARTILLERY, faction=Faction.FRANCE,
+                         deploy_line=Line.REAR, keywords=["远程"])
+        attacker = BattleUnit(card=artillery, current_hp=3, current_line=Line.REAR, slot=1)
+        infantry = Card(name="步兵", cost=1, attack=1, health=3,
+                        unit_type=UnitType.INFANTRY, faction=Faction.PRUSSIA,
+                        deploy_line=Line.MAIN, keywords=[])
+        defender = BattleUnit(card=infantry, current_hp=3, current_line=Line.MAIN, slot=1)
+        from combat import calculate_damage_with_situation
+        dmg_def, dmg_atk = calculate_damage_with_situation(attacker, defender, bf)
+        # Artillery atk 3 + 1 vs non-formation infantry = 4, -1 fog = 3
+        self.assertEqual(dmg_def, 3)
+
+    def test_dense_fog_does_not_reduce_non_ranged(self):
+        bf = Battlefield()
+        bf.current_situation_id = "dense_fog"
+        inf_a = Card(name="攻击步兵", cost=1, attack=2, health=2,
+                     unit_type=UnitType.INFANTRY, faction=Faction.FRANCE,
+                     deploy_line=Line.MAIN, keywords=[])
+        attacker = BattleUnit(card=inf_a, current_hp=2, current_line=Line.MAIN, slot=1)
+        inf_d = Card(name="防御步兵", cost=1, attack=1, health=3,
+                     unit_type=UnitType.INFANTRY, faction=Faction.PRUSSIA,
+                     deploy_line=Line.MAIN, keywords=[])
+        defender = BattleUnit(card=inf_d, current_hp=3, current_line=Line.MAIN, slot=1)
+        from combat import calculate_damage_with_situation
+        dmg_def, _ = calculate_damage_with_situation(attacker, defender, bf)
+        self.assertEqual(dmg_def, 2)  # No fog penalty for non-ranged
+
+    def test_cannon_smoke_suppresses_qishe(self):
+        from combat import is_cannon_smoke_suppressed
+        bf = Battlefield()
+        bf.current_situation_id = "cannon_smoke"
+        self.assertTrue(is_cannon_smoke_suppressed(bf, 0))
+        self.assertFalse(is_cannon_smoke_suppressed(bf, 1))
+
+    def test_cannon_smoke_no_effect_without_situation(self):
+        from combat import is_cannon_smoke_suppressed
+        bf = Battlefield()
+        self.assertFalse(is_cannon_smoke_suppressed(bf, 0))
+
+    def make_card(self, name, cost=1, attack=1, health=1, keywords=None, unit_type=UnitType.INFANTRY):
+        return Card(name=name, cost=cost, attack=attack, health=health,
+                    unit_type=unit_type, faction=Faction.FRANCE,
+                    deploy_line=Line.REAR, keywords=keywords or [])
+
+    def make_cav(self, name, cost=2, attack=2, health=2, keywords=None):
+        return Card(name=name, cost=cost, attack=attack, health=health,
+                    unit_type=UnitType.CAVALRY, faction=Faction.FRANCE,
+                    deploy_line=Line.REAR, keywords=keywords or [])
+
+
+class CommanderReactionTests(unittest.TestCase):
+    def test_reaction_state_exists_on_player(self):
+        p = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        self.assertFalse(p.reaction_used)
+        self.assertEqual(p.reaction_turn, 0)
+
+    def test_napoleon_reaction_grants_order_on_hq_damage(self):
+        bf = Battlefield()
+        p1 = Player(name="P1-France", faction=Faction.FRANCE, hq_hp=14)
+        p1.commander_id = "napoleon"
+        p1.max_orders = 5
+        p1.current_orders = 3
+        p2 = Player(name="P2-Russia", faction=Faction.RUSSIA, hq_hp=14)
+        with patch.object(game, 'ENABLE_COMMANDER_REACTIONS', True):
+            triggered = game.try_commander_reaction(p1, p2, bf, 0, "hq_damage", 5, [])
+        self.assertTrue(triggered)
+        self.assertTrue(p1.reaction_used)
+        self.assertEqual(p1.current_orders, 4)
+        self.assertEqual(p1.reaction_turn, 5)
+
+    def test_reaction_fires_only_once(self):
+        bf = Battlefield()
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p1.commander_id = "napoleon"
+        p1.max_orders = 5
+        p1.current_orders = 3
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        with patch.object(game, 'ENABLE_COMMANDER_REACTIONS', True):
+            game.try_commander_reaction(p1, p2, bf, 0, "hq_damage", 5, [])
+            p1.current_orders = 3
+            triggered = game.try_commander_reaction(p1, p2, bf, 0, "hq_damage", 6, [])
+        self.assertFalse(triggered)
+        self.assertEqual(p1.current_orders, 3)
+
+    def test_reaction_disabled_by_flag(self):
+        bf = Battlefield()
+        p1 = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        p1.commander_id = "napoleon"
+        p1.max_orders = 5
+        p1.current_orders = 3
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        with patch.object(game, 'ENABLE_COMMANDER_REACTIONS', False):
+            triggered = game.try_commander_reaction(p1, p2, bf, 0, "hq_damage", 5, [])
+        self.assertFalse(triggered)
+
+    def test_blucher_creates_token(self):
+        bf = Battlefield()
+        p1 = Player(name="P1", faction=Faction.PRUSSIA, hq_hp=14)
+        p1.commander_id = "blucher"
+        p2 = Player(name="P2", faction=Faction.RUSSIA, hq_hp=14)
+        with patch.object(game, 'ENABLE_COMMANDER_REACTIONS', True):
+            triggered = game.try_commander_reaction(p1, p2, bf, 0, "main_line_empty", 3, [])
+        self.assertTrue(triggered)
+        self.assertTrue(any(u.card.name == "后备国民军" for u in bf.p1_rear))
+
+    def test_kutuzov_heals_most_damaged_unit(self):
+        bf = Battlefield()
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=14)
+        p1.commander_id = "kutuzov"
+        p2 = Player(name="P2", faction=Faction.FRANCE, hq_hp=14)
+        card = Card(name="测试", cost=1, attack=2, health=4,
+                    unit_type=UnitType.INFANTRY, faction=Faction.RUSSIA,
+                    deploy_line=Line.REAR, keywords=[])
+        unit = BattleUnit(card=card, current_hp=1, current_line=Line.REAR, slot=0)
+        bf.p2_rear.append(unit)  # player_idx=1 for Russia
+        with patch.object(game, 'ENABLE_COMMANDER_REACTIONS', True):
+            triggered = game.try_commander_reaction(p1, p2, bf, 1, "hq_damaged", 4, [])
+        self.assertTrue(triggered)
+        self.assertEqual(unit.current_hp, 2)
+
+    def test_kutuzov_heals_hq_if_no_damaged_units(self):
+        bf = Battlefield()
+        p1 = Player(name="P1", faction=Faction.RUSSIA, hq_hp=10)
+        p1.commander_id = "kutuzov"
+        p2 = Player(name="P2", faction=Faction.FRANCE, hq_hp=14)
+        with patch.object(game, 'ENABLE_COMMANDER_REACTIONS', True):
+            triggered = game.try_commander_reaction(p1, p2, bf, 1, "hq_damaged", 4, [])
+        self.assertTrue(triggered)
+        self.assertEqual(p1.hq_hp, 11)
+
+
+class UnitSynergyTests(unittest.TestCase):
+    def test_infantry_artillery_synergy_bonus(self):
+        bf = Battlefield()
+        artillery = Card(name="炮兵", cost=3, attack=3, health=3,
+                         unit_type=UnitType.ARTILLERY, faction=Faction.FRANCE,
+                         deploy_line=Line.REAR, keywords=["远程"])
+        arty_unit = BattleUnit(card=artillery, current_hp=3, current_line=Line.REAR, slot=1)
+        infantry = Card(name="步兵", cost=1, attack=2, health=3,
+                        unit_type=UnitType.INFANTRY, faction=Faction.FRANCE,
+                        deploy_line=Line.MAIN, keywords=[])
+        inf_unit = BattleUnit(card=infantry, current_hp=3, current_line=Line.MAIN, slot=1)
+        bf.p1_rear = [arty_unit]
+        bf.p1_main = [inf_unit]
+        target = Card(name="敌步兵", cost=1, attack=1, health=3,
+                      unit_type=UnitType.INFANTRY, faction=Faction.PRUSSIA,
+                      deploy_line=Line.MAIN, keywords=[])
+        defender = BattleUnit(card=target, current_hp=3, current_line=Line.MAIN, slot=1)
+        bf.p2_main = [defender]
+        from combat import apply_synergy_bonus
+        bonus = apply_synergy_bonus(arty_unit, defender, bf, 0)
+        self.assertEqual(bonus, 1)
+
+    def test_cavalry_vs_shaken_synergy(self):
+        bf = Battlefield()
+        cavalry = Card(name="骑兵", cost=2, attack=2, health=2,
+                       unit_type=UnitType.CAVALRY, faction=Faction.FRANCE,
+                       deploy_line=Line.REAR, keywords=[])
+        cav_unit = BattleUnit(card=cavalry, current_hp=2, current_line=Line.MAIN, slot=1)
+        target = Card(name="敌步兵", cost=1, attack=1, health=3,
+                      unit_type=UnitType.INFANTRY, faction=Faction.PRUSSIA,
+                      deploy_line=Line.MAIN, keywords=[])
+        defender = BattleUnit(card=target, current_hp=1, current_line=Line.MAIN, slot=1)
+        defender.is_shaken = True
+        from combat import apply_synergy_bonus
+        bonus = apply_synergy_bonus(cav_unit, defender, bf, 0)
+        self.assertEqual(bonus, 1)
+
+    def test_no_synergy_without_matching_conditions(self):
+        bf = Battlefield()
+        infantry_a = Card(name="步兵A", cost=1, attack=2, health=2,
+                          unit_type=UnitType.INFANTRY, faction=Faction.FRANCE,
+                          deploy_line=Line.MAIN, keywords=[])
+        attacker = BattleUnit(card=infantry_a, current_hp=2, current_line=Line.MAIN, slot=1)
+        infantry_d = Card(name="步兵D", cost=1, attack=1, health=3,
+                          unit_type=UnitType.INFANTRY, faction=Faction.PRUSSIA,
+                          deploy_line=Line.MAIN, keywords=[])
+        defender = BattleUnit(card=infantry_d, current_hp=3, current_line=Line.MAIN, slot=1)
+        from combat import apply_synergy_bonus
+        bonus = apply_synergy_bonus(attacker, defender, bf, 0)
+        self.assertEqual(bonus, 0)
+
+
+class ShakenPressureTests(unittest.TestCase):
+    def test_pressure_active_when_hq_low(self):
+        from combat import is_under_morale_pressure
+        p = Player(name="P1", faction=Faction.FRANCE, hq_hp=7)
+        bf = Battlefield()
+        self.assertTrue(is_under_morale_pressure(p, bf, 0))
+
+    def test_pressure_not_active_when_hq_high(self):
+        from combat import is_under_morale_pressure
+        p = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        bf = Battlefield()
+        self.assertFalse(is_under_morale_pressure(p, bf, 0))
+
+    def test_pressure_active_when_2_units_lost(self):
+        from combat import is_under_morale_pressure
+        p = Player(name="P1", faction=Faction.FRANCE, hq_hp=14)
+        bf = Battlefield()
+        bf.p1_units_lost_this_round = 2
+        self.assertTrue(is_under_morale_pressure(p, bf, 0))
+
+    def test_pressure_lower_damage_threshold(self):
+        from combat import maybe_mark_shaken_with_pressure
+        card = Card(name="测试", cost=1, attack=1, health=4,
+                    unit_type=UnitType.INFANTRY, faction=Faction.FRANCE,
+                    deploy_line=Line.MAIN, keywords=[])
+        unit = BattleUnit(card=card, current_hp=2, current_line=Line.MAIN, slot=1)
+        result = maybe_mark_shaken_with_pressure(unit, damage_taken=1, under_pressure=True, log=[])
+        self.assertTrue(result)
+        self.assertTrue(unit.is_shaken)
+
+    def test_normal_threshold_without_pressure(self):
+        from combat import maybe_mark_shaken_with_pressure
+        card = Card(name="测试", cost=1, attack=1, health=4,
+                    unit_type=UnitType.INFANTRY, faction=Faction.FRANCE,
+                    deploy_line=Line.MAIN, keywords=[])
+        unit = BattleUnit(card=card, current_hp=2, current_line=Line.MAIN, slot=1)
+        result = maybe_mark_shaken_with_pressure(unit, damage_taken=1, under_pressure=False, log=[])
+        self.assertFalse(result)
+        self.assertFalse(unit.is_shaken)
 
 
 if __name__ == "__main__":

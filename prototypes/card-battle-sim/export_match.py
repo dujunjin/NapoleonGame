@@ -18,6 +18,36 @@ from game import (
 )
 
 
+SITUATION_NAMES = {
+    "dense_fog": "浓雾", "mud": "泥泞",
+    "cannon_smoke": "炮烟", "stable_supply": "补给线稳定",
+}
+
+
+def skirmish_state_label(bf: Battlefield) -> str:
+    """Return a human-readable skirmish state label for the battlefield."""
+    p1 = len(bf.p1_skirmish)
+    p2 = len(bf.p2_skirmish)
+    if p1 == 0 and p2 == 0:
+        return "未接敌"
+    if p1 > 0 and p2 == 0:
+        return "我方压制"
+    if p1 == 0 and p2 > 0:
+        return "敌方压制"
+    return "交战"
+
+
+def estimate_exported_hq_threat(attacker_units: list, defender_main: list, defender_skirmish: list) -> int:
+    """Estimate total attack power that could hit HQ if defenders are cleared."""
+    if defender_main or defender_skirmish:
+        return 0
+    total = 0
+    for unit in attacker_units:
+        if unit.current_line.value == "散兵线" or "远程" in unit.card.keywords:
+            total += max(0, unit.card.attack)
+    return total
+
+
 def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
     """把当前战场状态序列化为 dict"""
     def unit_uid(owner: str, line: Line, u: BattleUnit) -> str:
@@ -34,6 +64,10 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
             "cost": u.card.cost,
             "slot": u.slot,
             "keywords": list(u.card.keywords),
+            "is_shaken": u.is_shaken,
+            "can_act": u.can_act,
+            "has_acted_this_turn": u.has_acted_this_turn,
+            "deployed_this_turn": u.deployed_this_turn,
         }
     
     return {
@@ -87,6 +121,24 @@ def snapshot_battlefield(p1: Player, p2: Player, bf: Battlefield) -> dict:
                 "reward_pending": p2.objective_reward_pending,
             },
         },
+        "ui_summary": {
+            "skirmish_state": skirmish_state_label(bf),
+            "p1_hq_threat": estimate_exported_hq_threat(
+                bf.p1_rear + bf.p1_main + bf.p1_skirmish,
+                bf.p2_main, bf.p2_skirmish),
+            "p2_hq_threat": estimate_exported_hq_threat(
+                bf.p2_rear + bf.p2_main + bf.p2_skirmish,
+                bf.p1_main, bf.p1_skirmish),
+        },
+        # v0.5 Battlefield Situation metadata
+        "battlefield_situation": (
+            {
+                "id": bf.current_situation_id,
+                "name": SITUATION_NAMES.get(bf.current_situation_id, bf.current_situation_id),
+                "started_turn": bf.current_situation_started_turn,
+            }
+            if bf.current_situation_id else None
+        ),
     }
 
 
@@ -100,6 +152,22 @@ def _enrich_event_step(step: dict) -> None:
             step["event_card"] = card
             step["event_effect_text"] = effect
             return
+
+
+def _enrich_commander_reaction(step: dict) -> None:
+    """Parse log for commander reaction markers (⚜) and attach to step."""
+    for line in step.get("log", []):
+        if "⚜" in line:
+            step["commander_reaction"] = line.strip()
+            return
+    step["commander_reaction"] = None
+
+
+def _enrich_damage_modifiers(step: dict) -> None:
+    """Propagate damage_modifiers from attack_event to step level for viewer consumption."""
+    ae = step.get("attack_event")
+    if ae and "damage_modifiers" in ae:
+        step["damage_modifiers"] = ae["damage_modifiers"]
 
 
 def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict:
@@ -204,6 +272,8 @@ def play_and_export(p1_faction: Faction, p2_faction: Faction, seed: int) -> dict
         step["action_id"] = idx
         if step["action"] == "event":
             _enrich_event_step(step)
+        _enrich_commander_reaction(step)
+        _enrich_damage_modifiers(step)
 
     return {
         "meta": {

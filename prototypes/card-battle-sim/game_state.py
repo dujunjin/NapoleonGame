@@ -24,6 +24,7 @@ class BattleUnit:
     has_acted_this_turn: bool = False
     deployed_this_turn: bool = True
     has_used_evade: bool = False
+    is_shaken: bool = False
     damage_reduction_turns: int = 0  # 剩余伤害减免回合数（单次受伤最大1）
     # v0.3B trigger state
     on_deploy_fired: bool = False
@@ -47,6 +48,20 @@ class BattleUnit:
         # 部署当回合，没有"冲锋"关键词的不能行动
         if self.deployed_this_turn and "冲锋" not in self.card.keywords:
             return False
+        return True
+
+    def mark_shaken(self) -> bool:
+        """Apply the visible morale marker once; returns True if newly applied."""
+        if self.is_dead or self.is_shaken:
+            return False
+        self.is_shaken = True
+        return True
+
+    def clear_shaken(self) -> bool:
+        """Clear the visible morale marker; returns True if state changed."""
+        if not self.is_shaken:
+            return False
+        self.is_shaken = False
         return True
 
     def __repr__(self):
@@ -92,6 +107,9 @@ class Player:
     objective_reward_pending: Optional[str] = None
     # v0.3B PlayLog for Sequence triggers
     play_log: List[PlayEntry] = field(default_factory=list)
+    # v0.5 Commander Reactions
+    reaction_used: bool = False
+    reaction_turn: int = 0
 
     def draw(self, n: int = 1) -> List[Card]:
         """抽 n 张牌；手牌满或牌库空了就略过（不烧伤，不洗弃牌堆）。"""
@@ -122,6 +140,13 @@ class Battlefield:
     p2_skirmish: List[BattleUnit] = field(default_factory=list)
     p2_main: List[BattleUnit] = field(default_factory=list)
     p2_rear: List[BattleUnit] = field(default_factory=list)
+    # v0.5 Battlefield Situations
+    current_situation_id: Optional[str] = None
+    current_situation_started_turn: int = 0
+    situation_cycle: List[str] = field(default_factory=list)
+    # v0.5 Shaken Pressure tracking
+    p1_units_lost_this_round: int = 0
+    p2_units_lost_this_round: int = 0
 
     def get_line(self, player_idx: int, line: Line) -> List[BattleUnit]:
         """返回指定玩家在指定线的单位列表（可修改）"""

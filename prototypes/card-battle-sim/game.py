@@ -18,6 +18,7 @@ from ai import choose_cards_to_play, ai_attack_phase, choose_units_to_advance
 from cards import Line, UnitType
 from commanders import get_default_commander
 from objectives import assign_objectives
+from combat import maybe_mark_shaken, is_under_morale_pressure
 
 
 # ========== 配置 ==========
@@ -31,6 +32,16 @@ ORDERS_GROWTH_PER_TURN = 1  # 每回合军令+1
 MAX_ORDERS = 16             # 军令上限
 MAX_TURNS = 30              # 倒计时上限（40→30，收紧节奏）
 OPERATIONAL_PRESSURE_START_TURN = 18  # 作战压力起始回合
+
+# v0.5 Battlefield Situation Pack feature flags
+ENABLE_BATTLEFIELD_SITUATIONS = True
+ENABLE_COMMANDER_REACTIONS = True
+ENABLE_UNIT_SYNERGIES = True
+ENABLE_SHAKEN_PRESSURE = True
+
+SITUATION_IDS = ["dense_fog", "mud", "cannon_smoke", "stable_supply"]
+SITUATION_START_ROUND = 3
+SITUATION_DURATION_ROUNDS = 3
 
 
 @dataclass
@@ -220,6 +231,7 @@ def _play_event_card(player: Player, card: Card, battlefield: Battlefield,
         for from_line, to_line in [(Line.REAR, Line.MAIN), (Line.MAIN, Line.SKIRMISH)]:
             candidates = [u for u in battlefield.get_line(player_idx, from_line)
                           if not u.has_acted_this_turn
+                          and not u.is_shaken
                           and battlefield.can_deploy(player_idx, to_line, u.slot)]
             if candidates:
                 target = candidates[0]
@@ -299,6 +311,7 @@ def _play_event_card(player: Player, card: Card, battlefield: Battlefield,
         player.hq_hp -= 1
         for u in enemies:
             u.current_hp -= 1
+            maybe_mark_shaken(u, 1, log)
         battlefield.cleanup_dead()
         _spend_event_card(player, card)
         if log is not None:
@@ -339,6 +352,7 @@ def _play_event_card(player: Player, card: Card, battlefield: Battlefield,
             return False
         for u in all_units:
             u.current_hp -= 1
+            maybe_mark_shaken(u, 1, log)
         battlefield.cleanup_dead()
         _spend_event_card(player, card)
         if log is not None:
@@ -346,6 +360,20 @@ def _play_event_card(player: Player, card: Card, battlefield: Battlefield,
         return True
 
     return False
+
+
+def resolve_morale_end_of_turn(player_idx: int, battlefield: Battlefield,
+                               shaken_at_turn_start: set, log: list = None) -> int:
+    """Clear Shaken only for units that began this owner's active turn Shaken."""
+    recovered = 0
+    for unit in battlefield.all_units(player_idx):
+        if id(unit) not in shaken_at_turn_start:
+            continue
+        if unit.clear_shaken():
+            recovered += 1
+            if log is not None:
+                log.append(f"  ⚑ {unit.card.name} 重整")
+    return recovered
 
 
 def play_turn(
@@ -360,6 +388,10 @@ def play_turn(
 ) -> dict:
     """执行一个回合，返回该回合统计"""
     stats = {"units_played": 0, "hq_damage_dealt": 0}
+    shaken_at_turn_start = {
+        id(unit) for unit in battlefield.all_units(active_idx)
+        if unit.is_shaken
+    }
     
     if log is not None:
         log.append(f"\n=== 回合 {turn_num}：{active.name} 行动 ===")
@@ -370,7 +402,17 @@ def play_turn(
     # 2. 军令恢复
     active.max_orders = advance_max_orders(active.max_orders, turn_num)
     active.current_orders = active.max_orders
-    
+
+    # v0.5: Update battlefield situation and apply supply bonus
+    if ENABLE_BATTLEFIELD_SITUATIONS and battlefield.situation_cycle:
+        old_situation = battlefield.current_situation_id
+        battlefield.current_situation_id = get_situation_for_turn(turn_num, battlefield.situation_cycle)
+        if battlefield.current_situation_id != old_situation:
+            battlefield.current_situation_started_turn = turn_num
+            if log is not None:
+                log.append(f"  🌍 战场态势：{SITUATION_NAMES.get(battlefield.current_situation_id, battlefield.current_situation_id)}")
+        apply_stable_supply_bonus(active, battlefield)
+
     # 重置场上单位的"本回合行动"标记
     for unit in battlefield.all_units(active_idx):
         unit.has_acted_this_turn = False
@@ -380,6 +422,11 @@ def play_turn(
 
     # v0.3B: Reset PlayLog at turn start
     active.play_log = []
+
+    # v0.5: Reset round unit-loss counters at the start of P1's turn (start of new full round)
+    if ENABLE_SHAKEN_PRESSURE and active_idx == 0:
+        battlefield.p1_units_lost_this_round = 0
+        battlefield.p2_units_lost_this_round = 0
     
     if log is not None:
         if drawn:
@@ -407,7 +454,7 @@ def play_turn(
                 stats["events_played"] = stats.get("events_played", 0) + 1
             if sub_steps is not None and snapshot_fn is not None:
                 sub_steps.append({
-                    "action": "deploy",
+                    "action": "deploy" if card.card_type == CardType.UNIT else "event",
                     "log": list(log) if log else [],
                     "state": snapshot_fn(active, opponent, battlefield) if active_idx == 0 else snapshot_fn(opponent, active, battlefield),
                 })
@@ -418,8 +465,11 @@ def play_turn(
     # 先推后方→主力
     rear_advancers = choose_units_to_advance(active, battlefield, active_idx, from_line=Line.REAR, to_line=Line.MAIN)
     for unit in rear_advancers:
-        if active.current_orders < 1:
+        advance_cost = get_advance_cost(unit, battlefield) if ENABLE_BATTLEFIELD_SITUATIONS else 1
+        if active.current_orders < advance_cost:
             break
+        if unit.is_shaken:
+            continue
         if not battlefield.can_deploy(active_idx, Line.MAIN, unit.slot):
             continue
         battlefield.get_line(active_idx, Line.REAR).remove(unit)
@@ -427,10 +477,10 @@ def play_turn(
         unit.has_acted_this_turn = True
         battlefield.get_line(active_idx, Line.MAIN).append(unit)
         battlefield.sort_line(active_idx, Line.MAIN)
-        active.current_orders -= 1
+        active.current_orders -= advance_cost
         stats["advances"] = stats.get("advances", 0) + 1
         if log is not None:
-            log.append(f"  ⇒ {unit.card.name} 后方→主力 槽位{unit.slot + 1}（-1军令）")
+            log.append(f"  ⇒ {unit.card.name} 后方→主力 槽位{unit.slot + 1}（-{advance_cost}军令）")
         if sub_steps is not None and snapshot_fn is not None:
             sub_steps.append({
                 "action": "advance",
@@ -441,8 +491,11 @@ def play_turn(
     # 再推主力→散兵
     main_advancers = choose_units_to_advance(active, battlefield, active_idx, from_line=Line.MAIN, to_line=Line.SKIRMISH)
     for unit in main_advancers:
-        if active.current_orders < 1:
+        advance_cost = get_advance_cost(unit, battlefield) if ENABLE_BATTLEFIELD_SITUATIONS else 1
+        if active.current_orders < advance_cost:
             break
+        if unit.is_shaken:
+            continue
         if not battlefield.can_deploy(active_idx, Line.SKIRMISH, unit.slot):
             continue
         battlefield.get_line(active_idx, Line.MAIN).remove(unit)
@@ -450,7 +503,7 @@ def play_turn(
         unit.has_acted_this_turn = True
         battlefield.get_line(active_idx, Line.SKIRMISH).append(unit)
         battlefield.sort_line(active_idx, Line.SKIRMISH)
-        active.current_orders -= 1
+        active.current_orders -= advance_cost
         # 阿尔科莱精神：到达散兵线时攻击力 +2，伤害减免2回合
         if "阿尔科莱精神" in unit.card.keywords:
             from dataclasses import replace
@@ -460,7 +513,7 @@ def play_turn(
                 log.append(f"    ✨ 阿尔科莱精神：{unit.card.name} 攻击力 +2（现{unit.card.attack}），伤害减免2回合")
         stats["advances"] = stats.get("advances", 0) + 1
         if log is not None:
-            log.append(f"  ⇒ {unit.card.name} 主力→散兵 槽位{unit.slot + 1}（-1军令）")
+            log.append(f"  ⇒ {unit.card.name} 主力→散兵 槽位{unit.slot + 1}（-{advance_cost}军令）")
         if sub_steps is not None and snapshot_fn is not None:
             sub_steps.append({
                 "action": "advance",
@@ -469,10 +522,46 @@ def play_turn(
             })
 
     # 4. 攻击阶段（指挥官能力在攻击前使用）
+    opponent_hq_before = opponent.hq_hp
     use_commander_ability(active, opponent, battlefield, active_idx, turn_num, log)
+
+    # v0.5: Calculate opponent pressure before attack phase
+    opponent_under_pressure = (ENABLE_SHAKEN_PRESSURE
+                               and is_under_morale_pressure(opponent, battlefield, 1 - active_idx))
+
+    # v0.5: Snapshot opponent alive count before attacks for loss tracking
+    opp_alive_before = len(battlefield.all_units(1 - active_idx)) if ENABLE_SHAKEN_PRESSURE else 0
+
     hq_damage = ai_attack_phase(active, opponent, battlefield, active_idx, log,
-                                sub_steps=sub_steps, snapshot_fn=snapshot_fn)
+                                sub_steps=sub_steps, snapshot_fn=snapshot_fn,
+                                enable_unit_synergies=ENABLE_UNIT_SYNERGIES,
+                                under_pressure=opponent_under_pressure)
     stats["hq_damage_dealt"] = hq_damage
+
+    # v0.5: Track opponent units lost this round
+    if ENABLE_SHAKEN_PRESSURE:
+        opp_alive_after = len(battlefield.all_units(1 - active_idx))
+        opp_killed = max(0, opp_alive_before - opp_alive_after)
+        if active_idx == 0:
+            battlefield.p2_units_lost_this_round += opp_killed
+        else:
+            battlefield.p1_units_lost_this_round += opp_killed
+
+    # v0.5: Commander reaction on HQ damage (active player dealt damage)
+    if hq_damage > 0:
+        try_commander_reaction(active, opponent, battlefield, active_idx, "hq_damage", turn_num, log)
+
+    # v0.5: Commander reaction on HQ damaged (opponent's HP decreased)
+    if opponent.hq_hp < opponent_hq_before:
+        try_commander_reaction(opponent, active, battlefield, 1 - active_idx, "hq_damaged", turn_num, log)
+
+    recovered = resolve_morale_end_of_turn(active_idx, battlefield, shaken_at_turn_start, log)
+    if recovered:
+        stats["shaken_recoveries"] = recovered
+
+    # v0.5: Commander reaction on main line cleared
+    if not battlefield.get_line(1 - active_idx, Line.MAIN):
+        try_commander_reaction(opponent, active, battlefield, 1 - active_idx, "main_line_empty", turn_num, log)
     
     if log is not None:
         log.append(f"  状态：P1 HQ={battlefield.p1_rear and 'X' or ''}{active.hq_hp if active_idx == 0 else opponent.hq_hp}, "
@@ -503,6 +592,106 @@ def apply_operational_pressure(p1: Player, p2: Player,
         p2.hq_hp -= 1
         if log is not None:
             log.append("  ⚡ 作战压力：双方均未造成 HQ 伤害，各 HQ -1")
+
+
+def initialize_situation_cycle(seed: int) -> list:
+    """Return a deterministic permutation of SITUATION_IDS for this seed."""
+    rng = random.Random(seed)
+    cycle = list(SITUATION_IDS)
+    rng.shuffle(cycle)
+    return cycle
+
+
+def get_situation_for_turn(turn_num: int, cycle: list) -> Optional[str]:
+    """Return the situation ID active at this turn, or None if before start."""
+    if not cycle or turn_num < SITUATION_START_ROUND:
+        return None
+    idx = ((turn_num - SITUATION_START_ROUND) // SITUATION_DURATION_ROUNDS) % len(cycle)
+    return cycle[idx]
+
+
+def get_advance_cost(unit: BattleUnit, battlefield: Battlefield) -> int:
+    """Return order cost to advance this unit. Mud adds +1 for cavalry."""
+    cost = 1
+    if battlefield.current_situation_id == "mud" and unit.card.unit_type == UnitType.CAVALRY:
+        cost += 1
+    return cost
+
+
+def apply_stable_supply_bonus(player: Player, battlefield: Battlefield) -> None:
+    """If Stable Supply Lines is active, grant +1 current_orders up to MAX_ORDERS."""
+    if battlefield.current_situation_id != "stable_supply":
+        return
+    player.current_orders = min(player.current_orders + 1, MAX_ORDERS)
+
+
+def try_commander_reaction(
+    player: 'Player', opponent: 'Player', battlefield: 'Battlefield',
+    player_idx: int, trigger: str, turn_num: int = 0, log: list = None,
+) -> bool:
+    """Attempt to fire a commander reaction. Returns True if triggered."""
+    if not ENABLE_COMMANDER_REACTIONS:
+        return False
+    if player.reaction_used:
+        return False
+    from commanders import COMMANDER_REACTIONS, CommanderId
+    try:
+        cmd_id = CommanderId(player.commander_id)
+    except (ValueError, KeyError):
+        return False
+    reaction = COMMANDER_REACTIONS.get(cmd_id)
+    if not reaction or reaction.trigger != trigger:
+        return False
+
+    player.reaction_used = True
+    player.reaction_turn = turn_num
+
+    if cmd_id == CommanderId.NAPOLEON:
+        player.current_orders = min(player.current_orders + 1, MAX_ORDERS)
+        if log:
+            log.append(f"  ⚜ 拿破仑反应「战机捕捉」：+1 军令（现{player.current_orders}）")
+
+    elif cmd_id == CommanderId.BLUCHER:
+        bf_line = battlefield.get_line(player_idx, Line.REAR)
+        if len(bf_line) < battlefield.LINE_CAPACITY:
+            slot = battlefield.choose_deploy_slot(player_idx, Line.REAR)
+            if slot is not None:
+                from cards import Card, UnitType
+                token_card = Card(
+                    name="后备国民军", cost=0, attack=1, health=2,
+                    unit_type=UnitType.INFANTRY, faction=player.faction,
+                    deploy_line=Line.REAR, keywords=[],
+                )
+                token_unit = BattleUnit(card=token_card, current_hp=2, current_line=Line.REAR, slot=slot)
+                bf_line.append(token_unit)
+                battlefield.sort_line(player_idx, Line.REAR)
+                if log:
+                    log.append(f"  ⚜ 布吕歇尔反应「顽强集结」：后方生成后备国民军 槽位{slot+1}")
+        else:
+            player.current_orders = min(player.current_orders + 1, MAX_ORDERS)
+            if log:
+                log.append(f"  ⚜ 布吕歇尔反应「顽强集结」：后方已满，+1 军令")
+
+    elif cmd_id == CommanderId.KUTUZOV:
+        units = battlefield.all_units(player_idx)
+        damaged = [u for u in units if u.current_hp < u.base_max_hp and not u.is_dead]
+        if damaged:
+            target = min(damaged, key=lambda u: u.current_hp)
+            target.current_hp = min(target.current_hp + 1, target.base_max_hp)
+            if log:
+                log.append(f"  ⚜ 库图佐夫反应「深纵回撤」：{target.card.name} 恢复 1 HP（现{target.current_hp}）")
+        else:
+            player.hq_hp = min(player.hq_hp + 1, STARTING_HQ_HP)
+            if log:
+                log.append(f"  ⚜ 库图佐夫反应「深纵回撤」：无受伤友军，HQ 恢复 1（现{player.hq_hp}）")
+
+    return True
+
+
+SITUATION_NAMES = {
+    "dense_fog": "浓雾", "mud": "泥泞",
+    "cannon_smoke": "炮烟", "stable_supply": "补给线稳定",
+}
 
 
 def initialize_command_layer(p1: Player, p2: Player, seed: int) -> None:
@@ -642,6 +831,9 @@ def play_one_game(p1_faction: Faction = Faction.FRANCE,
     
     battlefield = Battlefield()
     initialize_command_layer(p1, p2, seed if seed is not None else 0)
+
+    if ENABLE_BATTLEFIELD_SITUATIONS:
+        battlefield.situation_cycle = initialize_situation_cycle(seed if seed is not None else 0)
 
     p1_units_played = 0
     p2_units_played = 0
