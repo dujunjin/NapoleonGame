@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>拿破仑战争 — 可玩 Demo</title>
+<style>
+:root {
+    --void: #0a0c14; --abyss: #0f1220; --slate: #1a1f35; --slate-lt: #252b45;
+    --brass: #c9a84c; --brass-glow: #e0c060; --brass-dim: #8a7530;
+    --blood: #8b1a1a; --blood-bright: #c23030; --blood-glow: #e04040;
+    --smoke: #4a4a5a; --smoke-lt: #6a6a7a; --frost: #5a7a9a;
+    --forest: #2a5a3a; --forest-lt: #4a8a5a; --flame: #e06030;
+    --faction-france: #4a6fa5; --faction-prussia: #6a6a6a; --faction-russia: #3a6a4a;
+    --card-paper: #f0e8d0; --card-paper-dark: #d8c8a0;
+    --font-display: "Georgia", "Noto Serif SC", serif;
+    --font-body: "Hiragino Sans", "PingFang SC", sans-serif;
+    --font-mono: "SF Mono", "Menlo", monospace;
+    --radius: 4px; --radius-lg: 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--font-body); background: var(--void); color: #e0dde8;
+    min-height: 100vh; overflow-x: hidden;
+}
+
+/* === Atmosphere === */
+body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+        linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+        radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 90%, rgba(201,168,76,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.4) 100%);
+}
+
+/* === Faction Select === */
+#faction-select {
+    position: relative; z-index: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; min-height: 100vh; gap: 30px;
+}
+#faction-select h1 {
+    font-family: var(--font-display); font-size: 28px; letter-spacing: 8px;
+    color: var(--brass); text-shadow: 0 0 20px rgba(201,168,76,0.3);
+}
+#faction-select .subtitle { color: var(--smoke-lt); font-size: 14px; letter-spacing: 2px; }
+.faction-cards { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.faction-card {
+    width: 200px; padding: 24px; background: rgba(26,31,53,0.8);
+    border: 1px solid rgba(201,168,76,0.15); border-radius: var(--radius-lg);
+    cursor: pointer; text-align: center; transition: all 0.2s;
+}
+.faction-card:hover { border-color: var(--brass); transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.faction-card .icon { font-size: 40px; margin-bottom: 12px; }
+.faction-card .name { font-family: var(--font-display); font-size: 18px;
+    color: var(--brass); letter-spacing: 2px; margin-bottom: 8px; }
+.faction-card .desc { font-size: 12px; color: var(--smoke-lt); line-height: 1.5; }
+.faction-card.france { border-color: var(--faction-france); }
+.faction-card.france:hover { border-color: var(--faction-france); box-shadow: 0 0 20px rgba(74,111,165,0.3); }
+.faction-card.prussia { border-color: var(--faction-prussia); }
+.faction-card.prussia:hover { border-color: var(--faction-prussia); box-shadow: 0 0 20px rgba(106,106,106,0.3); }
+.faction-card.russia { border-color: var(--faction-russia); }
+.faction-card.russia:hover { border-color: var(--faction-russia); box-shadow: 0 0 20px rgba(58,106,74,0.3); }
+
+/* === Game Screen === */
+#game-screen { display: none; position: relative; z-index: 1;
+    max-width: 1000px; margin: 0 auto; padding: 8px 12px 200px; }
+
+/* Title */
+.game-title {
+    text-align: center; padding: 10px; margin-bottom: 8px;
+    font-family: var(--font-display); font-size: 16px; letter-spacing: 4px;
+    color: var(--brass); text-shadow: 0 0 10px rgba(201,168,76,0.2);
+    border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+
+/* Info Bar */
+.info-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 12px; margin-bottom: 8px;
+    background: rgba(26,31,53,0.8); border: 1px solid rgba(201,168,76,0.1);
+    border-radius: var(--radius); font-size: 12px;
+}
+.info-bar .phase-label { color: var(--brass); font-weight: bold; letter-spacing: 1px; }
+.info-bar .stat { color: var(--smoke-lt); }
+.info-bar .stat b { color: var(--brass); }
+
+/* HQ Strips */
+.hq-strip {
+    display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+    background: rgba(0,0,0,0.3); border-radius: var(--radius);
+    border: 1px solid rgba(201,168,76,0.1); margin-bottom: 6px;
+}
+.hq-strip.enemy { border-left: 3px solid var(--faction-russia); }
+.hq-strip.player { border-left: 3px solid var(--faction-france); }
+.hq-label { font-family: var(--font-display); font-size: 13px; color: var(--smoke-lt); min-width: 70px; }
+.hq-hp-bar { flex: 1; max-width: 180px; height: 14px; background: rgba(0,0,0,0.4);
+    border-radius: 7px; overflow: hidden; border: 1px solid rgba(201,168,76,0.1); }
+.hq-hp-fill { height: 100%; background: linear-gradient(90deg, var(--blood), var(--blood-bright));
+    border-radius: 7px; transition: width 0.5s; }
+.hq-hp-fill.critical { animation: hp-pulse 1s ease-in-out infinite; }
+@keyframes hp-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.hq-hp-text { font-family: var(--font-mono); font-size: 14px; font-weight: bold; color: var(--blood-bright); }
+.hq-strip.hq-hit { animation: hq-hit 0.5s ease-out; }
+@keyframes hq-hit { 0%{transform:translateX(0)} 10%{transform:translateX(-4px)} 20%{transform:translateX(4px)}
+    30%{transform:translateX(-3px)} 40%{transform:translateX(3px)} 100%{transform:translateX(0)} }
+
+/* Battlefield Lines */
+.bf-lines { display: flex; flex-direction: column; gap: 3px; }
+.bf-line {
+    display: flex; align-items: stretch; gap: 0;
+    background: rgba(0,0,0,0.2); border: 1px solid rgba(201,168,76,0.08);
+    border-radius: var(--radius); min-height: 72px; overflow: hidden;
+}
+.bf-line.skirmish-line {
+    background: linear-gradient(to bottom, rgba(201,168,76,0.06), rgba(201,168,76,0.02));
+    border: 1px solid rgba(201,168,76,0.2);
+}
+.bf-line-divider {
+    text-align: center; color: var(--brass-dim); font-size: 9px;
+    letter-spacing: 4px; padding: 1px 0; font-family: var(--font-display); opacity: 0.5;
+}
+.line-label {
+    writing-mode: vertical-rl; width: 22px; min-width: 22px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--smoke); font-size: 10px; letter-spacing: 2px;
+    border-right: 1px solid rgba(201,168,76,0.08); background: rgba(0,0,0,0.1);
+    flex-shrink: 0; font-family: var(--font-display);
+}
+.units-row {
+    flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 4px; padding: 4px; align-items: center;
+}
+.slot {
+    border: 1px dashed rgba(201,168,76,0.08); border-radius: var(--radius);
+    background: rgba(0,0,0,0.06); min-height: 62px; min-width: 0;
+    cursor: default; transition: all 0.2s; position: relative;
+}
+.slot.clickable { cursor: pointer; border-color: var(--brass-dim); }
+.slot.clickable:hover { border-color: var(--brass); background: rgba(201,168,76,0.08); }
+.slot.target { border-color: var(--blood-bright); background: rgba(194,48,48,0.1);
+    cursor: crosshair; animation: target-pulse 0.8s ease-in-out infinite; }
+@keyframes target-pulse { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 8px rgba(194,48,48,0.4)} }
+
+/* Unit Cards on Battlefield */
+.unit-card {
+    background: linear-gradient(135deg, var(--card-paper), var(--card-paper-dark));
+    border: 2px solid rgba(42,42,42,0.5); border-radius: var(--radius);
+    color: #2a2a2a; padding: 3px; font-size: 10px; position: relative;
+    transition: all 0.2s;
+}
+.unit-card.faction-france { border-color: var(--faction-france); }
+.unit-card.faction-prussia { border-color: var(--faction-prussia); }
+.unit-card.faction-russia { border-color: var(--faction-russia); }
+.unit-card.type-骑兵 { background: linear-gradient(135deg, #f2d5d1, #d08070); }
+.unit-card.type-炮兵 { background: linear-gradient(135deg, #ece1be, #c8aa58); }
+.unit-card.type-散兵 { background: linear-gradient(135deg, #dff0cf, #a0c878); }
+.unit-card.type-近卫 { background: linear-gradient(135deg, #eadcf4, #b088cc); }
+.unit-card.can-act { box-shadow: 0 0 6px rgba(201,168,76,0.4); cursor: pointer; }
+.unit-card.can-act:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+.unit-card.selected { box-shadow: 0 0 12px rgba(201,168,76,0.7); border-color: var(--brass); }
+.unit-card.is-dead { opacity: 0.3; filter: grayscale(0.8); border-style: dashed; }
+.unit-card.is-shaken { box-shadow: 0 0 6px rgba(201,168,76,0.5); }
+.uc-cost {
+    position: absolute; top: -4px; left: -4px; width: 18px; height: 18px;
+    background: var(--blood); color: #fff; border: 2px solid #2a2a2a;
+    border-radius: 50%; text-align: center; line-height: 14px;
+    font-weight: bold; font-size: 10px; z-index: 1;
+}
+.uc-name { font-weight: bold; font-size: 9px; text-align: center; margin-top: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 1px; }
+.uc-type { font-size: 8px; color: #5a5a5a; text-align: center; }
+.uc-stats { display: flex; justify-content: space-between;
+    border-top: 1px solid rgba(0,0,0,0.1); padding-top: 1px; font-weight: bold; }
+.uc-atk { color: var(--blood); font-size: 11px; }
+.uc-hp { font-size: 11px; }
+.uc-hp.dmg { color: var(--blood); }
+.uc-hp.ok { color: var(--forest); }
+.uc-shaken {
+    position: absolute; top: 16px; right: 1px; font-size: 7px; font-weight: bold;
+    background: rgba(74,58,31,0.88); color: var(--brass-glow);
+    border: 1px solid var(--brass); border-radius: 2px; padding: 0 2px;
+}
+.uc-evade-used { position: absolute; bottom: 1px; right: 1px; font-size: 7px;
+    color: var(--smoke); }
+
+/* Attack Arrow */
+.arrow-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 20; }
+.arrow-line { stroke: var(--blood-bright); stroke-width: 3; marker-end: url(#ah);
+    filter: drop-shadow(0 0 4px rgba(194,48,48,0.5)); stroke-dasharray: 8 4;
+    animation: arrow-flow 0.5s linear infinite; }
+@keyframes arrow-flow { to { stroke-dashoffset: -12; } }
+.arrow-dmg { font-size: 14px; font-weight: bold; font-family: var(--font-display);
+    fill: var(--blood-glow); text-anchor: middle; dominant-baseline: middle;
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.9)); }
+
+/* Floating Damage */
+.float-dmg {
+    position: absolute; font-family: var(--font-display); font-size: 16px;
+    font-weight: bold; color: var(--blood-glow);
+    text-shadow: 0 0 6px rgba(0,0,0,0.8); pointer-events: none; z-index: 30;
+    animation: float-up 1s ease-out forwards;
+}
+@keyframes float-up { 0%{opacity:1;transform:translateY(0) scale(1.3)}
+    100%{opacity:0;transform:translateY(-30px) scale(0.8)} }
+
+/* Hand Area */
+.hand-area {
+    position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; padding: 8px 12px; z-index: 40;
+    background: linear-gradient(180deg, rgba(10,12,20,0.9), rgba(10,12,20,0.98));
+    border: 1px solid rgba(201,168,76,0.15); border-radius: var(--radius-lg);
+    backdrop-filter: blur(8px); max-width: 90vw; overflow-x: auto;
+}
+.hand-card {
+    min-width: 100px; max-width: 120px; padding: 6px; cursor: pointer;
+    background: linear-gradient(135deg, var(--card-paper), var(--card-paper-dark));
+    border: 2px solid rgba(42,42,42,0.5); border-radius: var(--radius);
+    color: #2a2a2a; font-size: 10px; transition: all 0.2s; flex-shrink: 0;
+}
+.hand-card:hover { transform: translateY(-8px); box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    border-color: var(--brass); }
+.hand-card.selected { border-color: var(--brass); box-shadow: 0 0 12px rgba(201,168,76,0.6);
+    transform: translateY(-12px); }
+.hand-card.too-expensive { opacity: 0.4; cursor: not-allowed; }
+.hand-card.event-card { background: linear-gradient(135deg, #d0e8d0, #a0c8a0); }
+.hand-card .hc-name { font-weight: bold; font-size: 10px; text-align: center;
+    border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 2px; margin-bottom: 2px; }
+.hand-card .hc-info { font-size: 9px; color: #5a5a5a; text-align: center; }
+.hand-card .hc-stats { display: flex; justify-content: space-between; font-weight: bold;
+    margin-top: 2px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 2px; }
+.hand-card .hc-cost { position: absolute; top: -4px; left: -4px; width: 16px; height: 16px;
+    background: var(--blood); color: #fff; border: 2px solid #2a2a2a;
+    border-radius: 50%; text-align: center; line-height: 12px; font-size: 9px; }
+.hand-card { position: relative; }
+
+/* Action Bar */
+.action-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    background: linear-gradient(180deg, rgba(10,12,20,0.85), rgba(10,12,20,0.98));
+    border-top: 1px solid rgba(201,168,76,0.15);
+    padding: 8px 16px; display: flex; align-items: center; gap: 12px;
+    backdrop-filter: blur(8px);
+}
+.action-bar .max-w { max-width: 1000px; margin: 0 auto; width: 100%;
+    display: flex; align-items: center; gap: 12px; }
+.btn {
+    background: rgba(26,31,53,0.8); color: #c0bdc8;
+    border: 1px solid rgba(201,168,76,0.12); padding: 6px 14px;
+    cursor: pointer; font-family: var(--font-body); font-size: 12px;
+    border-radius: var(--radius); transition: all 0.15s; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: rgba(201,168,76,0.12); border-color: var(--brass-dim); color: var(--brass); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn.primary { background: linear-gradient(135deg, var(--blood), #6b1515);
+    border-color: var(--blood-bright); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: linear-gradient(135deg, var(--blood-bright), var(--blood));
+    box-shadow: 0 0 8px rgba(194,48,48,0.3); }
+.phase-indicator { font-family: var(--font-display); font-size: 13px;
+    color: var(--brass); letter-spacing: 1px; min-width: 80px; }
+.action-hint { font-size: 11px; color: var(--smoke-lt); flex: 1; }
+
+/* Log */
+.log-panel {
+    position: fixed; top: 8px; right: 8px; width: 280px; max-height: 300px;
+    overflow-y: auto; padding: 8px; z-index: 30;
+    background: rgba(15,18,32,0.9); border: 1px solid rgba(201,168,76,0.1);
+    border-radius: var(--radius); font-size: 10px; font-family: var(--font-mono);
+    color: var(--smoke-lt); line-height: 1.5;
+}
+.log-panel .log-line { margin: 1px 0; }
+.log-panel .log-atk { color: var(--blood-bright); }
+.log-panel .log-deploy { color: var(--brass); }
+.log-panel .log-heal { color: var(--forest-lt); }
+.log-panel .log-event { color: var(--frost); }
+
+/* Result Overlay */
+.result-overlay {
+    display: none; position: fixed; inset: 0; z-index: 60;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.6);
+}
+.result-overlay.visible { display: flex; animation: fade-in 0.5s; }
+@keyframes fade-in { from{opacity:0} to{opacity:1} }
+.result-card {
+    background: linear-gradient(135deg, rgba(26,31,53,0.95), rgba(42,37,32,0.95));
+    border: 2px solid var(--brass); border-radius: var(--radius-lg);
+    padding: 40px 60px; text-align: center;
+    box-shadow: 0 0 60px rgba(201,168,76,0.3);
+    animation: pop-in 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes pop-in { from{transform:scale(0.7);opacity:0} to{transform:scale(1);opacity:1} }
+.result-card .r-icon { font-size: 48px; margin-bottom: 12px; }
+.result-card .r-title { font-family: var(--font-display); font-size: 24px;
+    color: var(--brass-glow); letter-spacing: 4px; }
+.result-card .r-detail { font-size: 13px; color: var(--smoke-lt); margin-top: 8px; }
+.result-card .r-btn { margin-top: 20px; }
+
+/* Screen shake */
+.screen-shake { animation: shake 0.4s ease-out; }
+@keyframes shake { 0%{transform:translate(0,0)} 10%{transform:translate(-4px,-2px)}
+    20%{transform:translate(4px,2px)} 30%{transform:translate(-3px,1px)}
+    40%{transform:translate(3px,-1px)} 50%{transform:translate(-2px,2px)}
+    60%{transform:translate(2px,-1px)} 100%{transform:translate(0,0)} }
+
+/* Responsive */
+@media (max-width: 700px) {
+    .hand-area { gap: 4px; padding: 6px 8px; }
+    .hand-card { min-width: 80px; max-width: 95px; font-size: 9px; }
+    .log-panel { display: none; }
+    .info-bar { font-size: 10px; flex-wrap: wrap; gap: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: var(--slate-lt); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Faction Select -->
+<div id="faction-select">
+    <h1>拿 破 仑 战 争</h1>
+    <div class="subtitle">选择你的阵营</div>
+    <div class="faction-cards">
+        <div class="faction-card france" onclick="startGame('法兰西')">
+            <div class="icon">⚜</div>
+            <div class="name">法兰西</div>
+            <div class="desc">高攻击力 · 纵队冲锋 · 近卫精锐 · 军团联动</div>
+        </div>
+        <div class="faction-card prussia" onclick="startGame('普鲁士')">
+            <div class="icon">🦅</div>
+            <div class="name">普鲁士</div>
+            <div class="desc">死神威慑 · 国防动员 · 改良线列 · 纪律阵型</div>
+        </div>
+        <div class="faction-card russia" onclick="startGame('俄罗斯')">
+            <div class="icon">☦</div>
+            <div class="name">俄罗斯</div>
+            <div class="desc">低费铺场 · 自残换光环 · 肉盾耐打 · 消耗战</div>
+        </div>
+    </div>
+</div>
+
+<!-- Game Screen -->
+<div id="game-screen">
+    <div class="game-title" id="game-title">拿 破 仑 战 争</div>
+
+    <div class="info-bar" id="info-bar">
+        <span class="phase-label" id="phase-label">准备中</span>
+        <span class="stat">回合 <b id="turn-num">1</b></span>
+        <span class="stat">军令 <b id="orders-display">0/0</b></span>
+        <span class="stat">手牌 <b id="hand-count">0</b></span>
+        <span class="stat">牌库 <b id="deck-count">0</b></span>
+    </div>
+
+    <div class="hq-strip enemy" id="hq-enemy">
+        <span class="hq-label" id="enemy-label">敌方指挥部</span>
+        <div class="hq-hp-bar"><div class="hq-hp-fill" id="enemy-hp-fill" style="width:100%"></div></div>
+        <span class="hq-hp-text" id="enemy-hp-text">14/14</span>
+    </div>
+
+    <div class="bf-lines" id="bf-lines" style="position:relative">
+        <svg class="arrow-overlay" id="arrow-svg"><defs>
+            <marker id="ah" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0,10 3.5,0 7" fill="#c23030"/>
+            </marker>
+        </defs></svg>
+        <div class="bf-line" id="line-e-rear"><div class="line-label">敌后方</div>
+            <div class="units-row" id="row-e-rear"></div></div>
+        <div class="bf-line-divider">— 敌 主 力 —</div>
+        <div class="bf-line" id="line-e-main"><div class="line-label">敌主力</div>
+            <div class="units-row" id="row-e-main"></div></div>
+        <div class="bf-line-divider">— 散 兵 线 —</div>
+        <div class="bf-line skirmish-line" id="line-skirmish"><div class="line-label">散兵线</div>
+            <div class="units-row" id="row-skirmish"></div></div>
+        <div class="bf-line-divider">— 我 主 力 —</div>
+        <div class="bf-line" id="line-p-main"><div class="line-label">我主力</div>
+            <div class="units-row" id="row-p-main"></div></div>
+        <div class="bf-line" id="line-p-rear"><div class="line-label">我后方</div>
+            <div class="units-row" id="row-p-rear"></div></div>
+    </div>
+
+    <div class="hq-strip player" id="hq-player">
+        <span class="hq-label" id="player-label">我方指挥部</span>
+        <div class="hq-hp-bar"><div class="hq-hp-fill" id="player-hp-fill" style="width:100%"></div></div>
+        <span class="hq-hp-text" id="player-hp-text">14/14</span>
+    </div>
+</div>
+
+<div class="hand-area" id="hand-area" style="display:none"></div>
+
+<div class="action-bar" id="action-bar" style="display:none">
+    <div class="max-w">
+        <span class="phase-label" id="ab-phase">—</span>
+        <span class="action-hint" id="ab-hint"></span>
+        <button class="btn" id="btn-advance" onclick="doAdvance()" style="display:none">推进</button>
+        <button class="btn primary" id="btn-end-turn" onclick="endPlayerTurn()">结束回合</button>
+    </div>
+</div>
+
+<div class="log-panel" id="log-panel"></div>
+
+<div class="result-overlay" id="result-overlay">
+    <div class="result-card">
+        <div class="r-icon" id="r-icon">⚜</div>
+        <div class="r-title" id="r-title">胜利</div>
+        <div class="r-detail" id="r-detail"></div>
+        <div class="r-btn"><button class="btn primary" onclick="location.reload()">再来一局</button></div>
+    </div>
+</div>
+
+<script>
+// ====================================================================
+// Card Data (ported from cards.py)
+// ====================================================================
+const UT = { INF:"线列步兵", CAV:"骑兵", ART:"炮兵", SKI:"散兵", GRD:"近卫" };
+
+function mk(name,cost,atk,hp,type,faction,kw) {
+    return {name,cost,attack:atk,health:hp,unitType:type,faction,keywords:kw||[],cardType:"unit",eventEffect:null};
+}
+function mkE(name,cost,faction,eff) {
+    return {name,cost,attack:0,health:0,unitType:UT.INF,faction,keywords:[],cardType:"event",eventEffect:eff};
+}
+
+function buildFrance() { return [
+    mk("猎兵连",1,1,2,UT.SKI,"法兰西",["闪避"]), mk("猎兵连",1,1,2,UT.SKI,"法兰西",["闪避"]),
+    mk("第45线列步兵团",3,3,4,UT.INF,"法兰西",["结阵","齐射"]), mk("第45线列步兵团",3,3,4,UT.INF,"法兰西",["结阵","齐射"]),
+    mk("第45线列步兵团",3,3,4,UT.INF,"法兰西",["结阵","齐射"]), mk("第45线列步兵团",3,3,4,UT.INF,"法兰西",["结阵","齐射"]),
+    mk("征召步兵营",2,2,3,UT.INF,"法兰西",["结阵"]), mk("征召步兵营",2,2,3,UT.INF,"法兰西",["结阵"]),
+    mk("帝国步兵团",4,4,4,UT.INF,"法兰西",["结阵","齐射"]), mk("帝国步兵团",4,4,4,UT.INF,"法兰西",["结阵","齐射"]),
+    mk("帝国步兵团",4,4,4,UT.INF,"法兰西",["结阵","齐射"]),
+    mk("骠骑兵",2,2,2,UT.CAV,"法兰西",["冲锋","侧翼迂回"]), mk("骠骑兵",2,2,2,UT.CAV,"法兰西",["冲锋","侧翼迂回"]),
+    mk("龙骑兵团",4,3,3,UT.CAV,"法兰西",["冲锋"]), mk("龙骑兵团",4,3,3,UT.CAV,"法兰西",["冲锋"]),
+    mk("龙骑兵团",4,3,3,UT.CAV,"法兰西",["冲锋"]),
+    mk("胸甲骑兵",6,6,5,UT.CAV,"法兰西",["冲锋","突破"]),
+    mk("近卫马炮兵",4,3,3,UT.ART,"法兰西",["远程","军团联动"]), mk("近卫马炮兵",4,3,3,UT.ART,"法兰西",["远程","军团联动"]),
+    mk("12磅野战炮",5,4,3,UT.ART,"法兰西",["远程"]), mk("12磅野战炮",5,4,3,UT.ART,"法兰西",["远程"]),
+    mk("近卫掷弹兵",5,5,5,UT.INF,"法兰西",["结阵","齐射","守卫"]),
+    mk("近卫掷弹兵",5,5,5,UT.INF,"法兰西",["结阵","齐射","守卫"]),
+    mk("近卫掷弹兵",5,5,5,UT.INF,"法兰西",["结阵","齐射","守卫"]),
+    mk("老近卫军",8,6,8,UT.GRD,"法兰西",["结阵","齐射","守卫","突破"]),
+    mk("老近卫掷弹兵",5,5,6,UT.GRD,"法兰西",["守卫","结阵"]),
+    mkE("达武的铁军",2,"法兰西","fortify"), mkE("奥斯特里茨晨雾",2,"法兰西","fog"),
+    mkE("拿破仑的预备队",4,"法兰西","fortify"), mkE("军团传令",3,"法兰西","advance"),
+    mkE("帝国传令官",2,"法兰西","buff_guard"),
+]; }
+
+function buildPrussia() { return [
+    mk("耶格猎兵",1,2,2,UT.SKI,"普鲁士",["闪避","齐射"]), mk("耶格猎兵",1,2,2,UT.SKI,"普鲁士",["闪避","齐射"]),
+    mk("西里西亚国民军",2,2,3,UT.INF,"普鲁士",["结阵"]), mk("西里西亚国民军",2,2,3,UT.INF,"普鲁士",["结阵"]),
+    mk("西里西亚国民军",2,2,3,UT.INF,"普鲁士",["结阵"]), mk("西里西亚国民军",2,2,3,UT.INF,"普鲁士",["结阵"]),
+    mk("西里西亚国民军",2,2,3,UT.INF,"普鲁士",["结阵"]), mk("西里西亚国民军",2,2,3,UT.INF,"普鲁士",["结阵"]),
+    mk("普鲁士线列军",3,4,4,UT.INF,"普鲁士",["结阵","齐射"]), mk("普鲁士线列军",3,4,4,UT.INF,"普鲁士",["结阵","齐射"]),
+    mk("普鲁士线列军",3,4,4,UT.INF,"普鲁士",["结阵","齐射"]), mk("普鲁士线列军",3,4,4,UT.INF,"普鲁士",["结阵","齐射"]),
+    mk("近卫掷弹兵团",4,4,5,UT.INF,"普鲁士",["结阵","齐射","守卫"]),
+    mk("近卫掷弹兵团",4,4,5,UT.INF,"普鲁士",["结阵","齐射","守卫"]),
+    mk("近卫掷弹兵团",4,4,5,UT.INF,"普鲁士",["结阵","齐射","守卫"]),
+    mk("死骑兵",2,2,2,UT.CAV,"普鲁士",["冲锋","死神威慑"]),
+    mk("死骑兵",2,2,2,UT.CAV,"普鲁士",["冲锋","死神威慑"]),
+    mk("死骑兵",2,2,2,UT.CAV,"普鲁士",["冲锋","死神威慑"]),
+    mk("普鲁士龙骑",4,4,3,UT.CAV,"普鲁士",["冲锋"]), mk("普鲁士龙骑",4,4,3,UT.CAV,"普鲁士",["冲锋"]),
+    mk("普鲁士重炮",5,5,3,UT.ART,"普鲁士",["远程"]), mk("普鲁士重炮",5,5,3,UT.ART,"普鲁士",["远程"]),
+    mk("黑色布伦瑞克",5,5,4,UT.INF,"普鲁士",["结阵","突破","死神威慑"]),
+    mk("布吕歇尔的近卫",6,6,6,UT.GRD,"普鲁士",["结阵","守卫"]),
+    mkE("国防动员",2,"普鲁士","buff_inf"), mkE("国防动员",2,"普鲁士","buff_inf"),
+    mkE("沙恩霍斯特改革",2,"普鲁士","draw_buff"),
+    mkE("布吕歇尔的追击令",2,"普鲁士","buff_cav"),
+    mkE("莱比锡泥泞",2,"普鲁士","mud"),
+    mk("勃兰登堡后备营",3,3,4,UT.INF,"普鲁士",["结阵"]),
+    mk("反冲击突击队",4,4,4,UT.INF,"普鲁士",["结阵","齐射","死神威慑"]),
+    mk("西里西亚国民军线列",2,2,3,UT.INF,"普鲁士",["结阵"]),
+]; }
+
+function buildRussia() { return [
+    mk("哥萨克轻骑",2,2,2,UT.CAV,"俄罗斯",["冲锋","侧翼迂回"]),
+    mk("哥萨克轻骑",2,2,2,UT.CAV,"俄罗斯",["冲锋","侧翼迂回"]),
+    mk("俄军猎兵团",1,1,2,UT.SKI,"俄罗斯",["闪避"]),
+    mk("东正教民兵",2,2,3,UT.INF,"俄罗斯",["结阵"]), mk("东正教民兵",2,2,3,UT.INF,"俄罗斯",["结阵"]),
+    mk("俄国线列军",3,2,5,UT.INF,"俄罗斯",["结阵"]), mk("俄国线列军",3,2,5,UT.INF,"俄罗斯",["结阵"]),
+    mk("俄国线列军",3,2,5,UT.INF,"俄罗斯",["结阵"]), mk("俄国线列军",3,2,5,UT.INF,"俄罗斯",["结阵"]),
+    mk("俄军步兵炮",3,3,2,UT.ART,"俄罗斯",["远程"]),
+    mk("西伯利亚老兵",3,5,5,UT.INF,"俄罗斯",["结阵"]), mk("西伯利亚老兵",3,5,5,UT.INF,"俄罗斯",["结阵"]),
+    mk("普拉托夫的哥萨克",4,3,2,UT.CAV,"俄罗斯",["冲锋","侧翼迂回"]),
+    mk("普拉托夫的哥萨克",4,3,2,UT.CAV,"俄罗斯",["冲锋","侧翼迂回"]),
+    mk("俄军龙骑",4,4,3,UT.CAV,"俄罗斯",["冲锋"]),
+    mk("莫斯科掷弹兵",5,4,5,UT.INF,"俄罗斯",["结阵","守卫"]),
+    mk("莫斯科掷弹兵",5,4,5,UT.INF,"俄罗斯",["结阵","守卫"]),
+    mk("独角兽榴弹炮",5,5,3,UT.ART,"俄罗斯",["远程"]),
+    mk("独角兽榴弹炮",5,5,3,UT.ART,"俄罗斯",["远程"]),
+    mk("巴格拉季昂的近卫",6,5,6,UT.GRD,"俄罗斯",["结阵","守卫"]),
+    mk("巴格拉季昂的近卫",6,5,6,UT.GRD,"俄罗斯",["结阵","守卫"]),
+    mk("库图佐夫的旗手",6,4,6,UT.GRD,"俄罗斯",["结阵","守卫"]),
+    mk("帝国大军",5,3,5,UT.INF,"俄罗斯",["结阵"]),
+    mk("顿河哥萨克猎骑",3,3,3,UT.CAV,"俄罗斯",["冲锋","侧翼迂回"]),
+    mk("撤退中的炮兵队",4,3,3,UT.ART,"俄罗斯",["远程"]),
+    mk("焦土游击",2,2,2,UT.INF,"俄罗斯",["结阵"]),
+    mkE("库图佐夫的战略后撤",1,"俄罗斯","retreat_heal"),
+    mkE("焦土政策",2,"俄罗斯","scorched"),
+    mkE("冬将军",3,"俄罗斯","winter"),
+    mkE("巴格拉季昂后卫军",2,"俄罗斯","fortify"),
+]; }
+
+const DECK_BUILDERS = { "法兰西": buildFrance, "普鲁士": buildPrussia, "俄罗斯": buildRussia };
+const STARTING_HQ = 14, MAX_ORDERS = 16, MAX_HAND = 7, INIT_ORDERS = 1;
+
+// ====================================================================
+// Game State
+// ====================================================================
+let G = null; // global game state
+let selectedHandCard = null;
+let selectedAttacker = null;
+let playerActionsRemaining = 0; // for tracking attacks
+
+function makeUnit(card, line, slot) {
+    return { card, currentHp: card.health, line, slot,
+        hasActed: false, deployedThisTurn: true, hasUsedEvade: false,
+        isShaken: false, damageReductionTurns: 0, id: Math.random().toString(36).slice(2,8) };
+}
+
+function makePlayer(name, faction) {
+    const deck = DECK_BUILDERS[faction]();
+    shuffle(deck);
+    return { name, faction, deck, hand: [], discardPile: [], hqHp: STARTING_HQ,
+        maxOrders: 0, currentOrders: 0, commanderUsed: false };
+}
+
+function shuffle(arr) { for (let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]; } }
+
+function initState(pFaction) {
+    const eFaction = pFaction==="法兰西" ? "俄罗斯" : pFaction==="普鲁士" ? "法兰西" : "普鲁士";
+    const p = makePlayer("玩家", pFaction);
+    const e = makePlayer("AI", eFaction);
+    // Draw starting hands
+    for (let i=0;i<4;i++) { if(p.deck.length) p.hand.push(p.deck.shift()); }
+    for (let i=0;i<5;i++) { if(e.deck.length) e.hand.push(e.deck.shift()); } // AI goes second gets +1
+    return { player: p, enemy: e,
+        bf: { pRear:[], pMain:[], pSki:[], eSki:[], eMain:[], eRear:[] },
+        turn: 1, phase: "draw", log: [], gameOver: false };
+}
+
+// ====================================================================
+// Combat System
+// ====================================================================
+function effAtk(unit, bf, isPlayer) {
+    let atk = unit.card.attack;
+    const own = isPlayer ? bf.pMain.concat(bf.pRear) : bf.eMain.concat(bf.eRear);
+    // 军团联动: cavalry +1 if friendly artillery in same slot main/rear
+    if (unit.card.unitType === UT.CAV) {
+        for (const f of own) {
+            if (f.slot === unit.slot && f.card.unitType === UT.ART && f.card.keywords.includes("军团联动"))
+                { atk += 1; break; }
+        }
+    }
+    // 死神威慑: -1 per enemy in same slot
+    const enemy = isPlayer ? bf.eMain.concat(bf.eRear).concat(bf.eSki) : bf.pMain.concat(bf.pRear).concat(bf.pSki);
+    for (const e of enemy) {
+        if (e.slot === unit.slot && e.card.keywords.includes("死神威慑")) atk = Math.max(0, atk - 1);
+    }
+    // Shaken penalty
+    if (unit.isShaken) atk = Math.max(0, atk - 1);
+    return atk;
+}
+
+function calcDmg(atk, def) {
+    const ac = atk.card, dc = def.card;
+    // 闪避
+    if (dc.keywords.includes("闪避") && !def.hasUsedEvade && ac.unitType !== UT.ART) {
+        def.hasUsedEvade = true; return { dmg: 0, counter: 0, evaded: true };
+    }
+    let dmg = effAtk(atk, G.bf, isPlayerUnit(atk));
+    const defAtk = effAtk(def, G.bf, isPlayerUnit(def));
+    // 骑兵 vs 步兵
+    if (ac.unitType === UT.CAV && (dc.unitType === UT.INF || dc.unitType === UT.GRD)) {
+        if (dc.keywords.includes("结阵") && !ac.keywords.includes("突破")) {
+            dmg = Math.max(1, Math.floor(dmg / 2));
+        } else if (!dc.keywords.includes("结阵")) {
+            dmg = dmg * 2;
+        }
+    }
+    // 炮兵 vs 步兵
+    if (ac.unitType === UT.ART && (dc.unitType === UT.INF || dc.unitType === UT.GRD)) {
+        dmg = dc.keywords.includes("结阵") ? dmg + 2 : dmg + 1;
+    }
+    // 齐射: first attack
+    if (ac.keywords.includes("齐射") && !atk.hasActed) dmg += 1;
+    // 阿尔科莱精神 artillery in skirmish
+    if (ac.keywords.includes("阿尔科莱精神") && ac.unitType === UT.ART && atk.line === "skirmish") dmg += 2;
+    // Damage reduction
+    if (def.damageReductionTurns > 0) dmg = Math.min(dmg, 1);
+    // Counter
+    let counter = 0;
+    if (ac.unitType === UT.ART && ac.keywords.includes("远程")) counter = 0;
+    else if (dc.unitType === UT.ART) counter = Math.floor(defAtk / 2);
+    else counter = defAtk;
+    return { dmg: Math.max(0, dmg), counter: Math.max(0, counter), evaded: false };
+}
+
+function isPlayerUnit(u) {
+    return G.bf.pRear.includes(u) || G.bf.pMain.includes(u) || G.bf.pSki.includes(u);
+}
+
+function findTargets(attacker) {
+    const isP = isPlayerUnit(attacker);
+    const oppRear = isP ? G.bf.eRear : G.bf.pRear;
+    const oppMain = isP ? G.bf.eMain : G.bf.pMain;
+    const oppSki = isP ? G.bf.eSki : G.bf.pSki;
+    // 守卫 check
+    const guards = oppMain.filter(u => u.card.keywords.includes("守卫") && !u.isDead);
+    if (guards.length > 0) return guards;
+    // Ranged artillery from rear
+    if (attacker.line === "rear" && attacker.card.keywords.includes("远程") && attacker.card.unitType === UT.ART) {
+        return oppSki.concat(oppMain).filter(u => !u.isDead);
+    }
+    // 侧翼迂回 cavalry
+    if (attacker.card.keywords.includes("侧翼迂回") && attacker.card.unitType === UT.CAV && attacker.line !== "rear") {
+        return oppSki.concat(oppMain).concat(oppRear).filter(u => !u.isDead);
+    }
+    if (attacker.line === "rear") return [];
+    return oppSki.concat(oppMain).filter(u => !u.isDead);
+}
+
+function canAttackHQ(attacker) {
+    const isP = isPlayerUnit(attacker);
+    const oppMain = isP ? G.bf.eMain : G.bf.pMain;
+    const oppSki = isP ? G.bf.eSki : G.bf.pSki;
+    if (oppMain.some(u=>!u.isDead) || oppSki.some(u=>!u.isDead)) return false;
+    if (attacker.line === "rear" && attacker.card.keywords.includes("远程")) return true;
+    if (attacker.line === "skirmish") return true;
+    if (attacker.line === "main" && attacker.card.keywords.includes("阿尔科莱精神") && attacker.card.unitType === UT.ART) return true;
+    return false;
+}
+
+function getLine(line, isP) {
+    if (isP) return line==="rear"?G.bf.pRear:line==="main"?G.bf.pMain:G.bf.pSki;
+    return line==="rear"?G.bf.eRear:line==="main"?G.bf.eMain:G.bf.eSki;
+}
+
+function allUnits(isP) { return getLine("rear",isP).concat(getLine("main",isP)).concat(getLine("skirmish",isP)); }
+
+// ====================================================================
+// Turn Flow
+// ====================================================================
+function startPlayerTurn() {
+    G.phase = "player_deploy";
+    const p = G.player;
+    p.maxOrders = Math.min(p.maxOrders + 1, MAX_ORDERS);
+    p.currentOrders = p.maxOrders;
+    // Reset units
+    for (const u of allUnits(true)) {
+        u.hasActed = false; u.deployedThisTurn = false;
+        if (u.damageReductionTurns > 0) u.damageReductionTurns--;
+    }
+    // Draw
+    for (let i=0;i<2;i++) { if(p.deck.length && p.hand.length < MAX_HAND) p.hand.push(p.deck.shift()); }
+    // Clear shaken at turn start
+    for (const u of allUnits(true)) { if (u.isShaken) u.isShaken = false; }
+    selectedHandCard = null; selectedAttacker = null;
+    log(`\n=== 回合 ${G.turn}：玩家行动 ===`);
+    log(`军令: ${p.currentOrders}/${p.maxOrders}  手牌: ${p.hand.length}`);
+    render();
+}
+
+function endPlayerTurn() {
+    if (G.gameOver) return;
+    selectedHandCard = null; selectedAttacker = null;
+    G.phase = "enemy_turn";
+    render();
+    setTimeout(() => doEnemyTurn(), 400);
+}
+
+function doEnemyTurn() {
+    const e = G.enemy;
+    e.maxOrders = Math.min(e.maxOrders + 1, MAX_ORDERS);
+    e.currentOrders = e.maxOrders;
+    for (const u of allUnits(false)) {
+        u.hasActed = false; u.deployedThisTurn = false;
+        if (u.damageReductionTurns > 0) u.damageReductionTurns--;
+    }
+    for (let i=0;i<2;i++) { if(e.deck.length && e.hand.length < MAX_HAND) e.hand.push(e.deck.shift()); }
+    for (const u of allUnits(false)) { if (u.isShaken) u.isShaken = false; }
+    log(`\n=== 回合 ${G.turn}：AI行动 ===`);
+    log(`军令: ${e.currentOrders}/${e.maxOrders}`);
+    render();
+    aiDeploy(() => aiAdvance(() => aiAttack(() => {
+        // End AI turn, check victory
+        if (checkVictory()) return;
+        G.turn++;
+        startPlayerTurn();
+    })));
+}
+
+function checkVictory() {
+    if (G.player.hqHp <= 0 && G.enemy.hqHp <= 0) { showResult("draw"); return true; }
+    if (G.enemy.hqHp <= 0) { showResult("win"); return true; }
+    if (G.player.hqHp <= 0) { showResult("lose"); return true; }
+    return false;
+}
+
+function showResult(type) {
+    G.gameOver = true;
+    const o = document.getElementById("result-overlay");
+    document.getElementById("r-icon").textContent = type==="win"?"⚜":type==="lose"?"💀":"⚔";
+    document.getElementById("r-title").textContent = type==="win"?"胜利！":type==="lose"?"战败...":"平局";
+    document.getElementById("r-detail").textContent = `回合 ${G.turn} · 玩家 HQ ${G.player.hqHp} · AI HQ ${G.enemy.hqHp}`;
+    o.classList.add("visible");
+}
+
+// ====================================================================
+// Player Actions
+// ====================================================================
+function selectHandCard(idx) {
+    if (G.phase !== "player_deploy" || G.gameOver) return;
+    const card = G.player.hand[idx];
+    if (!card) return;
+    if (selectedHandCard === idx) { selectedHandCard = null; }
+    else if (card.cardType === "event" || card.cost <= G.player.currentOrders) { selectedHandCard = idx; }
+    selectedAttacker = null;
+    render();
+}
+
+function clickSlot(line, slot) {
+    if (G.gameOver) return;
+    if (G.phase === "player_deploy" && selectedHandCard !== null) {
+        deployToSlot(line, slot);
+    } else if (G.phase === "player_attack" && selectedAttacker !== null) {
+        attackSlot(line, slot);
+    }
+}
+
+function deployToSlot(line, slot) {
+    const card = G.player.hand[selectedHandCard];
+    if (!card) return;
+    if (card.cardType === "event") { playEventCard(selectedHandCard); return; }
+    // Must deploy to own rear
+    if (line !== "p-rear") return;
+    if (G.player.currentOrders < card.cost) return;
+    if (G.bf.pRear.some(u => u.slot === slot)) return; // occupied
+    const unit = makeUnit(card, "rear", slot);
+    G.bf.pRear.push(unit);
+    G.player.currentOrders -= card.cost;
+    G.player.hand.splice(selectedHandCard, 1);
+    // 自残
+    for (const kw of card.keywords) {
+        const m = kw.match(/^自残(\d+)$/);
+        if (m) { G.player.hqHp -= parseInt(m[1]); log(`  💥 ${card.name} 自损 HQ ${m[1]}`); }
+    }
+    // 光环+1攻
+    if (card.keywords.includes("光环+1攻")) {
+        for (const u of allUnits(true)) { if (u !== unit) u.card = {...u.card, attack: u.card.attack + 1}; }
+        log(`  ✨ ${card.name}：全场友军 +1 攻`);
+    }
+    // 光环+1血
+    if (card.keywords.includes("光环+1血")) {
+        for (const u of allUnits(true)) { if (u !== unit) { u.card = {...u.card, health: u.card.health + 1}; u.currentHp++; } }
+        log(`  ✨ ${card.name}：全场友军 +1 血`);
+    }
+    log(`  ▶ 玩家部署 ${card.name} 到后方 槽位${slot+1}（-${card.cost}军令）`);
+    selectedHandCard = null;
+    if (checkVictory()) return;
+    render();
+}
+
+function playEventCard(handIdx) {
+    const card = G.player.hand[handIdx];
+    if (G.player.currentOrders < card.cost) return;
+    G.player.currentOrders -= card.cost;
+    G.player.hand.splice(handIdx, 1);
+    selectedHandCard = null;
+    log(`  📜 玩家打出 ${card.name}`);
+    // Simple event resolution
+    const eff = card.eventEffect;
+    if (eff === "fog") {
+        // -1 attack to all artillery (both sides)
+        for (const u of allUnits(true).concat(allUnits(false))) {
+            if (u.card.unitType === UT.ART) u.card = {...u.card, attack: Math.max(0, u.card.attack - 1)};
+        }
+        log(`    全场炮兵 -1 攻`);
+    } else if (eff === "winter") {
+        for (const u of allUnits(true).concat(allUnits(false))) {
+            u.currentHp--; if (u.currentHp <= 0) log(`    💀 ${u.card.name} 冻死`);
+        }
+        G.bf.pRear = G.bf.pRear.filter(u=>u.currentHp>0);
+        G.bf.pMain = G.bf.pMain.filter(u=>u.currentHp>0);
+        G.bf.pSki = G.bf.pSki.filter(u=>u.currentHp>0);
+        G.bf.eRear = G.bf.eRear.filter(u=>u.currentHp>0);
+        G.bf.eMain = G.bf.eMain.filter(u=>u.currentHp>0);
+        G.bf.eSki = G.bf.eSki.filter(u=>u.currentHp>0);
+        log(`    全场所有单位 -1 血`);
+    } else if (eff === "scorched") {
+        G.player.hqHp -= 1;
+        for (const u of G.bf.eSki) { u.currentHp--; }
+        G.bf.eSki = G.bf.eSki.filter(u => { if(u.currentHp<=0){log(`    💀 ${u.card.name}`);return false;} return true; });
+        log(`    自损 HQ 1，敌方散兵全体 -1 血`);
+    } else if (eff === "buff_inf") {
+        const infs = allUnits(true).filter(u => u.card.unitType === UT.INF);
+        if (infs.length) {
+            const t = infs[Math.floor(Math.random()*infs.length)];
+            t.card = {...t.card, attack: t.card.attack+1, health: t.card.health+2};
+            t.currentHp = Math.min(t.currentHp+2, t.card.health);
+            log(`    ${t.card.name} +1/+2 回血2`);
+        }
+    } else if (eff === "buff_cav") {
+        for (const u of allUnits(true)) {
+            if (u.card.unitType === UT.CAV || u.card.unitType === UT.GRD)
+                u.card = {...u.card, attack: u.card.attack+1};
+        }
+        log(`    全场友军骑兵/近卫 +1 攻`);
+    } else if (eff === "buff_guard") {
+        const guards = allUnits(true).filter(u => u.card.keywords.includes("守卫"));
+        if (guards.length) {
+            const t = guards[0];
+            t.card = {...t.card, attack: t.card.attack+1, health: t.card.health+2};
+            t.currentHp = Math.min(t.currentHp+2, t.card.health);
+            log(`    ${t.card.name} +1/+2`);
+        }
+    } else if (eff === "fortify") {
+        const infs = allUnits(true).filter(u => u.card.unitType === UT.INF || u.card.unitType === UT.GRD);
+        if (infs.length) {
+            const t = infs[Math.floor(Math.random()*infs.length)];
+            t.card = {...t.card, health: t.card.health+2};
+            t.currentHp = Math.min(t.currentHp+2, t.card.health);
+            if (!t.card.keywords.includes("守卫")) t.card = {...t.card, keywords: [...t.card.keywords, "守卫"]};
+            log(`    ${t.card.name} +0/+2 回血2 获得守卫`);
+        }
+    } else if (eff === "retreat_heal") {
+        const nonRear = allUnits(true).filter(u => u.line !== "rear");
+        if (nonRear.length) {
+            const t = nonRear[Math.floor(Math.random()*nonRear.length)];
+            // Move to rear
+            const lineArr = getLine(t.line.replace("skirmish","skirmish"), true);
+            const idx = lineArr.indexOf(t);
+            if (idx >= 0) lineArr.splice(idx, 1);
+            t.line = "rear"; t.currentHp = Math.min(t.currentHp+2, t.card.health);
+            // Find empty rear slot
+            const used = new Set(G.bf.pRear.map(u=>u.slot));
+            for (let s=0;s<4;s++) { if(!used.has(s)){t.slot=s;break;} }
+            G.bf.pRear.push(t);
+            G.player.hqHp -= 1;
+            log(`    ${t.card.name} 撤回后方 回血2 自损HQ1`);
+        }
+    } else if (eff === "mud") {
+        for (const u of allUnits(true).concat(allUnits(false))) {
+            if (u.card.unitType === UT.CAV) u.card = {...u.card, attack: Math.max(0, u.card.attack-1)};
+        }
+        log(`    全场骑兵 -1 攻`);
+    } else if (eff === "draw_buff") {
+        if (G.player.deck.length && G.player.hand.length < MAX_HAND) G.player.hand.push(G.player.deck.shift());
+        const infs = allUnits(true).filter(u => u.card.unitType === UT.INF);
+        if (infs.length) {
+            const t = infs[Math.floor(Math.random()*infs.length)];
+            t.card = {...t.card, attack: t.card.attack+1, health: t.card.health+1};
+            t.currentHp = Math.min(t.currentHp+1, t.card.health);
+            log(`    抽1 ${t.card.name} +1/+1`);
+        }
+    } else if (eff === "advance") {
+        const canAdv = allUnits(true).filter(u => u.line === "rear" && !u.isShaken);
+        if (canAdv.length) {
+            const t = canAdv[0];
+            const oldLine = getLine(t.line, true);
+            oldLine.splice(oldLine.indexOf(t), 1);
+            t.line = "main";
+            const used = new Set(G.bf.pMain.map(u=>u.slot));
+            for (let s=0;s<4;s++) { if(!used.has(s)){t.slot=s;break;} }
+            G.bf.pMain.push(t);
+            log(`    ${t.card.name} 后方→主力`);
+        }
+    }
+    if (checkVictory()) return;
+    render();
+}
+
+function switchToAttack() {
+    G.phase = "player_attack";
+    selectedHandCard = null;
+    selectedAttacker = null;
+    render();
+}
+
+function selectAttacker(unit) {
+    if (G.phase !== "player_attack" || G.gameOver) return;
+    if (!isPlayerUnit(unit) || unit.hasActed || unit.isDead) return;
+    if (unit.isShaken) return;
+    if (unit.deployedThisTurn && !unit.card.keywords.includes("冲锋")) return;
+    if (unit.line === "rear" && !unit.card.keywords.includes("远程") && !unit.card.keywords.includes("阿尔科莱精神")) return;
+    selectedAttacker = selectedAttacker === unit ? null : unit;
+    render();
+}
+
+function attackSlot(line, slot) {
+    if (!selectedAttacker) return;
+    const isP = isPlayerUnit(selectedAttacker);
+    // Check if clicking HQ attack
+    if (line === (isP ? "e-hq" : "p-hq")) {
+        if (canAttackHQ(selectedAttacker)) {
+            attackHQ(selectedAttacker, !isP);
+            return;
+        }
+        return;
+    }
+    // Find defender
+    const lineArr = getLine(line.replace("e-","").replace("p-",""), !isP);
+    const defender = lineArr.find(u => u.slot === slot && !u.isDead);
+    if (!defender) return;
+    // Check if defender is a valid target
+    const targets = findTargets(selectedAttacker);
+    if (!targets.includes(defender)) return;
+    executeAttack(selectedAttacker, defender);
+}
+
+function attackHQ(attacker, againstPlayer) {
+    const dmg = effAtk(attacker, G.bf, isPlayerUnit(attacker));
+    if (againstPlayer) { G.player.hqHp -= dmg; }
+    else { G.enemy.hqHp -= dmg; }
+    attacker.hasActed = true;
+    const who = againstPlayer ? "玩家" : "AI";
+    log(`  💥 ${attacker.card.name} 直击 ${who} HQ · 造成 ${dmg} 伤害`, "atk");
+    selectedAttacker = null;
+    // Shake
+    const board = document.getElementById("bf-lines");
+    board.classList.remove("screen-shake"); void board.offsetWidth; board.classList.add("screen-shake");
+    if (checkVictory()) return;
+    render();
+}
+
+function executeAttack(attacker, defender) {
+    const result = calcDmg(attacker, defender);
+    if (result.evaded) {
+        log(`  ⚡ ${defender.card.name} 闪避了 ${attacker.card.name} 的攻击`);
+        attacker.hasActed = true; selectedAttacker = null; render(); return;
+    }
+    defender.currentHp -= result.dmg;
+    attacker.currentHp -= result.counter;
+    attacker.hasActed = true;
+    // Shaken check
+    maybeShaken(defender, result.dmg);
+    maybeShaken(attacker, result.counter);
+    // Breakthrough
+    let smashDmg = 0;
+    if (attacker.card.keywords.includes("突破") && defender.currentHp <= 0) {
+        smashDmg = Math.abs(defender.currentHp);
+        if (smashDmg > 0) {
+            if (isPlayerUnit(attacker)) G.enemy.hqHp -= smashDmg;
+            else G.player.hqHp -= smashDmg;
+        }
+    }
+    // Cleanup dead
+    cleanupDead();
+    // Log
+    let msg = `  ⚔ ${attacker.card.name} → ${defender.card.name} · 造成${result.dmg}伤害`;
+    if (result.counter > 0) msg += ` · 反击${result.counter}`;
+    if (defender.currentHp <= 0) msg += ` · 💀击杀`;
+    if (smashDmg > 0) msg += ` · 突破${smashDmg}打HQ`;
+    log(msg, "atk");
+    selectedAttacker = null;
+    if (checkVictory()) return;
+    render();
+}
+
+function maybeShaken(unit, dmg) {
+    if (unit.isDead || unit.isShaken || dmg < 2) return;
+    if (unit.currentHp * 2 > unit.card.health) return;
+    unit.isShaken = true;
+    log(`  ⚑ ${unit.card.name} 动摇`);
+}
+
+function cleanupDead() {
+    G.bf.pRear = G.bf.pRear.filter(u => u.currentHp > 0);
+    G.bf.pMain = G.bf.pMain.filter(u => u.currentHp > 0);
+    G.bf.pSki = G.bf.pSki.filter(u => u.currentHp > 0);
+    G.bf.eRear = G.bf.eRear.filter(u => u.currentHp > 0);
+    G.bf.eMain = G.bf.eMain.filter(u => u.currentHp > 0);
+    G.bf.eSki = G.bf.eSki.filter(u => u.currentHp > 0);
+}
+
+// ====================================================================
+// AI Logic
+// ====================================================================
+function aiDeploy(cb) {
+    const e = G.enemy;
+    const hand = [...e.hand].sort((a,b) => a.cost - b.cost);
+    let delay = 0;
+    for (const card of hand) {
+        if (card.cost > e.currentOrders) continue;
+        if (card.cardType === "event") continue; // Skip events for AI MVP
+        if (!G.bf.eRear.some(u => u.slot < 4)) break; // no room
+        if (e.currentOrders < card.cost) continue;
+        // Find empty slot
+        const used = new Set(G.bf.eRear.map(u => u.slot));
+        let slot = -1;
+        for (let s=0;s<4;s++) { if (!used.has(s)) { slot = s; break; } }
+        if (slot < 0) continue;
+        const unit = makeUnit(card, "rear", slot);
+        G.bf.eRear.push(unit);
+        e.currentOrders -= card.cost;
+        e.hand.splice(e.hand.indexOf(card), 1);
+        for (const kw of card.keywords) {
+            const m = kw.match(/^自残(\d+)$/);
+            if (m) { e.hqHp -= parseInt(m[1]); }
+        }
+        if (card.keywords.includes("光环+1攻")) {
+            for (const u of allUnits(false)) { if (u !== unit) u.card = {...u.card, attack: u.card.attack+1}; }
+        }
+        if (card.keywords.includes("光环+1血")) {
+            for (const u of allUnits(false)) { if (u !== unit) { u.card = {...u.card, health: u.card.health+1}; u.currentHp++; } }
+        }
+        log(`  ▶ AI部署 ${card.name} 到后方 槽位${slot+1}`, "deploy");
+        delay += 300;
+    }
+    setTimeout(() => { render(); cb(); }, Math.max(delay, 100));
+}
+
+function aiAdvance(cb) {
+    let advanced = false;
+    // Rear → Main
+    for (const u of [...G.bf.eRear]) {
+        if (u.isShaken || G.enemy.currentOrders < 1) continue;
+        const used = new Set(G.bf.eMain.map(u2=>u2.slot));
+        let slot = -1;
+        for (let s=0;s<4;s++) { if (!used.has(s)) { slot = s; break; } }
+        if (slot < 0) continue;
+        G.bf.eRear.splice(G.bf.eRear.indexOf(u), 1);
+        u.line = "main"; u.slot = slot; u.hasActed = true;
+        G.bf.eMain.push(u);
+        G.enemy.currentOrders -= 1;
+        log(`  ⇒ AI ${u.card.name} 后方→主力 槽位${slot+1}`, "deploy");
+        advanced = true;
+    }
+    // Main → Skirmish
+    for (const u of [...G.bf.eMain]) {
+        if (u.isShaken || u.deployedThisTurn || G.enemy.currentOrders < 1) continue;
+        const used = new Set(G.bf.eSki.map(u2=>u2.slot).concat(G.bf.pSki.map(u2=>u2.slot)));
+        let slot = -1;
+        for (let s=0;s<4;s++) { if (!used.has(s)) { slot = s; break; } }
+        if (slot < 0) continue;
+        G.bf.eMain.splice(G.bf.eMain.indexOf(u), 1);
+        u.line = "skirmish"; u.slot = slot; u.hasActed = true;
+        G.bf.eSki.push(u);
+        G.enemy.currentOrders -= 1;
+        log(`  ⇒ AI ${u.card.name} 主力→散兵 槽位${slot+1}`, "deploy");
+        advanced = true;
+    }
+    setTimeout(() => { render(); cb(); }, advanced ? 500 : 100);
+}
+
+function aiAttack(cb) {
+    const attackers = allUnits(false).filter(u => {
+        if (u.hasActed || u.isDead || u.isShaken) return false;
+        if (u.deployedThisTurn && !u.card.keywords.includes("冲锋")) return false;
+        if (u.line === "rear" && !u.card.keywords.includes("远程") && !u.card.keywords.includes("阿尔科莱精神")) return false;
+        return true;
+    });
+    let delay = 0;
+    for (const atk of attackers) {
+        if (atk.hasActed) continue;
+        // Check HQ attack first
+        if (canAttackHQ(atk)) {
+            const dmg = effAtk(atk, G.bf, false);
+            G.player.hqHp -= dmg;
+            atk.hasActed = true;
+            log(`  💥 AI ${atk.card.name} 直击玩家 HQ · 造成 ${dmg} 伤害`, "atk");
+            delay += 400;
+            continue;
+        }
+        const targets = findTargets(atk);
+        if (targets.length === 0) continue;
+        // Pick best target: prefer kill shots, then lowest HP
+        targets.sort((a,b) => {
+            const aKill = calcDmg(atk,a).dmg >= a.currentHp ? -100 : 0;
+            const bKill = calcDmg(atk,b).dmg >= b.currentHp ? -100 : 0;
+            return (aKill + a.currentHp) - (bKill + b.currentHp);
+        });
+        const def = targets[0];
+        const result = calcDmg(atk, def);
+        if (result.evaded) {
+            log(`  ⚡ ${def.card.name} 闪避了 AI ${atk.card.name} 的攻击`);
+            atk.hasActed = true; delay += 300; continue;
+        }
+        def.currentHp -= result.dmg;
+        atk.currentHp -= result.counter;
+        atk.hasActed = true;
+        maybeShaken(def, result.dmg);
+        maybeShaken(atk, result.counter);
+        let smash = 0;
+        if (atk.card.keywords.includes("突破") && def.currentHp <= 0) {
+            smash = Math.abs(def.currentHp);
+            if (smash > 0) G.player.hqHp -= smash;
+        }
+        cleanupDead();
+        let msg = `  ⚔ AI ${atk.card.name} → ${def.card.name} · 造成${result.dmg}伤害`;
+        if (result.counter > 0) msg += ` · 反击${result.counter}`;
+        if (def.currentHp <= 0) msg += ` · 💀击杀`;
+        if (smash > 0) msg += ` · 突破${smash}打HQ`;
+        log(msg, "atk");
+        delay += 400;
+        if (G.gameOver) break;
+    }
+    setTimeout(() => { render(); cb(); }, Math.max(delay, 200));
+}
+
+// ====================================================================
+// Rendering
+// ====================================================================
+function render() {
+    renderInfoBar();
+    renderHQ();
+    renderBattlefield();
+    renderHand();
+    renderActionBar();
+}
+
+function renderInfoBar() {
+    const p = G.player;
+    document.getElementById("phase-label").textContent =
+        G.phase==="player_deploy"?"部署阶段":G.phase==="player_attack"?"攻击阶段":
+        G.phase==="enemy_turn"?"AI 回合":"—";
+    document.getElementById("turn-num").textContent = G.turn;
+    document.getElementById("orders-display").textContent = `${p.currentOrders}/${p.maxOrders}`;
+    document.getElementById("hand-count").textContent = p.hand.length;
+    document.getElementById("deck-count").textContent = p.deck.length;
+}
+
+function renderHQ() {
+    const pHp = Math.max(0, G.player.hqHp), eHp = Math.max(0, G.enemy.hqHp);
+    document.getElementById("player-hp-text").textContent = `${pHp}/${STARTING_HQ}`;
+    document.getElementById("enemy-hp-text").textContent = `${eHp}/${STARTING_HQ}`;
+    const pPct = (pHp/STARTING_HQ)*100, ePct = (eHp/STARTING_HQ)*100;
+    const pFill = document.getElementById("player-hp-fill");
+    const eFill = document.getElementById("enemy-hp-fill");
+    pFill.style.width = pPct+"%"; eFill.style.width = ePct+"%";
+    pFill.classList.toggle("critical", pHp <= 5);
+    eFill.classList.toggle("critical", eHp <= 5);
+    document.getElementById("player-label").textContent = `${G.player.faction} 指挥部`;
+    document.getElementById("enemy-label").textContent = `${G.enemy.faction} 指挥部`;
+    // Faction color
+    const fc = f => f==="法兰西"?"var(--faction-france)":f==="普鲁士"?"var(--faction-prussia)":"var(--faction-russia)";
+    document.getElementById("hq-player").style.borderLeftColor = fc(G.player.faction);
+    document.getElementById("hq-enemy").style.borderLeftColor = fc(G.enemy.faction);
+}
+
+function renderBattlefield() {
+    const lines = [
+        {id:"row-e-rear", units:G.bf.eRear, isP:false, line:"rear"},
+        {id:"row-e-main", units:G.bf.eMain, isP:false, line:"main"},
+        {id:"row-skirmish", units:G.bf.eSki.concat(G.bf.pSki), isP:null, line:"skirmish"},
+        {id:"row-p-main", units:G.bf.pMain, isP:true, line:"main"},
+        {id:"row-p-rear", units:G.bf.pRear, isP:true, line:"rear"},
+    ];
+    const attackTargets = selectedAttacker ? findTargets(selectedAttacker) : [];
+    const canHQ = selectedAttacker ? canAttackHQ(selectedAttacker) : false;
+
+    for (const l of lines) {
+        const row = document.getElementById(l.id);
+        let html = "";
+        for (let s=0;s<4;s++) {
+            const unit = l.units.find(u => u.slot === s);
+            const lineKey = l.id.replace("row-","");
+            if (unit) {
+                const isP = isPlayerUnit(unit);
+                const canAct = G.phase==="player_attack" && isP && !unit.hasActed && !unit.isDead && !unit.isShaken
+                    && (!unit.deployedThisTurn || unit.card.keywords.includes("冲锋"))
+                    && (unit.line !== "rear" || unit.card.keywords.includes("远程") || unit.card.keywords.includes("阿尔科莱精神"));
+                const isTarget = attackTargets.includes(unit);
+                const isSelected = selectedAttacker === unit;
+                let cls = `unit-card type-${unit.card.unitType} faction-${factionKey(unit.card.faction)}`;
+                if (unit.isDead) cls += " is-dead";
+                if (unit.isShaken) cls += " is-shaken";
+                if (canAct) cls += " can-act";
+                if (isSelected) cls += " selected";
+                if (isTarget) cls += " target";
+                const dmg = unit.currentHp > 0 && unit.currentHp < unit.card.health;
+                const hpCls = unit.currentHp <= 0 ? "dmg" : dmg ? "dmg" : "ok";
+                html += `<div class="slot${isTarget?' target':''}${G.phase==="player_deploy"&&l.id==="row-p-rear"&&!unit.currentHp?' clickable':''}"
+                    onclick="clickSlot('${lineKey}',${s})">
+                    <div class="${cls}" onclick="event.stopPropagation(); ${isP && G.phase==='player_attack' ? `selectAttacker(G.bf.${isP?'p':'e'}${unit.line==='rear'?'Rear':unit.line==='main'?'Main':'Ski'}.find(u=>u.id==='${unit.id}'))` : ''}">
+                        <div class="uc-cost">${unit.card.cost}</div>
+                        <div class="uc-name">${esc(unit.card.name)}</div>
+                        <div class="uc-type">${unit.card.unitType}</div>
+                        <div class="uc-stats">
+                            <span class="uc-atk">${effAtk(unit, G.bf, isP)}</span>
+                            <span class="uc-hp ${hpCls}">${Math.max(0,unit.currentHp)}/${unit.card.health}</span>
+                        </div>
+                        ${unit.isShaken?'<div class="uc-shaken">动摇</div>':''}
+                        ${unit.hasUsedEvade?'<div class="uc-evade-used">闪避✓</div>':''}
+                    </div>
+                </div>`;
+            } else {
+                const clickable = (G.phase==="player_deploy" && l.id==="row-p-rear") ||
+                    (G.phase==="player_attack" && (attackTargets.length > 0 || canHQ));
+                html += `<div class="slot${clickable?' clickable':''}" onclick="clickSlot('${lineKey}',${s})"></div>`;
+            }
+        }
+        row.innerHTML = html;
+    }
+    // Draw attack arrow
+    drawArrow();
+}
+
+function drawArrow() {
+    const svg = document.getElementById("arrow-svg");
+    svg.querySelectorAll("line,text").forEach(e=>e.remove());
+    if (!selectedAttacker) return;
+    const targets = findTargets(selectedAttacker);
+    if (targets.length === 0 && !canAttackHQ(selectedAttacker)) return;
+    // Just show glow on targets, no arrow (too complex to position correctly)
+}
+
+function renderHand() {
+    const area = document.getElementById("hand-area");
+    if (G.phase !== "player_deploy" && G.phase !== "player_attack") { area.style.display = "none"; return; }
+    area.style.display = "flex";
+    let html = "";
+    for (let i=0;i<G.player.hand.length;i++) {
+        const c = G.player.hand[i];
+        const tooExp = c.cardType !== "event" && c.cost > G.player.currentOrders;
+        const sel = selectedHandCard === i;
+        let cls = `hand-card${sel?' selected':''}${tooExp?' too-expensive':''}${c.cardType==='event'?' event-card':''}`;
+        html += `<div class="${cls}" onclick="selectHandCard(${i})">
+            <div class="hc-cost">${c.cost}</div>
+            <div class="hc-name">${esc(c.name)}</div>
+            <div class="hc-info">${c.cardType==='event'?'事件':c.unitType}</div>
+            ${c.cardType==='unit'?`<div class="hc-stats"><span style="color:var(--blood)">${c.attack}</span><span>${c.health}</span></div>`:''}
+        </div>`;
+    }
+    area.innerHTML = html;
+}
+
+function renderActionBar() {
+    const bar = document.getElementById("action-bar");
+    if (!G || G.gameOver) { bar.style.display = "none"; return; }
+    bar.style.display = "flex";
+    document.getElementById("ab-phase").textContent =
+        G.phase==="player_deploy"?"部署":G.phase==="player_attack"?"攻击":
+        G.phase==="enemy_turn"?"AI":"—";
+    const hint = document.getElementById("ab-hint");
+    const advBtn = document.getElementById("btn-advance");
+    const endBtn = document.getElementById("btn-end-turn");
+    if (G.phase === "player_deploy") {
+        hint.textContent = "点击手牌 → 点击后方空槽位部署";
+        advBtn.style.display = "inline-block";
+        advBtn.textContent = "进入攻击";
+        advBtn.disabled = false;
+        advBtn.onclick = switchToAttack;
+        endBtn.style.display = "inline-block";
+    } else if (G.phase === "player_attack") {
+        hint.textContent = "点击可行动的单位 → 点击目标攻击";
+        advBtn.style.display = "none";
+        endBtn.style.display = "inline-block";
+    } else if (G.phase === "enemy_turn") {
+        hint.textContent = "AI 正在行动...";
+        advBtn.style.display = "none";
+        endBtn.style.display = "none";
+    }
+}
+
+// ====================================================================
+// Logging
+// ====================================================================
+function log(msg, type) {
+    G.log.push(msg);
+    const panel = document.getElementById("log-panel");
+    const cls = type==="atk"?"log-atk":type==="deploy"?"log-deploy":type==="heal"?"log-heal":type==="event"?"log-event":"";
+    panel.innerHTML += `<div class="log-line ${cls}">${esc(msg)}</div>`;
+    panel.scrollTop = panel.scrollHeight;
+}
+
+function esc(s) { return s==null?"":String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function factionKey(f) {
+    if(f==="法兰西")return"france"; if(f==="普鲁士")return"prussia"; return"russia";
+}
+
+// ====================================================================
+// Init
+// ====================================================================
+function startGame(faction) {
+    document.getElementById("faction-select").style.display = "none";
+    document.getElementById("game-screen").style.display = "block";
+    document.getElementById("action-bar").style.display = "flex";
+    G = initState(faction);
+    log(`对局开始 · 玩家 ${faction} vs AI ${G.enemy.faction}`);
+    startPlayerTurn();
+}
+</script>
+</body>
+</html>
