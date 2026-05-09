@@ -7,21 +7,41 @@
 <style>
 /* === CSS Variables === */
 :root {
-    --bg-deep: #1a1a2e;
-    --bg-surface: #22223a;
-    --bg-raised: #2a2a48;
-    --border-main: #4a4a6a;
-    --border-dim: #3a3a58;
+    --void: #0a0c14;
+    --abyss: #0f1220;
+    --slate: #1a1f35;
+    --slate-lt: #252b45;
+    --brass: #c9a84c;
+    --brass-glow: #e0c060;
+    --brass-dim: #8a7530;
+    --blood: #8b1a1a;
+    --blood-bright: #c23030;
+    --blood-glow: #e04040;
+    --smoke: #4a4a5a;
+    --smoke-lt: #6a6a7a;
+    --frost: #5a7a9a;
+    --frost-lt: #7a9aba;
+    --forest: #2a5a3a;
+    --forest-lt: #4a8a5a;
+    --flame: #e06030;
+    --flame-glow: #ff8040;
+
+    --bg-deep: var(--void);
+    --bg-surface: var(--abyss);
+    --bg-raised: var(--slate-lt);
+    --border-main: rgba(201,168,76,0.15);
+    --border-dim: rgba(201,168,76,0.08);
     --text-primary: #e0dde8;
-    --text-secondary: #9a98a8;
-    --text-muted: #6a687a;
-    --gold: #c9a84c;
-    --gold-bright: #e0c060;
-    --red: #c2552c;
-    --red-bright: #e06040;
-    --green: #4a8a5a;
-    --green-bright: #5aaa6a;
-    --blue-gray: #5a7a9a;
+    --text-secondary: var(--smoke-lt);
+    --text-muted: var(--smoke);
+    --gold: var(--brass);
+    --gold-bright: var(--brass-glow);
+    --red: var(--blood-bright);
+    --red-bright: var(--blood-glow);
+    --green: var(--forest);
+    --green-bright: var(--forest-lt);
+    --blue-gray: var(--frost);
+
     --faction-france: #4a6fa5;
     --faction-prussia: #5a5a5a;
     --faction-russia: #3a6a4a;
@@ -32,7 +52,9 @@
     --type-cavalry: #c06a5b;
     --type-artillery: #b79a4a;
     --type-guard: #9f75bd;
+    --font-display: "Georgia", "Noto Serif SC", "Songti SC", serif;
     --font-main: "Hiragino Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-body: var(--font-main);
     --font-mono: "SF Mono", "Menlo", "Consolas", monospace;
     --radius: 4px;
     --radius-lg: 6px;
@@ -45,12 +67,33 @@
 
 body {
     font-family: var(--font-main);
-    background: var(--bg-deep);
+    background: var(--void);
     color: var(--text-primary);
     min-height: 100vh;
+}
+.atmosphere {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+.atmosphere::before {
+    content: '';
+    position: absolute;
+    inset: 0;
     background-image:
-        radial-gradient(ellipse at top, rgba(40,40,80,0.3) 0%, transparent 60%),
-        repeating-linear-gradient(45deg, transparent 0, transparent 10px, rgba(255,255,255,0.01) 10px, rgba(255,255,255,0.01) 20px);
+        linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+.atmosphere::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 10%, rgba(201,168,76,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 90%, rgba(201,168,76,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.4) 100%);
 }
 
 /* === Page Layout === */
@@ -73,10 +116,11 @@ body {
     box-shadow: var(--shadow);
 }
 .replay-header h1 {
+    font-family: var(--font-display);
     font-size: 22px;
     letter-spacing: 4px;
     color: var(--gold);
-    text-shadow: 1px 1px 0 #000;
+    text-shadow: 0 0 12px rgba(201,168,76,0.6), 1px 1px 0 #000;
 }
 .replay-header .matchup {
     font-size: 14px;
@@ -98,8 +142,9 @@ body {
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-    background: var(--bg-surface);
+    background: var(--slate);
     border: 1px solid var(--border-main);
+    border-top: 2px solid var(--brass-dim);
     border-radius: var(--radius);
     padding: 8px 12px;
     box-shadow: var(--shadow);
@@ -277,11 +322,11 @@ body {
 
 /* === Battle Board === */
 .battle-board {
-    background: var(--bg-surface);
+    background: var(--abyss);
     border: 2px solid var(--border-main);
     border-radius: var(--radius-lg);
     padding: 12px;
-    box-shadow: var(--shadow), var(--shadow-inset);
+    box-shadow: 0 0 20px rgba(201,168,76,0.1), inset 0 0 40px rgba(0,0,0,0.8);
     position: relative;
     overflow: hidden;
 }
@@ -319,6 +364,7 @@ body {
 .hq-strip.hq-target {
     box-shadow: 0 0 12px rgba(194,85,44,0.6);
     border-color: var(--red-bright);
+    animation: hq-hit 0.5s ease-out;
 }
 .hq-threat {
     margin-left: auto;
@@ -329,10 +375,49 @@ body {
     font-size: 11px;
     color: var(--text-secondary);
 }
+
+.hq-hp-bar {
+    flex: 1;
+    max-width: 200px;
+    height: 16px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(201,168,76,0.15);
+}
+.hq-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blood), var(--blood-bright));
+    border-radius: 8px;
+    transition: width 0.5s ease;
+}
+.hq-hp-fill.critical {
+    animation: hp-pulse 1s ease-in-out infinite;
+}
+@keyframes hp-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+@keyframes threat-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(224,96,48,0.3); }
+    50% { box-shadow: 0 0 16px rgba(224,96,48,0.6); }
+}
+
+@keyframes hq-hit {
+    0% { transform: translateX(0); }
+    10% { transform: translateX(-4px); }
+    20% { transform: translateX(4px); }
+    30% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    50% { transform: translateX(-1px); }
+    100% { transform: translateX(0); }
+}
 .hq-threat.danger {
     color: #fff;
-    background: rgba(194,85,44,0.75);
-    border-color: var(--red-bright);
+    background: rgba(224,96,48,0.7);
+    border-color: var(--flame);
+    animation: threat-pulse 1.5s ease-in-out infinite;
 }
 
 /* Battlefield lines */
@@ -419,6 +504,11 @@ body {
     stroke-width: 3;
     marker-end: url(#arrowhead);
     filter: drop-shadow(0 0 4px rgba(194,85,44,0.6));
+    stroke-dasharray: 8 4;
+    animation: arrow-flow 0.6s linear infinite;
+}
+@keyframes arrow-flow {
+    to { stroke-dashoffset: -12; }
 }
 .arrow-damage {
     font-size: 13px;
@@ -455,10 +545,18 @@ body {
     font-size: 10px;
     position: relative;
     min-width: 0;
-    transition: box-shadow 0.2s, opacity 0.3s;
+    transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s, opacity 0.3s;
+    cursor: pointer;
+}
+.unit-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
 }
 .unit-card.p2-unit {
     transform: scaleY(-1);
+}
+.unit-card.p2-unit:hover {
+    transform: scaleY(-1) translateY(2px);
 }
 .unit-card.p2-unit > * { transform: scaleY(-1); }
 
@@ -530,14 +628,37 @@ body {
 .ucard-hp.full { color: var(--green); }
 
 /* Unit states */
+@keyframes source-glow {
+    from { box-shadow: 0 0 12px rgba(201,168,76,0.7), 0 0 3px var(--brass); }
+    to   { box-shadow: 0 0 20px rgba(201,168,76,0.9), 0 0 6px var(--brass-glow); }
+}
 .unit-card.is-source {
-    box-shadow: 0 0 8px rgba(201,168,76,0.7), 0 0 2px var(--gold);
+    animation: source-glow 0.8s ease-in-out infinite alternate;
     border-color: var(--gold);
+}
+@keyframes target-shake {
+    0%  { transform: translateX(0); }
+    20% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(2px); }
+    100%{ transform: translateX(0); }
 }
 .unit-card.is-target {
     box-shadow: 0 0 8px rgba(194,85,44,0.7), 0 0 2px var(--red-bright);
     border-color: var(--red-bright);
+    animation: target-shake 0.3s ease-out;
 }
+@keyframes target-shake-inv {
+    0%  { transform: scaleY(-1) translateX(0); }
+    20% { transform: scaleY(-1) translateX(-3px); }
+    40% { transform: scaleY(-1) translateX(3px); }
+    60% { transform: scaleY(-1) translateX(-2px); }
+    80% { transform: scaleY(-1) translateX(2px); }
+    100%{ transform: scaleY(-1) translateX(0); }
+}
+.unit-card.p2-unit.is-target { animation: target-shake-inv 0.3s ease-out; }
+
 .unit-card.is-focus,
 .hq-strip.is-focus {
     outline: 2px solid var(--gold-bright);
@@ -548,8 +669,17 @@ body {
     filter: grayscale(0.8);
     border-style: dashed;
 }
-.unit-card.is-new {
-    animation: deploy-pulse 0.8s ease-out;
+@keyframes deploy-rise {
+    0%   { opacity: 0; transform: translateY(20px) scale(0.8); }
+    60%  { opacity: 1; }
+    100% { transform: translateY(0) scale(1); }
+}
+.unit-card.is-new { animation: deploy-rise 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.unit-card.p2-unit.is-new { animation: deploy-rise-inv 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes deploy-rise-inv {
+    0%   { opacity: 0; transform: scaleY(-1) translateY(20px) scale(0.8); }
+    60%  { opacity: 1; }
+    100% { transform: scaleY(-1) translateY(0) scale(1); }
 }
 .unit-card.is-hp-changed .ucard-hp {
     animation: hp-flash 0.6s ease-out;
@@ -563,6 +693,32 @@ body {
     0% { background: rgba(194,85,44,0.3); }
     100% { background: transparent; }
 }
+
+@keyframes shaken-tremble {
+    from { transform: translateX(-1px); }
+    to   { transform: translateX(1px); }
+}
+.unit-card.is-shaken { animation: shaken-tremble 0.15s ease-in-out infinite alternate; }
+.unit-card.p2-unit.is-shaken { animation: shaken-tremble-inv 0.15s ease-in-out infinite alternate; }
+@keyframes shaken-tremble-inv {
+    from { transform: scaleY(-1) translateX(-1px); }
+    to   { transform: scaleY(-1) translateX(1px); }
+}
+.ucard-status-shaken {
+    position: absolute;
+    top: 18px;
+    right: 2px;
+    background: rgba(74,58,31,0.88);
+    color: var(--brass-glow);
+    border: 1px solid var(--brass);
+    border-radius: 3px;
+    padding: 1px 3px;
+    font-size: 8px;
+    font-weight: bold;
+    line-height: 1.1;
+    z-index: 2;
+}
+
 
 /* Owner marker for skirmish */
 .owner-marker {
@@ -736,7 +892,8 @@ body {
 .raw-log-content .log-line.log-attack { color: var(--red-bright); }
 .raw-log-content .log-line.log-special { color: var(--green-bright); }
 
-/* === Final Result Banner === */
+/* === Final Result Banner (legacy — replaced by .result-overlay) === */
+/* kept for backwards compat; new overlay uses .result-overlay */
 .result-banner {
     display: none;
     background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
@@ -759,6 +916,310 @@ body {
     margin-top: 4px;
 }
 
+
+/* Floating damage */
+.floating-dmg {
+    position: absolute;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--blood-glow);
+    text-shadow: 0 0 8px rgba(0,0,0,0.8);
+    pointer-events: none;
+    z-index: 30;
+    animation: float-up 1.2s ease-out forwards;
+}
+@keyframes float-up {
+    0%   { opacity: 1; transform: translateY(0) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-40px) scale(0.8); }
+}
+
+/* Screen shake */
+.screen-shake { animation: screen-shake 0.4s ease-out; }
+@keyframes screen-shake {
+    0%  { transform: translate(0, 0); }
+    10% { transform: translate(-4px, -2px); }
+    20% { transform: translate(4px, 2px); }
+    30% { transform: translate(-3px, 1px); }
+    40% { transform: translate(3px, -1px); }
+    50% { transform: translate(-2px, 2px); }
+    60% { transform: translate(2px, -1px); }
+    70% { transform: translate(-1px, 1px); }
+    100%{ transform: translate(0, 0); }
+}
+.screen-shake-heavy { animation: screen-shake-heavy 0.6s ease-out; }
+@keyframes screen-shake-heavy {
+    0%  { transform: translate(0, 0); }
+    10% { transform: translate(-8px, -4px); }
+    20% { transform: translate(8px, 4px); }
+    30% { transform: translate(-6px, 3px); }
+    40% { transform: translate(6px, -3px); }
+    50% { transform: translate(-4px, 4px); }
+    60% { transform: translate(4px, -2px); }
+    70% { transform: translate(-2px, 2px); }
+    100%{ transform: translate(0, 0); }
+}
+
+/* Result overlay */
+.result-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    align-items: center;
+    justify-content: center;
+}
+.result-overlay.visible { display: flex; animation: result-fade-in 0.8s ease-out; }
+@keyframes result-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.result-card {
+    background: linear-gradient(135deg, rgba(26,31,53,0.95), rgba(42,37,32,0.95));
+    border: 2px solid var(--brass);
+    border-radius: 8px;
+    padding: 32px 48px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(201,168,76,0.3);
+    animation: result-scale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes result-scale {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}
+
+/* === Title Banner === */
+.title-banner {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 16px 20px 12px;
+    position: relative;
+    overflow: hidden;
+}
+.title-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(26,31,53,0.8), rgba(42,37,32,0.6));
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: var(--radius-lg);
+}
+.title-banner > * { position: relative; z-index: 1; }
+.title-banner h1 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    letter-spacing: 6px;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(201,168,76,0.3), 0 2px 0 #000;
+    margin-bottom: 4px;
+}
+.title-matchup {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+}
+.title-matchup .f1 { color: var(--faction-france); font-weight: bold; }
+.title-matchup .f2 { color: var(--faction-russia); font-weight: bold; }
+.title-matchup .vs { color: var(--gold); margin: 0 8px; }
+.title-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-family: var(--font-mono);
+}
+
+/* === Playback Bar === */
+.playback-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: linear-gradient(180deg, rgba(10,12,20,0.85), rgba(10,12,20,0.98));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(201,168,76,0.15);
+    padding: 8px 16px 10px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+}
+.playback-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.playback-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.progress-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(201,168,76,0.08);
+    border-radius: 3px;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+    border-radius: 3px;
+    transition: width 0.2s;
+}
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    top: -3px;
+    width: 12px;
+    height: 12px;
+    background: var(--gold);
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(201,168,76,0.5);
+}
+.progress-turn-markers {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.progress-turn-marker {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    background: rgba(201,168,76,0.2);
+}
+.turn-label {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--gold);
+    min-width: 60px;
+    text-align: center;
+}
+.speed-btn {
+    background: rgba(26,31,53,0.8);
+    color: var(--text-secondary);
+    border: 1px solid rgba(201,168,76,0.12);
+    padding: 4px 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    min-width: 36px;
+    text-align: center;
+    transition: all 0.15s;
+}
+.speed-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* === Timeline Sidebar === */
+.timeline-sidebar {
+    background: linear-gradient(180deg, rgba(15,18,32,0.95), rgba(26,31,53,0.9));
+    border: 1px solid rgba(201,168,76,0.12);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+}
+.timeline-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(201,168,76,0.1);
+    flex-shrink: 0;
+}
+.timeline-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 8px;
+}
+.timeline-footer {
+    padding: 6px 10px;
+    border-top: 1px solid rgba(201,168,76,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+.turn-group {
+    margin-bottom: 8px;
+}
+.turn-group-label {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(201,168,76,0.08);
+    margin-bottom: 4px;
+    position: sticky;
+    top: 0;
+    background: rgba(15,18,32,0.95);
+    z-index: 2;
+}
+.event-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+    margin-bottom: 2px;
+}
+.event-card:hover { background: rgba(201,168,76,0.06); }
+.event-card.current {
+    background: rgba(201,168,76,0.1);
+    border-left-color: var(--gold);
+}
+.event-card .ev-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+    border: 1px solid;
+}
+.event-card .ev-icon.deploy   { background: rgba(201,168,76,0.15); border-color: var(--gold); color: var(--gold); }
+.event-card .ev-icon.advance  { background: rgba(90,122,154,0.15); border-color: var(--blue-gray); color: var(--blue-gray); }
+.event-card .ev-icon.attack   { background: rgba(194,48,48,0.15); border-color: var(--red-bright); color: var(--red-bright); }
+.event-card .ev-icon.event    { background: rgba(42,90,58,0.15); border-color: var(--green); color: var(--green-bright); }
+.event-card .ev-icon.hq_attack { background: rgba(224,96,48,0.2); border-color: var(--flame); color: var(--flame-glow); }
+.event-card .ev-icon.start    { background: rgba(74,74,90,0.15); border-color: var(--smoke); color: var(--smoke-lt); }
+.event-card .ev-icon.end      { background: rgba(42,90,58,0.15); border-color: var(--green); color: var(--green-bright); }
+.event-card .ev-icon.end_turn { background: rgba(74,74,90,0.1); border-color: var(--smoke); color: var(--smoke); }
+.event-card .ev-body { flex: 1; min-width: 0; }
+.event-card .ev-desc { color: #c0bdc8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-card .ev-faction {
+    display: inline-block;
+    padding: 0 4px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: bold;
+    color: #fff;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.ev-faction.f1 { background: var(--faction-france); }
+.ev-faction.f2 { background: var(--faction-russia); }
+.event-card .ev-marker { font-size: 12px; flex-shrink: 0; }
+
 /* === Loading & Error === */
 .state-message {
     text-align: center;
@@ -780,7 +1241,15 @@ body {
 
 /* === Accessibility: reduced motion === */
 @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
     .unit-card.is-new { animation: none; }
+    .unit-card.is-hp-changed .ucard-hp { animation: none; }
+    .arrow-line { filter: none; stroke-dasharray: none; animation: none; }
+}
     .unit-card.is-hp-changed .ucard-hp { animation: none; }
     .arrow-line { filter: none; }
 }
@@ -790,40 +1259,35 @@ body {
     .info-strips {
         grid-template-columns: 1fr;
     }
-    .controls-bar {
-        flex-direction: column;
-        align-items: stretch;
+/* === Responsive === */
+@media (max-width: 1000px) {
+    .page {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
     }
-    .controls-left, .controls-center, .controls-right {
-        justify-content: center;
-    }
-    .history-table td.desc-cell {
-        max-width: 180px;
-    }
+    .timeline-sidebar { display: none; }
 }
 
 @media (max-width: 500px) {
-    .page { padding: 6px 8px; gap: 8px; }
-    .replay-header h1 { font-size: 16px; letter-spacing: 2px; }
+    .page { padding: 6px 8px 80px; gap: 6px; }
+    .title-banner h1 { font-size: 15px; letter-spacing: 3px; }
     .battle-board { padding: 6px; }
-    .bf-line { min-height: 70px; }
-    .units-row {
-        gap: 3px;
-        padding: 3px;
-        min-height: 70px;
-    }
+    .bf-line { min-height: 65px; }
+    .units-row { gap: 3px; padding: 3px; min-height: 65px; }
     .unit-card { font-size: 9px; }
     .ucard-name { font-size: 9px; }
     .ucard-atk, .ucard-hp { font-size: 10px; }
     .ucard-cost { width: 16px; height: 16px; font-size: 9px; line-height: 12px; top: -4px; left: -4px; }
-    .slot-empty { min-height: 60px; }
+    .slot-empty { min-height: 55px; }
     .btn { padding: 5px 8px; font-size: 12px; }
-    .controls-center { flex-wrap: wrap; }
-    .player-strip { gap: 6px; font-size: 11px; }
-    .history-table { font-size: 11px; }
-    .history-table td.desc-cell { max-width: 120px; }
-    #step-slider { width: 100%; }
-    .controls-right { flex-direction: column; align-items: stretch; }
+    .playback-inner { gap: 8px; flex-wrap: wrap; }
+    .playback-controls { gap: 2px; }
+    .hq-strip { padding: 6px 10px; gap: 8px; }
+    .hq-hp-bar { max-width: 100px; }
+    .match-select { max-width: 140px; font-size: 11px; }
+    .playback-bar { padding: 6px 10px 8px; }
+    .turn-label { font-size: 11px; min-width: 50px; }
+    .pb-btn { width: 32px; height: 28px; font-size: 12px; }
 }
 
 /* === Focus visible global === */
@@ -833,10 +1297,10 @@ body {
 }
 
 /* === Scrollbar === */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-deep); }
-::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: var(--slate-lt); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--smoke); }
 
 /* === Unit Tooltip === */
 .card-tooltip {
@@ -872,6 +1336,7 @@ body {
 </style>
 </head>
 <body>
+<div class="atmosphere" aria-hidden="true"></div>
 <div class="page" id="app">
     <div class="state-message" id="loading-state">加载对局数据中...</div>
 </div>
@@ -945,80 +1410,16 @@ function buildUI() {
     const p2FactionClass = factionClass(meta.p2_faction);
 
     app.innerHTML = `
-        <!-- Replay Header -->
-        <div class="replay-header" role="banner">
-            <h1>拿破仑战争 · 对局回放</h1>
-            <div class="matchup">
-                <span class="faction-p1">${esc(meta.p1_faction)}</span>
-                <span> vs </span>
-                <span class="faction-p2">${esc(meta.p2_faction)}</span>
+        <!-- Title Banner -->
+        <div class="title-banner" role="banner">
+            <h1>拿 破 仑 战 争</h1>
+            <div class="title-matchup">
+                <span class="f1">${esc(meta.p1_faction)}</span>
+                <span class="vs">⚔</span>
+                <span class="f2">${esc(meta.p2_faction)}</span>
             </div>
-            <div class="meta-line">
-                种子 ${meta.seed} · 最终回合 ${meta.final_turn} · ${esc(meta.end_reason)} · 胜者：${esc(meta.winner_name)}
-            </div>
-        </div>
-
-        <!-- Controls Bar -->
-        <div class="controls-bar" role="toolbar" aria-label="回放控制">
-            <div class="controls-left">
-                <select class="match-select" id="match-select" aria-label="选择对局"
-                        onchange="loadDifferent(this.value)">
-                    <option value="match_data.json">默认对局</option>
-                    <option value="match_france_vs_prussia.json">法兰西 vs 普鲁士</option>
-                    <option value="match_prussia_vs_russia.json">普鲁士 vs 俄罗斯</option>
-                </select>
-                <div class="turn-info">
-                    回合 <span class="turn-num" id="turn-display">0</span>
-                    <span class="active-player" id="active-display"></span>
-                    <span class="step-counter" id="step-counter"></span>
-                </div>
-            </div>
-            <div class="controls-center">
-                <button class="btn icon-btn" id="btn-first" aria-label="第一步" title="第一步 (Home)">⏮</button>
-                <button class="btn icon-btn" id="btn-prev-turn" aria-label="上一回合" title="上一回合">⏮⌂</button>
-                <button class="btn icon-btn" id="btn-prev" aria-label="上一步" title="上一步 (Left)">◀</button>
-                <button class="btn primary icon-btn" id="btn-play" aria-label="播放" title="播放/暂停 (Space)">▶</button>
-                <button class="btn icon-btn" id="btn-next" aria-label="下一步" title="下一步 (Right)">▶</button>
-                <button class="btn icon-btn" id="btn-next-turn" aria-label="下一回合" title="下一回合">⌂⏭</button>
-                <button class="btn icon-btn" id="btn-last" aria-label="最终步" title="最终步 (End)">⏭</button>
-            </div>
-            <div class="controls-right">
-                <input type="range" id="step-slider" min="0" max="0" value="0"
-                       aria-label="时间轴" title="拖动时间轴">
-                <div class="filter-group" role="group" aria-label="动作过滤">
-                    <button class="filter-chip active" data-filter="all">全部</button>
-                    <button class="filter-chip" data-filter="deploy">部署</button>
-                    <button class="filter-chip" data-filter="event">事件</button>
-                    <button class="filter-chip" data-filter="attack">攻击</button>
-                    <button class="filter-chip" data-filter="hq_attack">HQ</button>
-                </div>
-                <label class="sr-only" for="speed-select">播放速度</label>
-                <select class="speed-select" id="speed-select" aria-label="播放速度" title="播放速度">
-                    <option value="0.5">0.5x</option>
-                    <option value="1" selected>1x</option>
-                    <option value="2">2x</option>
-                    <option value="4">4x</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Player Info Strips -->
-        <div class="info-strips">
-            <div class="player-strip" id="p1-strip">
-                <span class="strip-name p1" id="p1-name">P1</span>
-                <div class="strip-stat"><span class="label">HQ</span><span class="value hq-hp" id="p1-hq">--</span></div>
-                <div class="strip-stat"><span class="label">军令</span><span class="value orders" id="p1-orders">--</span></div>
-                <div class="strip-stat"><span class="label">手牌</span><span class="value" id="p1-hand">--</span></div>
-                <div class="strip-stat"><span class="label">牌库</span><span class="value" id="p1-deck">--</span></div>
-                <div class="strip-stat"><span class="label">弃牌</span><span class="value" id="p1-discard">--</span></div>
-            </div>
-            <div class="player-strip" id="p2-strip">
-                <span class="strip-name p2" id="p2-name">P2</span>
-                <div class="strip-stat"><span class="label">HQ</span><span class="value hq-hp" id="p2-hq">--</span></div>
-                <div class="strip-stat"><span class="label">军令</span><span class="value orders" id="p2-orders">--</span></div>
-                <div class="strip-stat"><span class="label">手牌</span><span class="value" id="p2-hand">--</span></div>
-                <div class="strip-stat"><span class="label">牌库</span><span class="value" id="p2-deck">--</span></div>
-                <div class="strip-stat"><span class="label">弃牌</span><span class="value" id="p2-discard">--</span></div>
+            <div class="title-meta">
+                种子 ${meta.seed} · 回合 ${meta.final_turn} · ${esc(meta.end_reason)} · 胜者 ${esc(meta.winner_name)}
             </div>
         </div>
 
@@ -1027,7 +1428,7 @@ function buildUI() {
             <svg class="arrow-overlay" id="arrow-overlay" aria-hidden="true">
                 <defs>
                     <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                        <polygon points="0 0, 10 3.5, 0 7" fill="${'#c2552c'}" />
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#c23030" />
                     </marker>
                 </defs>
             </svg>
@@ -1035,7 +1436,9 @@ function buildUI() {
             <!-- Enemy HQ -->
             <div class="hq-strip enemy p2-${p2FactionClass}" id="hq-enemy">
                 <span class="hq-label">${esc(meta.p2_faction)} 指挥部</span>
+                <div class="hq-hp-bar"><div class="hq-hp-fill" id="hq-enemy-fill" style="width:100%"></div></div>
                 <span class="hq-hp" id="hq-enemy-hp">--</span>
+                <span class="hq-threat" id="hq-enemy-threat">安全</span>
             </div>
 
             <!-- Battlefield Lines -->
@@ -1044,12 +1447,12 @@ function buildUI() {
                     <div class="line-label-col">敌·后方</div>
                     <div class="units-row" id="row-p2-rear"></div>
                 </div>
-                <div class="bf-line-divider">--- 敌 主 力 ---</div>
+                <div class="bf-line-divider">— 敌 主 力 —</div>
                 <div class="bf-line" id="line-p2-main">
                     <div class="line-label-col">敌·主力</div>
                     <div class="units-row" id="row-p2-main"></div>
                 </div>
-                <div class="bf-line-divider">--- 散 兵 线 ---</div>
+                <div class="bf-line-divider">— 散 兵 线 —</div>
                 <div class="bf-line skirmish-line" id="line-skirmish">
                     <div class="line-label-col">
                         散兵线
@@ -1057,7 +1460,7 @@ function buildUI() {
                     </div>
                     <div class="units-row" id="row-skirmish"></div>
                 </div>
-                <div class="bf-line-divider">--- 我 主 力 ---</div>
+                <div class="bf-line-divider">— 我 主 力 —</div>
                 <div class="bf-line" id="line-p1-main">
                     <div class="line-label-col">我·主力</div>
                     <div class="units-row" id="row-p1-main"></div>
@@ -1071,7 +1474,9 @@ function buildUI() {
             <!-- Player HQ -->
             <div class="hq-strip player" id="hq-player">
                 <span class="hq-label">${esc(meta.p1_faction)} 指挥部</span>
+                <div class="hq-hp-bar"><div class="hq-hp-fill" id="hq-player-fill" style="width:100%"></div></div>
                 <span class="hq-hp" id="hq-player-hp">--</span>
+                <span class="hq-threat" id="hq-player-threat">安全</span>
             </div>
         </div>
 
@@ -1083,38 +1488,69 @@ function buildUI() {
             <div class="action-summary" id="action-summary">--</div>
         </div>
 
-        <!-- Result Banner -->
-        <div class="result-banner" id="result-banner">
-            <div class="result-title" id="result-title"></div>
-            <div class="result-detail" id="result-detail"></div>
-        </div>
-
-        <!-- Battle History -->
-        <div class="history-panel">
-            <div class="history-header">
-                <span class="panel-title">战 斗 历 史</span>
+        <!-- Timeline Sidebar -->
+        <div class="timeline-sidebar" id="timeline-sidebar">
+            <div class="timeline-header">
+                <span class="panel-title">战 役 记 录</span>
+                <div class="filter-group" role="group" aria-label="动作过滤">
+                    <button class="filter-chip active" data-filter="all">全部</button>
+                    <button class="filter-chip" data-filter="deploy">部署</button>
+                    <button class="filter-chip" data-filter="event">事件</button>
+                    <button class="filter-chip" data-filter="attack">攻击</button>
+                    <button class="filter-chip" data-filter="hq_attack">HQ</button>
+                </div>
+            </div>
+            <div class="timeline-scroll" id="timeline-scroll"></div>
+            <div class="timeline-footer">
+                <span class="step-counter" id="step-counter">-- / --</span>
                 <button class="history-toggle-btn" id="toggle-raw-log"
                         aria-expanded="false" aria-controls="raw-log-area">
                     显示原始日志
                 </button>
             </div>
-            <div class="history-table-wrap">
-                <table class="history-table" aria-label="战斗历史步骤列表">
-                    <thead>
-                        <tr>
-                            <th style="width:40px">#</th>
-                            <th style="width:40px">回合</th>
-                            <th style="width:56px">阵营</th>
-                            <th style="width:64px">动作</th>
-                            <th>描述</th>
-                            <th style="width:60px">标记</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-body"></tbody>
-                </table>
-            </div>
             <div class="raw-log-area" id="raw-log-area">
                 <div class="raw-log-content" id="raw-log-content"></div>
+            </div>
+        </div>
+
+        <!-- Result Overlay -->
+        <div class="result-overlay" id="result-overlay">
+            <div class="result-card">
+                <div class="result-title" id="result-title"></div>
+                <div class="result-detail" id="result-detail"></div>
+            </div>
+        </div>
+
+        <!-- Bottom Playback Bar -->
+        <div class="playback-bar" role="toolbar" aria-label="回放控制">
+            <div class="playback-inner">
+                <select class="match-select" id="match-select" aria-label="选择对局"
+                        onchange="loadDifferent(this.value)">
+                    <option value="match_data.json">默认对局</option>
+                    <option value="match_france_vs_prussia.json">法兰西 vs 普鲁士</option>
+                    <option value="match_prussia_vs_russia.json">普鲁士 vs 俄罗斯</option>
+                </select>
+                <div class="playback-controls">
+                    <button class="btn icon-btn" id="btn-first" aria-label="第一步" title="第一步 (Home)">⏮</button>
+                    <button class="btn icon-btn" id="btn-prev-turn" aria-label="上一回合" title="上一回合">⏮⌂</button>
+                    <button class="btn icon-btn" id="btn-prev" aria-label="上一步" title="上一步 (←)">◀</button>
+                    <button class="btn primary icon-btn" id="btn-play" aria-label="播放" title="播放/暂停 (Space)">▶</button>
+                    <button class="btn icon-btn" id="btn-next" aria-label="下一步" title="下一步 (→)">▶</button>
+                    <button class="btn icon-btn" id="btn-next-turn" aria-label="下一回合" title="下一回合">⌂⏭</button>
+                    <button class="btn icon-btn" id="btn-last" aria-label="最终步" title="最终步 (End)">⏭</button>
+                </div>
+                <div class="progress-wrap">
+                    <span class="turn-label" id="turn-label">回合 --</span>
+                    <div class="progress-bar" id="progress-bar">
+                        <div class="progress-turn-markers" id="progress-markers"></div>
+                        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="turn-info">
+                    <span class="turn-num" id="turn-display"></span>
+                    <span class="active-player" id="active-display"></span>
+                </div>
+                <button class="speed-btn" id="speed-btn" title="播放速度">1x</button>
             </div>
         </div>
     `;
@@ -1127,29 +1563,31 @@ function buildUI() {
     document.getElementById("btn-last").onclick = () => goto(MATCH_DATA.timeline.length - 1);
     document.getElementById("btn-prev-turn").onclick = () => gotoPrevTurn();
     document.getElementById("btn-next-turn").onclick = () => gotoNextTurn();
-    document.getElementById("speed-select").onchange = (e) => {
-        playSpeed = parseFloat(e.target.value);
-        if (playInterval) { stopAutoplay(); startAutoplay(); }
-    };
+    document.getElementById("speed-btn").onclick = () => cycleSpeed();
     document.getElementById("toggle-raw-log").onclick = () => toggleRawLog();
 
-    // Timeline scrubber
-    const slider = document.getElementById("step-slider");
-    slider.max = MATCH_DATA.timeline.length - 1;
-    slider.oninput = (e) => goto(parseInt(e.target.value, 10));
+    // Progress bar click
+    document.getElementById("progress-bar").onclick = (e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        goto(Math.floor(pct * (MATCH_DATA.timeline.length - 1)));
+    };
+
+    // Build progress markers
+    buildProgressMarkers();
 
     // Filter chips
     document.querySelectorAll(".filter-chip").forEach(btn => {
         btn.onclick = () => {
             activeHistoryFilter = btn.dataset.filter;
             document.querySelectorAll(".filter-chip").forEach(b => b.classList.toggle("active", b === btn));
-            buildHistoryTable();
-            highlightHistoryRow();
+            buildTimeline();
+            highlightTimelineCard();
         };
     });
 
-    // Build history table
-    buildHistoryTable();
+    // Build timeline
+    buildTimeline();
 
     // Keyboard
     document.addEventListener("keydown", handleKeydown);
@@ -1159,28 +1597,127 @@ function buildUI() {
 }
 
 // ======================================================================
-// History Table
+// Progress Markers
 // ======================================================================
-function buildHistoryTable() {
-    const tbody = document.getElementById("history-body");
+function buildProgressMarkers() {
+    const container = document.getElementById("progress-markers");
+    if (!container) return;
+    container.innerHTML = "";
+    const timeline = MATCH_DATA.timeline;
+    let lastTurn = -1;
+    for (let i = 0; i < timeline.length; i++) {
+        const t = timeline[i].turn;
+        if (t !== lastTurn) {
+            const pct = (i / (timeline.length - 1)) * 100;
+            const marker = document.createElement("div");
+            marker.className = "progress-turn-marker";
+            marker.style.left = pct + "%";
+            container.appendChild(marker);
+            lastTurn = t;
+        }
+    }
+}
+
+// ======================================================================
+// Speed Control
+// ======================================================================
+function cycleSpeed() {
+    const speeds = [0.5, 1, 2, 4];
+    const idx = speeds.indexOf(playSpeed);
+    playSpeed = speeds[(idx + 1) % speeds.length];
+    document.getElementById("speed-btn").textContent = playSpeed + "x";
+    if (playInterval) { stopAutoplay(); startAutoplay(); }
+}
+
+// ======================================================================
+// Timeline (replaces history table)
+// ======================================================================
+function buildTimeline() {
+    const container = document.getElementById("timeline-scroll");
+    if (!container) return;
     const timeline = MATCH_DATA.timeline;
     let html = "";
+    let currentTurn = -1;
+    const ACTION_ICONS = { deploy: "▶", advance: "⇒", attack: "⚔", event: "📜", hq_attack: "💥", start: "⚑", end: "⚑", end_turn: "↻" };
+
     for (let i = 0; i < timeline.length; i++) {
         const node = timeline[i];
         if (activeHistoryFilter !== "all" && node.action !== activeHistoryFilter) continue;
-        const stepData = deriveHistoryRow(node, i);
-        html += `<tr data-step="${i}" tabindex="0"
-                     role="button" aria-label="跳转到步骤 ${i+1}"
-                     onclick="goto(${i})" onkeydown="if(event.key==='Enter'){goto(${i})}">
-                    <td>${i + 1}</td>
-                    <td>${node.turn}</td>
-                    <td>${stepData.factionBadge}</td>
-                    <td>${stepData.actionBadge}</td>
-                    <td class="desc-cell" title="${esc(stepData.desc)}">${esc(stepData.desc)}</td>
-                    <td class="marker">${stepData.marker}</td>
-                 </tr>`;
+        const turn = node.turn;
+        if (turn !== currentTurn) {
+            if (currentTurn !== -1) html += "</div>";
+            html += `<div class="turn-group"><div class="turn-group-label">回合 ${turn}</div>`;
+            currentTurn = turn;
+        }
+        const action = node.action || "";
+        const ap = node.active_player;
+        const icon = ACTION_ICONS[action] || "·";
+        const desc = deriveTimelineDesc(node, action, ap);
+        const marker = deriveTimelineMarker(node, action);
+        const fClass = ap === 0 ? "f1" : ap === 1 ? "f2" : "";
+
+        html += `<div class="event-card" data-step="${i}" tabindex="0"
+                      role="button" aria-label="步骤 ${i+1}"
+                      onclick="goto(${i})" onkeydown="if(event.key==='Enter'){goto(${i})}">
+                    <div class="ev-icon ${action}">${icon}</div>
+                    <div class="ev-body">
+                        <div class="ev-desc">
+                            ${fClass ? `<span class="ev-faction ${fClass}">${esc(factionShort(ap === 0 ? MATCH_DATA.meta.p1_faction : MATCH_DATA.meta.p2_faction))}</span>` : ""}
+                            ${esc(desc)}
+                        </div>
+                    </div>
+                    <div class="ev-marker">${marker}</div>
+                </div>`;
     }
-    tbody.innerHTML = html;
+    if (currentTurn !== -1) html += "</div>";
+    container.innerHTML = html;
+}
+
+function deriveTimelineDesc(node, action, ap) {
+    if (action === "start") return "对局开始";
+    if (action === "end") return "对局结束";
+    if (action === "end_turn") return "回合结束";
+    if (action === "deploy") {
+        const info = parseDeployLog(node);
+        return info.unit ? `${info.unit} → ${info.line} 槽位${info.slot}` : "部署单位";
+    }
+    if (action === "event") {
+        const info = parseEventLog(node);
+        return info.card || "打出事件卡";
+    }
+    if (action === "advance") {
+        const info = parseAdvanceLog(node);
+        return info.unit ? `${info.unit} ${info.from}→${info.to}` : "行军移动";
+    }
+    if (action === "attack") {
+        const ae = node.attack_event;
+        if (ae) return `${getAttackerName(ae)} → ${getDefenderName(ae)} · ${ae.dmg_to_defender}伤害`;
+        return "攻击";
+    }
+    if (action === "hq_attack") {
+        const ae = node.attack_event;
+        if (ae) return `${getAttackerName(ae)} → HQ · ${ae.dmg_to_defender}伤害`;
+        return "直击 HQ";
+    }
+    return ACTION_LABELS[action] || action;
+}
+
+function deriveTimelineMarker(node, action) {
+    if ((action === "attack" || action === "hq_attack") && node.attack_event) {
+        if (node.attack_event.defender_killed) return "💀";
+        if (node.attack_event.dmg_to_attacker > 0) return "⚔";
+    }
+    return "";
+}
+
+function highlightTimelineCard() {
+    const cards = document.querySelectorAll("#timeline-scroll .event-card");
+    cards.forEach(card => {
+        const step = parseInt(card.dataset.step, 10);
+        card.classList.toggle("current", step === currentStep);
+    });
+    const current = document.querySelector("#timeline-scroll .event-card.current");
+    if (current) current.scrollIntoView({ block: "nearest", behavior: "auto" });
 }
 
 function getAttackerName(ae) { return ae.attacker_name || (ae.attacker && ae.attacker.name) || "?"; }
@@ -1266,7 +1803,9 @@ function renderStep(idx) {
     const turnDisplay = document.getElementById("turn-display");
     const activeDisplay = document.getElementById("active-display");
     const stepCounter = document.getElementById("step-counter");
+    const turnLabel = document.getElementById("turn-label");
     if (turnDisplay) turnDisplay.textContent = node.turn;
+    if (turnLabel) turnLabel.textContent = `回合 ${node.turn}`;
 
     let activeText = "";
     if (node.active_player === 0) activeText = s.p1.faction;
@@ -1275,11 +1814,16 @@ function renderStep(idx) {
         activeText += activeText ? ` · ${ACTION_LABELS[node.action]}` : ACTION_LABELS[node.action];
     }
     if (activeDisplay) activeDisplay.textContent = activeText ? ` · ${activeText}` : "";
-    if (stepCounter) stepCounter.textContent = `[${currentStep + 1} / ${timeline.length}]`;
+    if (stepCounter) stepCounter.textContent = `${currentStep + 1} / ${timeline.length}`;
 
-    // Player strips
-    updatePlayerStrip("p1", s.p1, node.active_player === 0);
-    updatePlayerStrip("p2", s.p2, node.active_player === 1);
+    // Progress bar
+    const pct = timeline.length > 1 ? (currentStep / (timeline.length - 1)) * 100 : 0;
+    const progressFill = document.getElementById("progress-fill");
+    if (progressFill) progressFill.style.width = pct + "%";
+
+    // Player strips (removed, info now in HQ strips)
+    // updatePlayerStrip("p1", s.p1, node.active_player === 0);
+    // updatePlayerStrip("p2", s.p2, node.active_player === 1);
 
     // HQ
     const hqEnemyHp = document.getElementById("hq-enemy-hp");
@@ -1292,6 +1836,9 @@ function renderStep(idx) {
         hqPlayerHp.textContent = Math.max(0, s.p1.hq_hp);
         hqPlayerHp.classList.toggle("damaged", s.p1.hq_hp < startingHqHp("p1"));
     }
+    // HQ health bars
+    updateHqFill("enemy", s.p2.hq_hp, startingHqHp("p2"));
+    updateHqFill("player", s.p1.hq_hp, startingHqHp("p1"));
 
     // HQ threat badges
     renderHqThreat(s);
@@ -1309,18 +1856,14 @@ function renderStep(idx) {
     // Action summary
     renderActionSummary(node);
 
-    // Result banner
-    renderResultBanner();
+    // Result overlay
+    renderResultOverlay();
 
     // Arrows
     requestAnimationFrame(() => drawAttackArrows(node.attack_event || null, node.active_player));
 
-    // Sync timeline scrubber
-    const slider = document.getElementById("step-slider");
-    if (slider) slider.value = currentStep;
-
-    // History: highlight current row
-    highlightHistoryRow();
+    // Timeline: highlight current card
+    highlightTimelineCard();
 
     // Raw log
     renderRawLog(node);
@@ -1421,6 +1964,7 @@ function unitCardClasses(u, isP2, lineName, diff, node) {
     cls += ` faction-${unitFactionKey(u)}`;
     if (isP2) cls += " p2-unit";
     if (u.current_hp <= 0) cls += " is-dead";
+    if (u.is_shaken) cls += " is-shaken";
 
     // Diff-based states
     if (diff) {
@@ -1446,6 +1990,9 @@ function unitCardHTML(u, isP2, lineName, classes, showOwner) {
     const ownerMarker = showOwner
         ? `<span class="owner-marker ${isP2 ? 'p2' : 'p1'}" aria-label="${isP2 ? '敌方' : '我方'}"></span>`
         : "";
+    const shakenBadge = u.is_shaken
+        ? `<div class="ucard-status-shaken" title="动摇：攻击 -1，不能前压">动摇</div>`
+        : "";
     return `<div class="${classes}" data-unit-name="${esc(u.name)}"
                  data-unit-owner="${isP2 ? 'p2' : 'p1'}"
                  data-unit-line="${esc(lineName)}"
@@ -1453,6 +2000,7 @@ function unitCardHTML(u, isP2, lineName, classes, showOwner) {
                  data-unit-uid="${esc(unitKey(u, lineName, isP2))}"
                  data-keywords="${esc((u.keywords || []).join('|'))}">
         ${ownerMarker}
+        ${shakenBadge}
         <div class="ucard-cost">${u.cost}</div>
         <div class="ucard-name" title="${esc(u.name)}">${esc(u.name)}</div>
         <div class="ucard-type">${esc(u.type)}</div>
@@ -1734,20 +2282,30 @@ function startingHqHp(playerKey) {
 }
 
 // ======================================================================
-// Result Banner
+// Result Overlay
 // ======================================================================
-function renderResultBanner() {
-    const banner = document.getElementById("result-banner");
-    if (!banner) return;
+function renderResultOverlay() {
+    const overlay = document.getElementById("result-overlay");
+    if (!overlay) return;
     const isFinal = currentStep === MATCH_DATA.timeline.length - 1;
-    banner.classList.toggle("visible", isFinal);
+    overlay.classList.toggle("visible", isFinal);
     if (isFinal) {
         const m = MATCH_DATA.meta;
-        document.getElementById("result-title").textContent =
-            `胜者：${m.winner_name}`;
-        document.getElementById("result-detail").textContent =
-            `${m.p1_faction} vs ${m.p2_faction} · 回合 ${m.final_turn} · ${m.end_reason} · 种子 ${m.seed}`;
+        document.getElementById("result-title").textContent = m.winner_name;
+        document.getElementById("result-detail").innerHTML =
+            `${esc(m.p1_faction)} vs ${esc(m.p2_faction)}<br>回合 ${m.final_turn} · ${esc(m.end_reason)} · 种子 ${m.seed}`;
     }
+}
+
+// ======================================================================
+// HQ Fill Bars
+// ======================================================================
+function updateHqFill(side, hp, maxHp) {
+    const fill = document.getElementById(`hq-${side}-fill`);
+    if (!fill) return;
+    const pct = maxHp > 0 ? Math.max(0, (hp / maxHp) * 100) : 0;
+    fill.style.width = pct + "%";
+    fill.classList.toggle("critical", hp <= maxHp * 0.35 && hp > 0);
 }
 
 // ======================================================================
