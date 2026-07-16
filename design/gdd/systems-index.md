@@ -13,7 +13,8 @@
 | Match Viewer | UI/UX | P0 | In Progress | `prototypes/card-battle-sim/viewer.html` |
 | Balance Testing | QA/Design | P0 | In Progress | `prototypes/card-battle-sim/ecosystem_test.py` |
 | Paper Prototype | Production/UX | P1 | In Progress | `prototypes/card-battle-sim/generate_pdf.py` |
-| Engine Client | Engine | P2 | Not Started | Engine TBD |
-| Art Direction | Art | P2 | Not Started | Research docs only |
+| KARDS-Inspired Battle System | Gameplay | P0 | In Progress | `design/gdd/kards-inspired-battle-system.md` |
+| Unity Engine Client | Engine | P0 | In Progress | `src/NapoleonGame.Unity/` |
+| Art Direction | Art | P1 | In Progress | Unity card/board theme assets |
 | Audio Direction | Audio | P3 | Not Started | None |
 | Narrative/Lore Presentation | Narrative | P3 | Not Started | Research docs only |

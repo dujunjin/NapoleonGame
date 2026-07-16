@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="BattleTheme.uss" />
+    <ui:VisualElement name="battle-root" class="battle-root">
+        <ui:VisualElement name="battle-backdrop" class="battle-backdrop" />
+
+        <ui:VisualElement name="top-bar" class="top-bar glass-panel">
+            <ui:VisualElement class="identity-cluster">
+                <ui:Label text="敌军" class="eyebrow" />
+                <ui:Label name="enemy-name" text="普鲁士 · 布吕歇尔" class="identity-name" />
+                <ui:Label name="enemy-counts" text="手牌 5 · 牌库 28" class="micro-copy" />
+            </ui:VisualElement>
+            <ui:VisualElement class="turn-cluster">
+                <ui:Label name="round-label" text="第 1 回合" class="round-label" />
+                <ui:Label name="frontline-status" text="前线：无人控制" class="frontline-status" />
+            </ui:VisualElement>
+            <ui:VisualElement name="enemy-hq" class="hq-card enemy-hq target-area">
+                <ui:Label text="敌军 HQ" class="hq-label" />
+                <ui:Label name="enemy-hq-health" text="20 / 20" class="hq-health" />
+                <ui:VisualElement class="health-track">
+                    <ui:VisualElement name="enemy-health-fill" class="health-fill enemy-health-fill" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="main-stage" class="main-stage">
+            <ui:VisualElement class="left-rail glass-panel">
+                <ui:Label text="战局速报" class="rail-title" />
+                <ui:Label name="turn-hint" text="选择手牌部署，或拖动单位行动。" class="hint-copy" />
+                <ui:VisualElement class="divider" />
+                <ui:Label text="行动记录" class="rail-title small-title" />
+                <ui:ScrollView name="event-log" class="event-log" mode="Vertical" />
+            </ui:VisualElement>
+
+            <ui:VisualElement name="battle-surface" class="battle-surface">
+                <ui:VisualElement class="zone-block enemy-zone">
+                    <ui:VisualElement class="zone-heading">
+                        <ui:Label text="敌方支援线" class="zone-title" />
+                        <ui:Label name="enemy-resource" text="指挥点 0 / 0" class="resource-copy enemy-resource" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="enemy-support" class="slot-row support-row">
+                        <ui:VisualElement name="enemy-support-0" class="board-slot support-slot enemy-slot" />
+                        <ui:VisualElement name="enemy-support-1" class="board-slot support-slot enemy-slot" />
+                        <ui:VisualElement name="enemy-support-2" class="board-slot support-slot enemy-slot" />
+                        <ui:VisualElement name="enemy-support-3" class="board-slot support-slot enemy-slot" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="frontline-divider">
+                    <ui:VisualElement class="frontline-rule" />
+                    <ui:Label text="争夺前线" class="frontline-title" />
+                    <ui:VisualElement class="frontline-rule" />
+                </ui:VisualElement>
+                <ui:VisualElement name="frontline" class="slot-row frontline-row">
+                    <ui:VisualElement name="frontline-0" class="board-slot frontline-slot" />
+                    <ui:VisualElement name="frontline-1" class="board-slot frontline-slot" />
+                    <ui:VisualElement name="frontline-2" class="board-slot frontline-slot" />
+                    <ui:VisualElement name="frontline-3" class="board-slot frontline-slot" />
+                    <ui:VisualElement name="frontline-4" class="board-slot frontline-slot" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="zone-block player-zone">
+                    <ui:VisualElement name="player-support" class="slot-row support-row">
+                        <ui:VisualElement name="player-support-0" class="board-slot support-slot player-slot" />
+                        <ui:VisualElement name="player-support-1" class="board-slot support-slot player-slot" />
+                        <ui:VisualElement name="player-support-2" class="board-slot support-slot player-slot" />
+                        <ui:VisualElement name="player-support-3" class="board-slot support-slot player-slot" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="zone-heading">
+                        <ui:Label text="我方支援线" class="zone-title" />
+                        <ui:Label name="player-resource" text="指挥点 1 / 1" class="resource-copy player-resource" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <ui:VisualElement class="right-rail glass-panel">
+                <ui:Label text="军情详情" class="rail-title" />
+                <ui:VisualElement name="inspect-art" class="inspect-art">
+                    <ui:Label name="inspect-type" text="拿破仑战争" class="inspect-type" />
+                </ui:VisualElement>
+                <ui:Label name="inspect-title" text="选择一张卡牌或一个单位" class="inspect-title" />
+                <ui:Label name="inspect-stats" text="部署、推进与攻击分别消耗指挥点。" class="inspect-stats" />
+                <ui:Label name="inspect-rules" text="支援线属于各自玩家；前线为双方互斥控制。夺取前线后，非炮兵单位才能威胁敌方 HQ。" class="inspect-rules" />
+                <ui:VisualElement class="divider" />
+                <ui:Button name="commander-button" text="发动指挥官能力" class="command-button secondary-button" />
+                <ui:Button name="end-turn-button" text="结束回合" class="command-button primary-button" />
+                <ui:Toggle name="reduced-motion" label="减少动画" class="motion-toggle" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="bottom-dock" class="bottom-dock glass-panel">
+            <ui:VisualElement name="player-hq" class="hq-card player-hq">
+                <ui:Label text="我方 HQ" class="hq-label" />
+                <ui:Label name="player-hq-health" text="20 / 20" class="hq-health" />
+                <ui:VisualElement class="health-track">
+                    <ui:VisualElement name="player-health-fill" class="health-fill player-health-fill" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="hand-region">
+                <ui:VisualElement class="hand-heading">
+                    <ui:Label name="player-name" text="法兰西 · 拿破仑" class="identity-name player-identity" />
+                    <ui:Label name="player-counts" text="牌库 29 · 弃牌 0" class="micro-copy" />
+                </ui:VisualElement>
+                <ui:ScrollView name="hand" class="hand-scroll" mode="Horizontal" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden" />
+            </ui:VisualElement>
+            <ui:VisualElement class="dock-actions">
+                <ui:Button name="new-match-button" text="新对局" class="small-button" />
+                <ui:Label text="拖拽手牌部署&#10;D 快速部署 · Space 结束" class="dock-hint" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="drag-layer" class="drag-layer" picking-mode="Ignore" />
+        <ui:VisualElement name="turn-banner" class="turn-banner hidden-overlay">
+            <ui:Label name="turn-banner-title" text="你的回合" class="turn-banner-title" />
+            <ui:Label name="turn-banner-subtitle" text="第 1 回合" class="turn-banner-subtitle" />
+        </ui:VisualElement>
+        <ui:Label name="toast" text="" class="toast hidden-overlay" />
+
+        <ui:VisualElement name="setup-overlay" class="modal-overlay hidden-overlay">
+            <ui:VisualElement class="setup-card">
+                <ui:Label text="建立新战局" class="setup-title" />
+                <ui:Label text="选择阵营与对手。试玩版为玩家对战确定性 AI。" class="setup-copy" />
+                <ui:DropdownField name="player-faction-field" label="我方阵营" class="setup-field" />
+                <ui:DropdownField name="enemy-faction-field" label="敌方阵营" class="setup-field" />
+                <ui:IntegerField name="seed-field" label="战局种子" value="1977" class="setup-field" />
+                <ui:VisualElement class="setup-actions">
+                    <ui:Button name="cancel-setup-button" text="取消" class="small-button" />
+                    <ui:Button name="start-match-button" text="开始战斗" class="command-button primary-button setup-start" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="result-overlay" class="modal-overlay hidden-overlay">
+            <ui:VisualElement class="result-card">
+                <ui:Label name="result-kicker" text="战役结束" class="eyebrow" />
+                <ui:Label name="result-title" text="胜利" class="result-title" />
+                <ui:Label name="result-copy" text="敌方总部已被攻破。" class="result-copy" />
+                <ui:Button name="rematch-button" text="再次交战" class="command-button primary-button" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

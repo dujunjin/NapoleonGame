@@ -5,9 +5,9 @@
 
 ## Engine & Language
 
-- **Engine**: TBD — engine decision intentionally deferred.
-- **Language**: Python for current prototypes; target engine language TBD.
-- **Rendering**: HTML/CSS for current viewer; target engine renderer TBD.
+- **Engine**: Unity 2022.3.62f3c1.
+- **Language**: C# for the Unity client; Python for prototype regression and balance.
+- **Rendering**: UI Toolkit screen-space 2D/2.5D presentation.
 - **Physics**: None in current card prototype.
 
 ## Input & Platform
@@ -15,49 +15,54 @@
 <!-- Written by /setup-engine. Read by /ux-design, /ux-review, /test-setup, /team-ui, and /dev-story -->
 <!-- to scope interaction specs, test helpers, and implementation to the correct input methods. -->
 
-- **Target Platforms**: PC/Web for prototype evaluation; final targets TBD.
-- **Input Methods**: Keyboard/Mouse for current viewer; paper prototype for human playtests.
+- **Target Platforms**: macOS development build and Windows/macOS desktop demo.
+- **Input Methods**: Mouse and keyboard.
 - **Primary Input**: Mouse.
-- **Gamepad Support**: None for current prototype.
+- **Gamepad Support**: Deferred; all commands remain dispatchable so it can be added later.
 - **Touch Support**: None for current prototype.
-- **Platform Notes**: Card text and board state must remain readable at desktop browser sizes before engine selection.
+- **Platform Notes**: Design for 16:9 at 1920x1080 and remain usable at 1280x720. Essential rules cannot depend on hover alone.
 
 ## Naming Conventions
 
-- **Classes**: PascalCase for Python classes; follow target engine convention after setup.
-- **Variables**: snake_case in Python prototypes.
-- **Signals/Events**: Not configured until engine selection.
-- **Files**: snake_case Python files; descriptive kebab-case or snake_case docs.
-- **Scenes/Prefabs**: Not configured until engine selection.
-- **Constants**: UPPER_SNAKE_CASE in Python prototypes.
+- **Classes**: PascalCase; one public C# type per matching file.
+- **Variables**: `_camelCase` private fields, PascalCase public properties, camelCase locals.
+- **Signals/Events**: immutable domain events and explicit command dispatch; UI never owns rules state.
+- **Files**: PascalCase C# files; descriptive kebab-case docs.
+- **Scenes/Prefabs**: PascalCase; the vertical slice uses one generated `BattleDemo` scene.
+- **Constants**: PascalCase in C#, UPPER_SNAKE_CASE in Python.
 
 ## Performance Budgets
 
-- **Target Framerate**: Not applicable to Python simulator; viewer should remain responsive in a desktop browser.
-- **Frame Budget**: TBD after engine selection.
-- **Draw Calls**: TBD after engine selection.
-- **Memory Ceiling**: TBD after engine selection.
+- **Target Framerate**: 60 fps on an integrated-GPU development Mac.
+- **Frame Budget**: 16.6 ms total; UI scripts <= 2 ms during steady state.
+- **Draw Calls**: <= 80 for the battle screen after warm-up.
+- **Memory Ceiling**: <= 512 MB for the desktop demo after one full match.
 
 ## Testing
 
-- **Framework**: Python `unittest` for current simulator.
+- **Framework**: Unity Test Framework/NUnit for C#; Python `unittest` for the simulator.
 - **Minimum Coverage**: Focused regression tests for rule changes; broad coverage after architecture phase.
-- **Required Tests**: Balance formulas, gameplay systems, replay export integrity.
+- **Required Tests**: deterministic setup, resource economy, frontline control, legal targets, combat, victory, AI completion, card catalog, and Python regression.
 
 ## Forbidden Patterns
 
 <!-- Add patterns that should never appear in this project's codebase -->
-- [None configured yet — add as architectural decisions are made]
+- Rules in `MonoBehaviour`, `VisualElement`, animation callbacks, or scene objects.
+- UI code directly mutating HP, credits, zones, cards, or turn state.
+- `Resources.Load`, `FindObjectOfType`, `SendMessage`, legacy `Input.*`, or per-frame LINQ.
+- Randomness not supplied by the seeded match RNG.
 
 ## Allowed Libraries / Addons
 
 <!-- Add approved third-party dependencies here -->
-- [None configured yet — add as dependencies are approved]
+- Unity built-in UI Toolkit.
+- Unity Test Framework supplied by the editor.
+- No third-party runtime packages in the first vertical slice.
 
 ## Architecture Decisions Log
 
 <!-- Quick reference linking to full ADRs in docs/architecture/ -->
-- [No ADRs yet — use /architecture-decision to create one]
+- `docs/architecture/adr-0001-unity-client-architecture.md`
 
 ## Engine Specialists
 
@@ -65,12 +70,12 @@
 <!-- Read by /code-review, /architecture-decision, /architecture-review, and team skills -->
 <!-- to know which specialist to spawn for engine-specific validation. -->
 
-- **Primary**: TBD until engine selection.
-- **Language/Code Specialist**: Python/general gameplay review for current prototype; target-engine specialist after `/setup-engine`.
-- **Shader Specialist**: None for current prototype.
-- **UI Specialist**: General UI/UX review for current HTML viewer; target-engine UI specialist after `/setup-engine`.
-- **Additional Specialists**: game-designer, systems-designer, economy-designer, qa-lead, prototyper.
-- **Routing Notes**: Use engine-neutral agents for prototype work. Use Godot/Unity/Unreal specialists only after the engine decision is made.
+- **Primary**: unity-specialist.
+- **Language/Code Specialist**: unity-specialist for C# architecture and review.
+- **Shader Specialist**: unity-shader-specialist if custom shaders are introduced later.
+- **UI Specialist**: unity-ui-specialist for UXML, USS, pointer input, and accessibility.
+- **Additional Specialists**: gameplay-programmer, game-designer, systems-designer, qa-lead.
+- **Routing Notes**: Keep rules engine pure C#; route UI and scene work separately from domain logic.
 
 ### File Extension Routing
 
@@ -79,9 +84,9 @@
 
 | File Extension / Type | Specialist to Spawn |
 |-----------------------|---------------------|
-| Game code (primary language) | General gameplay review for Python prototypes |
-| Shader / material files | None until engine selection |
-| UI / screen files | General UI/UX review for HTML viewer |
-| Scene / prefab / level files | None until engine selection |
-| Native extension / plugin files | None until engine selection |
-| General architecture review | technical-director |
+| Game code (`.cs`) | unity-specialist |
+| Shader / material files | unity-shader-specialist |
+| UI (`.uxml`, `.uss`) | unity-ui-specialist |
+| Scene / prefab files | unity-specialist |
+| Native extension / plugin files | unity-specialist |
+| General architecture review | unity-specialist + technical-director |

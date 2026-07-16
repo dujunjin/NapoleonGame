@@ -1,21 +1,21 @@
 # Napoleon Card Game -- Claude Code Game Studios Configuration
 
 Napoleonic card tactics game development managed through Claude Code Game Studios.
-The project currently has an engine-independent Python rules simulator, KARDS-inspired
-HTML replay viewer, printable card PDF, and historical research documents.
+The project has an engine-independent Python rules simulator and a Unity playable
+vertical slice, plus a KARDS-inspired HTML replay viewer and research documents.
 
 ## Technology Stack
 
-- **Engine**: TBD. Do not lock the project to Godot, Unity, or Unreal until the engine decision brief is reviewed.
-- **Language**: Python for current rules prototypes; target engine language TBD.
+- **Engine**: Unity 2022.3.62f3c1 (first playable vertical slice)
+- **Language**: C# for Unity; Python remains the prototype/balance oracle.
 - **Version Control**: Git with trunk-based development
-- **Build System**: Prototype scripts for now; engine build pipeline TBD.
-- **Asset Pipeline**: Research docs, generated JSON replays, HTML viewer, and PDF card prototype for now.
+- **Build System**: Unity Build Pipeline plus Python prototype verification.
+- **Asset Pipeline**: Unity Asset Import Pipeline; generated card catalog; direct serialized references for the vertical slice.
 
-> **Current rule**: Treat `prototypes/rule-simulator/` and
-> `prototypes/card-battle-sim/` as engine-independent prototypes.
-> Do not migrate or rewrite them into an engine until the GDD, playtest feedback,
-> and engine decision brief are reviewed.
+> **Current rule**: Treat `prototypes/card-battle-sim/` as a read-only behavioral
+> oracle while the new rules are migrated deliberately into
+> `src/NapoleonGame.Unity/`. Do not delete it or claim parity without differential
+> tests. New production gameplay code belongs in the Unity project.
 
 ## Project Structure
 

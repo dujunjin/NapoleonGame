@@ -1,0 +1,16 @@
+{
+  "name": "NapoleonGame.Runtime",
+  "rootNamespace": "NapoleonGame.Runtime",
+  "references": [
+    "NapoleonGame.Domain"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

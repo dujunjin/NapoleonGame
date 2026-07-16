@@ -29,6 +29,7 @@ builds/
 bin/
 obj/
 out/
+output/
 dist/
 *.exe
 *.dll
